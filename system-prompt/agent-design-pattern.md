@@ -97,6 +97,6 @@ script/
 backend/
 frontend/
 test/
-README.md
+README.md # 项目介绍，使用方法，部署说明
 ```
 
