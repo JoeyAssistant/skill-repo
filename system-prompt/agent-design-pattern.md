@@ -65,7 +65,7 @@ Web UI → API Server(FastAPI) ┬→ CLI→ Data(JSON)
 
 ## CLI设计
 ### 设计原则
-- data-oriented: CLI以数据为中心，提供数据相关的操作，如查询、修改、新增、删除等
+- data-oriented: CLI以数据为中心，提供`data layer`数据相关的操作，如查询、修改、新增、删除等，command与入参设计保持精简，避免过度设计
 - `--help as doc`: 具备详细、清晰的命令行帮助文档，开发人员或agent能够根据`--help`内容明确CLI功能、原理、输入输出、使用方法，agent调用脚本之前，必须先查看`--help`
 - 结构化输入输出：除了常规CLI的arguments/options，提供json格式输入全量入参，输出格式统一使用json，方便代码或agent解析
 - 使用`click`框架
