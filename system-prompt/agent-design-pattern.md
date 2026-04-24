@@ -82,7 +82,7 @@ Web UI → API Server(FastAPI) ┬→ CLI→ Data(JSON)
 <列出data schema定义以及详细描述>
 
 ## scripts
-创建基本agent部署运维脚本，脚本输出human-friendly
+创建基本agent部署运维脚本，要求脚本打印human-friendly output用户阅读
 - start.sh
 - stop.sh
 - restart.sh
