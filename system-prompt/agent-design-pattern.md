@@ -88,6 +88,18 @@ Web UI → API Server(FastAPI) ┬→ CLI→ Data(JSON)
 - restart.sh
 - status.sh
 
+## 测试设计
+### 测试用例类型
+- 单元测试（UT）: 验证子模块或类核心逻辑，mock外部依赖
+- 集成测试（IT）: 整体前后端端到端功能验证，使用真实依赖
+
+### 测试用例运行方式
+针对单元测试与集成测试，各自提供执行脚本，自动化全量运行，生成测试报告
+```
+test/run_ut.py
+tets/run_it.py
+```
+
 ## 代码目录结构
 ```
 agent/
