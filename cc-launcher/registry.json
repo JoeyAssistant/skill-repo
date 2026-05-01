@@ -42,11 +42,6 @@
       "universal": true
     },
     {
-      "name": "github@claude-plugins-official",
-      "description": "GitHub 集成",
-      "universal": true
-    },
-    {
       "name": "skill-creator@claude-plugins-official",
       "description": "技能创建和管理",
       "universal": true
