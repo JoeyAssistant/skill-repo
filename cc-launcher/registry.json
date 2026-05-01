@@ -1,4 +1,14 @@
 {
+  "marketplaces": {
+    "claude-plugins-official": {
+      "source": "github",
+      "repo": "anthropics/claude-plugins-official"
+    },
+    "zai-coding-plugins": {
+      "source": "github",
+      "repo": "zai-org/zai-coding-plugins"
+    }
+  },
   "plugins": [
     {
       "name": "superpowers@claude-plugins-official",
