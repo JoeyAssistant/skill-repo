@@ -1,0 +1,29 @@
+{
+  "glm": {
+    "name": "智谱 GLM",
+    "base_url": "https://open.bigmodel.cn/api/anthropic",
+    "doc_url": "https://open.bigmodel.cn/dev/api/claude-code",
+    "models": {
+      "haiku": "GLM-4.5-air",
+      "sonnet": "GLM-5.1",
+      "opus": "GLM-5.1"
+    }
+  },
+  "minimax": {
+    "name": "MiniMax",
+    "base_url": "https://api.minimaxi.com/anthropic",
+    "doc_url": "https://platform.minimaxi.com/document/claude-code",
+    "models": {
+      "haiku": "MiniMax-M2.7",
+      "sonnet": "MiniMax-M2.7",
+      "opus": "MiniMax-M2.7"
+    },
+    "tools": {
+      "mmx": {
+        "install": "pip install mmx-cli",
+        "description": "MiniMax CLI，支持文本对话、语音合成、图片/视频/音乐生成、搜索、图片理解"
+      }
+    },
+    "systemPromptTemplate": "# MiniMax Profile — System Prompt\n\n## Available Tools\n\n你有权限在需要时使用 `mmx` 命令行工具来完成任务。以下是 mmx 支持的功能：\n\n| 资源 | 命令 | 用途 |\n|------|------|------|\n| text | `mmx text chat` | 文本生成/对话 |\n| speech | `mmx speech synthesize` | 语音合成（TTS） |\n| image | `mmx image generate` | 图片生成 |\n| video | `mmx video generate` | 视频生成 |\n| music | `mmx music generate` | 音乐生成 |\n| search | `mmx search query` | 网络搜索 |\n| vision | `mmx vision describe` | 图片理解 |\n| quota | `mmx quota show` | 查看用量配额 |\n\n## 使用指南\n\n- 当用户请求生成图片、语音、视频、音乐，或需要网络搜索时，**优先使用 mmx** 而非其他方式\n- 使用 `mmx <resource> <command> --help` 查看具体命令参数\n- 示例：\n  - 图片生成：`mmx image generate --prompt \"描述\"`\n  - 语音合成：`mmx speech synthesize --text \"文字\" --voice \"音色名\"`\n  - 网络搜索：`mmx search query \"搜索词\"`\n  - 图片理解：`mmx vision describe --image-path <路径>`\n\n## 注意\n\n- mmx 使用 MiniMax API，直接调用 MiniMax 模型能力\n- 当前配置的 API Key 已配置在环境变量中，mmx 会自动使用"
+  }
+}
