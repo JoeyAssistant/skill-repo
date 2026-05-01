@@ -1,0 +1,46 @@
+{
+  "plugins": [
+    {
+      "name": "superpowers@claude-plugins-official",
+      "description": "开发工作流技能集（TDD、调试、计划等）",
+      "universal": true
+    },
+    {
+      "name": "glm-plan-usage@zai-coding-plugins",
+      "description": "GLM 用量查询",
+      "universal": false,
+      "providers": ["glm"]
+    },
+    {
+      "name": "playwright@claude-plugins-official",
+      "description": "浏览器自动化",
+      "universal": true
+    },
+    {
+      "name": "frontend-design@claude-plugins-official",
+      "description": "高质量前端设计",
+      "universal": true
+    },
+    {
+      "name": "agent-sdk-dev@claude-plugins-official",
+      "description": "Agent SDK 开发",
+      "universal": true
+    },
+    {
+      "name": "playground@claude-plugins-official",
+      "description": "交互式 HTML playground",
+      "universal": true
+    },
+    {
+      "name": "github@claude-plugins-official",
+      "description": "GitHub 集成",
+      "universal": true
+    },
+    {
+      "name": "skill-creator@claude-plugins-official",
+      "description": "技能创建和管理",
+      "universal": true
+    }
+  ],
+  "mcps": []
+}

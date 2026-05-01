@@ -1,0 +1,22 @@
+{
+  "glm": {
+    "name": "智谱 GLM",
+    "base_url": "https://open.bigmodel.cn/api/anthropic",
+    "doc_url": "https://open.bigmodel.cn/dev/api/claude-code",
+    "models": {
+      "haiku": "GLM-4.5-air",
+      "sonnet": "GLM-5.1",
+      "opus": "GLM-5.1"
+    }
+  },
+  "minimax": {
+    "name": "MiniMax",
+    "base_url": "https://api.minimaxi.com/anthropic",
+    "doc_url": "https://platform.minimaxi.com/document/claude-code",
+    "models": {
+      "haiku": "MiniMax-M2.7",
+      "sonnet": "MiniMax-M2.7",
+      "opus": "MiniMax-M2.7"
+    }
+  }
+}
