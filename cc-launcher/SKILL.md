@@ -41,6 +41,9 @@ description: Use when users want to manage Claude Code provider profiles - creat
   "model": "sonnet",
   "enabledPlugins": {
     "plugin-name@marketplace": true
+  },
+  "tools": {
+    "mmx": {}
   }
 }
 ```
@@ -111,11 +114,14 @@ description: Use when users want to manage Claude Code provider profiles - creat
 3. 如果是已知供应商且有 `doc_url`，使用 web fetch 抓取文档，提取默认配置（base_url、模型名等）
 4. 交互式收集：
    - API Key（ANTHROPIC_AUTH_TOKEN）
+   - **安装供应商 CLI 工具**：如果 `providers.json` 中该供应商有 `tools` 字段（如 MiniMax 的 mmx），则执行安装
+     - MiniMax：执行 `pip install mmx-cli` 安装 mmx
    - 确认/修改 base_url、模型映射
    - 从 `registry.json` 选择插件（预选 universal + 匹配 providers 的条目）
-   - 系统提示词（可选）
+   - 系统提示词（可选）：使用 `providers.json` 中的 `systemPromptTemplate`，包含 mmx 使用说明
    - MCP 配置（可选）
 5. 生成 profile 文件到 `~/.cc-launcher/profiles/<name>/`
+   - `settings.json` 中添加 `"tools": { "mmx": {} }` 标记已安装的工具
 6. 调用"重新生成 shell 函数"流程
 
 ### 2. 列出 Profile
