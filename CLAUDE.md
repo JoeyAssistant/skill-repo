@@ -20,15 +20,7 @@ description: Description with trigger keywords
 
 ## Installing Skills
 
-```bash
-./install_skills.sh
-```
-
-This script:
-1. Clones official skills from `anthropics/skills`
-2. Copies personal skills to `~/.claude/skills/`
-
-Requires: `gh` (GitHub CLI)
+Local skills are installed by creating symlinks from `~/.claude/skills/<skill-name>` to the skill directory in this repo. Official skills are installed via Claude Code plugins.
 
 ## Current Skills
 
@@ -63,4 +55,4 @@ TTS script: `doc2audio/scripts/tts_generator.py`
 
 1. Create directory with skill name
 2. Add `SKILL.md` with frontmatter
-3. Update `install_skills.sh` to include in `SKILLS_PERSONAL_DIRS` array
+3. Create symlink: `ln -s $(pwd)/<skill-name> ~/.claude/skills/<skill-name>`
