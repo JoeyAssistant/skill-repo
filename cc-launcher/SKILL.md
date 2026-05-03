@@ -139,67 +139,90 @@ description: Use when users want to manage Claude Code provider profiles - creat
 
 ### 4. 重新生成 Shell 函数
 
-1. 检测当前平台（`uname` / `$env:OS`）
+1. 检测当前平台和 shell（`echo $SHELL` / `$env:SHELL` / `uname`）
 2. 扫描所有 `~/.cc-launcher/profiles/*/settings.json`
 3. 为每个 profile 生成两个 shell function：
    - `claude-<name>()` — 正常模式
    - `claude-<name>-skip-perms()` — 跳过权限模式
 4. 函数使用 `--settings`、`--append-system-prompt-file`、`--mcp-config` 参数
-5. 根据平台写入对应的配置文件（见下方模板），替换标记之间的内容
-6. 如果标记不存在，追加到文件末尾
+5. 函数**必须转发用户参数 `"$@"` / `@PSBoundParameters`**，否则用户传入的额外参数（如 `--append-system-prompt`）会被丢弃
+6. 根据平台写入对应的配置文件（见下方模板），替换标记之间的内容
+7. 如果标记不存在，追加到文件末尾
 
 **标记（Marker）：**
-- `# >>> Claude Code profiles - start >>>` / `# <<< Claude Code profiles - end <<<`
+- Bash/Zsh：`# >>> Claude Code profiles - start >>>` / `# <<< Claude Code profiles - end <<<`
+- PowerShell：`# >>> Claude Code profiles - start >>>` / `# <<< Claude Code profiles - end <<<`
 
 **平台适配：**
-| 平台 | 配置文件 | 路径 |
-|------|----------|------|
-| Linux/macOS (bash) | `~/.bashrc` | `$HOME/.cc-launcher/profiles/<name>/` |
-| Windows (PowerShell) | `$PROFILE` | `$HOME/.cc-launcher/profiles/<name>/` |
+| 平台 | Shell | 配置文件 | 检测方式 |
+|------|-------|----------|----------|
+| macOS | zsh | `~/.zshrc` | `$SHELL` 含 `zsh` 或 macOS 默认 |
+| macOS | bash | `~/.bash_profile` | `$SHELL` 含 `bash` |
+| Linux | bash | `~/.bashrc` | `$SHELL` 含 `bash` |
+| Linux | zsh | `~/.zshrc` | `$SHELL` 含 `zsh` |
+| Windows | PowerShell | `$PROFILE` | N/A |
 
-Bash 函数模板（Linux/macOS）：
+**平台检测逻辑：**
+1. 读取 `$SHELL` 环境变量（Unix）或 `$env:SHELL`（PowerShell）
+2. 如果 `$SHELL` 包含 `zsh` → 写入 `~/.zshrc`
+3. 如果 `$SHELL` 包含 `bash` → 写入 `~/.bashrc`（Linux）或 `~/.bash_profile`（macOS）
+4. 如果在 PowerShell 中 → 写入 `$PROFILE`
+
+Bash/Zsh 函数模板（Linux/macOS）：
 
 ```bash
 claude-<name>() {
-  local _args="--settings $HOME/.cc-launcher/profiles/<name>/settings.json"
-  test -f "$HOME/.cc-launcher/profiles/<name>/system-prompt.md" && _args="$_args --append-system-prompt-file $HOME/.cc-launcher/profiles/<name>/system-prompt.md"
-  test -f "$HOME/.cc-launcher/profiles/<name>/mcp.json" && _args="$_args --mcp-config $HOME/.cc-launcher/profiles/<name>/mcp.json"
-  claude $_args
+  local -a _args=("--settings" "$HOME/.cc-launcher/profiles/<name>/settings.json")
+  test -f "$HOME/.cc-launcher/profiles/<name>/system-prompt.md" && _args+=("--append-system-prompt-file" "$HOME/.cc-launcher/profiles/<name>/system-prompt.md")
+  test -f "$HOME/.cc-launcher/profiles/<name>/mcp.json" && _args+=("--mcp-config" "$HOME/.cc-launcher/profiles/<name>/mcp.json")
+  claude "${_args[@]}" "$@"
 }
 
 claude-<name>-skip-perms() {
-  local _args="--settings $HOME/.cc-launcher/profiles/<name>/settings.json"
-  test -f "$HOME/.cc-launcher/profiles/<name>/system-prompt.md" && _args="$_args --append-system-prompt-file $HOME/.cc-launcher/profiles/<name>/system-prompt.md"
-  test -f "$HOME/.cc-launcher/profiles/<name>/mcp.json" && _args="$_args --mcp-config $HOME/.cc-launcher/profiles/<name>/mcp.json"
-  claude $_args --dangerously-skip-permissions
+  local -a _args=("--settings" "$HOME/.cc-launcher/profiles/<name>/settings.json")
+  test -f "$HOME/.cc-launcher/profiles/<name>/system-prompt.md" && _args+=("--append-system-prompt-file" "$HOME/.cc-launcher/profiles/<name>/system-prompt.md")
+  test -f "$HOME/.cc-launcher/profiles/<name>/mcp.json" && _args+=("--mcp-config" "$HOME/.cc-launcher/profiles/<name>/mcp.json")
+  claude "${_args[@]}" "$@" --dangerously-skip-permissions
 }
 ```
+
+**Bash/Zsh 模板要点：**
+- 使用 `local -a _args=(...)` 数组，**不是**字符串拼接 — 避免路径含空格时出错
+- 使用 `_args+=("--flag" "$value")` 追加元素，**不是** `$_args="$_args --flag $value"`
+- `"${_args[@]}"` 带引号展开数组，**不是** `$_args`
+- 末尾加 `"$@"` 转发用户参数 — 这是必须的，否则 `claude-glm --append-system-prompt "..."` 等调用会静默失败
 
 PowerShell 函数模板（Windows）：
 
 ```powershell
 function claude-<name> {
-  $profileDir = "$HOME/.cc-launcher/profiles/<name>"
-  $args = @("--settings", "$profileDir/settings.json")
-  if (Test-Path "$profileDir/system-prompt.md") { $args += @("--append-system-prompt-file", "$profileDir/system-prompt.md") }
-  if (Test-Path "$profileDir/mcp.json") { $args += @("--mcp-config", "$profileDir/mcp.json") }
-  claude @args
+  $profileDir = "$HOME\.cc-launcher\profiles\<name>"
+  $claudeArgs = @("--settings", "$profileDir\settings.json")
+  if (Test-Path "$profileDir\system-prompt.md") { $claudeArgs += @("--append-system-prompt-file", "$profileDir\system-prompt.md") }
+  if (Test-Path "$profileDir\mcp.json") { $claudeArgs += @("--mcp-config", "$profileDir\mcp.json") }
+  claude @claudeArgs @PSBoundParameters.Values
 }
 
 function claude-<name>-skip-perms {
-  $profileDir = "$HOME/.cc-launcher/profiles/<name>"
-  $args = @("--settings", "$profileDir/settings.json")
-  if (Test-Path "$profileDir/system-prompt.md") { $args += @("--append-system-prompt-file", "$profileDir/system-prompt.md") }
-  if (Test-Path "$profileDir/mcp.json") { $args += @("--mcp-config", "$profileDir/mcp.json") }
-  claude @args --dangerously-skip-permissions
+  $profileDir = "$HOME\.cc-launcher\profiles\<name>"
+  $claudeArgs = @("--settings", "$profileDir\settings.json")
+  if (Test-Path "$profileDir\system-prompt.md") { $claudeArgs += @("--append-system-prompt-file", "$profileDir\system-prompt.md") }
+  if (Test-Path "$profileDir\mcp.json") { $claudeArgs += @("--mcp-config", "$profileDir\mcp.json") }
+  $claudeArgs += "--dangerously-skip-permissions"
+  claude @claudeArgs @PSBoundParameters.Values
 }
 ```
 
-**写入 PowerShell $PROFILE 的步骤：**
-1. 检查 `$PROFILE` 文件是否存在，不存在则创建（含父目录）
-2. 读取 `$PROFILE` 内容，定位标记区域
-3. 替换标记间内容，或追加到末尾
-4. 提示用户运行 `. $PROFILE` 或重启终端以生效
+**PowerShell 模板要点：**
+- 变量名用 `$claudeArgs`，**不是** `$args` — `$args` 是 PowerShell 自动变量，覆盖它会导致不可预测的行为
+- `--dangerously-skip-permissions` 追加到 `$claudeArgs` 数组内，**不是**放在 `claude @claudeArgs` 后面 — PowerShell 的 splatting `@array` 之后不能追加位置参数
+- 使用 `@PSBoundParameters.Values` 转发用户传入的参数
+
+**写入配置文件的步骤：**
+1. 检查配置文件是否存在，不存在则创建（含父目录）
+2. 读取配置文件内容，定位标记区域
+3. 替换标记间内容，或追加到文件末尾
+4. 提示用户 `source ~/.zshrc`（或对应配置文件）或重启终端以生效
 
 ### 5. 删除 Profile
 
@@ -210,9 +233,13 @@ function claude-<name>-skip-perms {
 
 ## 注意事项
 
-- 配置文件（`.bashrc` / `$PROFILE`）中使用标记（marker）包裹自动生成的内容，避免破坏用户手动配置
+- 配置文件（`~/.zshrc` / `~/.bashrc` / `$PROFILE`）中使用标记（marker）包裹自动生成的内容，避免破坏用户手动配置
 - 生成的函数使用 `$HOME` 而非 `~`
-- Bash 使用 `test -f`，PowerShell 使用 `Test-Path` 检测可选文件是否存在
+- Bash/Zsh 使用 `test -f`，PowerShell 使用 `Test-Path` 检测可选文件是否存在
+- **Bash/Zsh 函数必须使用数组 `local -a` + `"${_args[@]}"`**，不要用字符串拼接 — 字符串方式遇到路径空格会 break，且无法正确转发 `"$@"`
+- **函数末尾必须加 `"$@"` 转发用户参数**，否则 `claude-<name> --append-system-prompt "..."` 等调用会被静默丢弃
 - PowerShell 的 `$PROFILE` 路径通常为 `~\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
+- PowerShell 变量名**不要**用 `$args`（自动变量），用 `$claudeArgs` 等自定义名称
+- PowerShell 的 splatting `@array` 后不能追加位置参数，必须将所有参数放入数组
 - Windows 上 PowerShell 函数名中的 `-` 是合法字符，无需特殊处理
 - API Key 存储在 settings.json 中，注意文件权限

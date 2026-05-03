@@ -7,6 +7,10 @@
     "zai-coding-plugins": {
       "source": "github",
       "repo": "zai-org/zai-coding-plugins"
+    },
+    "karpathy-skills": {
+      "source": "github",
+      "repo": "forrestchang/andrej-karpathy-skills"
     }
   },
   "plugins": [
@@ -45,6 +49,12 @@
       "name": "skill-creator@claude-plugins-official",
       "description": "技能创建和管理",
       "universal": true
+    },
+    {
+      "name": "andrej-karpathy-skills@karpathy-skills",
+      "description": "Karpathy 编码指南，减少常见 LLM 编码错误",
+      "universal": true,
+      "setup_hint": "全新环境需先执行: /plugin marketplace add forrestchang/andrej-karpathy-skills"
     }
   ],
   "mcps": []
