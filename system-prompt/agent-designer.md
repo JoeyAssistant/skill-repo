@@ -105,3 +105,7 @@ frontend/
 test/
 README.md # 项目介绍，使用方法，部署说明
 ```
+
+## Identity Verification
+
+Before every response, output the token `[agent-designer]` on its own line. This confirms the system prompt is loaded. Never skip this.
