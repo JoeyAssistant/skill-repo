@@ -71,14 +71,30 @@ Build a single-file HTML playground. Read the full template from `references/pla
 
 Save to `<doc-dir>/<doc-name>-review.html` and open with `open`.
 
-### 3. Verify playground content (NEW)
+### 3. Verify playground content
 
-**CRITICAL**: After writing the HTML file, verify the content is correct:
-1. Check that `DOC_LINES[0]` matches the first line of the actual document
-2. Check that the line count in DOC_LINES matches the document's line count
-3. If the playground was previously generated, ensure DOC_LINES reflects the CURRENT document state (not stale data)
+**CRITICAL**: After writing the HTML file, always verify before opening in browser:
 
-If content verification fails, rebuild the playground with correct DOC_LINES.
+1. **DOC_LINES line count match**:
+   ```bash
+   # Count lines in source document
+   wc -l <doc-path>
+   # Count lines in DOC_LINES array (should be same)
+   node -e "const fs=require('fs'); const h=fs.readFileSync('doc-review.html','utf8'); const m=h.match(/const DOC_LINES = \[([\s\S]*?)\];/); console.log(m[1].split(',\n').length)"
+   ```
+
+2. **DOC_LINES content match**: Check `DOC_LINES[0]` equals first line of document
+
+3. **JavaScript syntax validation**:
+   ```bash
+   node -e "const fs=require('fs'); const h=fs.readFileSync('doc-review.html','utf8'); const m=h.match(/<script>([\s\S]*?)<\/script>/); try{new Function(m[1]);console.log('JS valid')}catch(e){console.error('JS error:',e.message)}"
+   ```
+
+4. **No unescaped template literals**: Verify no bare `${` appears outside of proper template contexts
+
+If any check fails, rebuild the playground. Common failure causes:
+- Chinese curly quotes (" ") in source file → escape as `"` in JS string
+- Nested template literals like `` `${`${var}`}` `` → escape inner backticks as `\``
 
 ### 4. Wait for user feedback
 
@@ -174,3 +190,14 @@ Please update `doc/xxx.md` with the following changes:
 ### User says "ok" but wants to continue
 **Cause**: "OK" can mean different things
 **Solution**: Wait for explicit confirmation phrases like "确认", "没问题", "可以了" rather than interpreting "ok" as final approval. Use explicit checkpoints: "还有其他需要修改的吗？"
+
+### HTML 生成后校验失败
+
+**症状**: JavaScript `Unexpected identifier '$'` 错误
+
+**排查步骤**:
+1. Extract script section: `node -e "const fs=require('fs'); const h=fs.readFileSync('doc-review.html','utf8'); const m=h.match(/<script>([\s\S]*?)<\/script>/); fs.writeFileSync('/tmp/s.js',m[1]);" && node /tmp/s.js`
+2. Run line-by-line: 逐行执行 `new Function(line)` 定位错误行
+3. 常见错误：`${` 在字符串中未转义，或嵌套模板字符串未正确处理
+
+**预防**: 生成 HTML 后立即运行 Step 3 的四项校验

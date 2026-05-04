@@ -25,12 +25,14 @@ graph TD
 ### data schema
 - 统一在`doc/data-schema.md`中定义基础数据结构
 - 结合业务场景，定义简洁、清晰的数据结构，使用合理数据类型，避免过度设计
-- 提供`python dataclass`定义，提供相应文字描述
+- 提供`python dataclass`定义，以及相应文字描述
 - CLI脚本或backend代码中中直接使用上述定义结构
+- `doc/data-schema.md`文档仅承载业务数据结构定义，不体现业务使用代码或持久化内容
 
 ### data persistence
 - 统一在`doc/data-persistence.md`中定义数据持久化策略，包括文件存储、数据库存储等
 - 持久化方案优先使用json、yaml等简单持久化存储，对于较复杂场景，使用数据库方案存储
+- `doc/data-persistence.md`仅定义存储方案，不涉及CLI内容
 
 ## CLI layer
 
@@ -46,6 +48,11 @@ graph TD
 - use Claude SDK (Anthropic SDK) or Claude Agent SDK
 - use skill /claude-api
 
+## Backend Layer
+设计文档`doc/backend.md`内容
+- backend技术选型
+- REST API设计，针对每一个API，列出接口定义，包括接口功能、输出、输出，使用mermaid语法列出API的调用流程，与内部模块（如agent、cli、data layer）的交互流程
+
 ## Web UI设计
 
 ### 设计与开发流程
@@ -54,13 +61,6 @@ graph TD
 - `doc/frontend/`目录下，针对每一个网页，创建对应UI预览`html`文件，用于与用户讨论、修改、确认UI设计规格，使用mock数据
 - 开发阶段按照`doc/frontend/`下的网页设计规格，一比一同步至`frontend/`目录下，并完成相关前后端开发
 - 每次修改后使用`playwright`验证前端UI修改是否生效，功能正常
-
-## Backend Layer
-### API设计
-<列出API接口定义以及描述，包括每个API的路径，功能描述，输入、输出>
-
-### API时序图
-<使用mermaid语法列出API的调用流程，与内部模块（如agent、cli、data layer）的交互流程>
 
 ## 日志规范
 
