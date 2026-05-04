@@ -66,9 +66,15 @@ The script outputs `<doc-name>-review.html` in the same directory with built-in 
 
 The user reviews in the browser and either:
 - Pastes the generated prompt back (has approved suggestions and/or user comments)
-- Says "OK" / "确认" / "没问题" (document is finalized)
+- Gives explicit completion confirmation
 
 **IMPORTANT**: Do NOT interpret any response as final confirmation unless the user explicitly says so. If the user says things like "继续review" or "再看看", continue the review loop.
+
+**Keywords that mean "continue"** (immediate rebuild, no confirmation check):
+- "继续"、"继续review"、"再来"、"再看看"、"继续看"
+- Any response that doesn't contain "确认完成"、"可以了"、"没问题"
+
+When user says "继续" or similar, skip to Step 6 immediately — do not ask any questions.
 
 ### 4. Preview before applying changes
 
@@ -92,16 +98,30 @@ Parse the user's pasted prompt and apply each change to the document. Changes fa
 After applying changes:
 1. Re-read the updated document
 2. Generate new suggestions (don't repeat already-addressed items)
-3. Write updated JSON and re-run the build script
-4. Open in browser
+3. **Before generating new HTML, delete any existing review HTML in the doc directory** — stale files cause "内容为空" bugs
+4. Write updated JSON and re-run the build script
+5. Open in browser
 
 If no new suggestions are warranted, write JSON with an empty `suggestions` array — the playground will show: "No items match this filter" and the user can still add inline comments.
 
 ### 7. Explicit confirmation check
 
-Ask: "还有其他需要修改的吗？确认完成后我会删除 review HTML 文件。"
+Ask the user to explicitly choose one of two actions:
 
-Repeat steps 3-6 until user confirms completion.
+```
+本次 review 完成了吗？
+- 如果还需要修改 → 告诉我具体内容，我会继续
+- 如果已完成 → 说"确认完成"，我会删除临时文件并结束
+```
+
+**Only these phrases trigger cleanup and exit:**
+- "确认完成"、"可以了"、"没问题"、"完成了"
+
+**Everything else is "continue":**
+- "继续"、"再看看"、"还需要改"、"还没完"等任何非完成确认
+- If user says anything other than explicit completion phrases, rebuild and continue (Step 6)
+
+Repeat steps 3-6 until user explicitly confirms completion.
 
 ## When NOT to use this skill
 
