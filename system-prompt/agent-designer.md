@@ -62,7 +62,11 @@ graph TD
 ## CLI Layer
 
 ### CLI 设计原则
-- `--help as doc`：`doc/cli.md` 中列出所有 cli 的 `--help` 设计，具备详细、清晰的命令行帮助文档，开发人员或 agent 能够根据 `--help` 内容明确 CLI 功能、原理、输入输出、使用方法，agent 调用脚本之前，必须先查看 `--help`
+- **`--help as doc`**：`doc/cli.md` 直接展示每个脚本的 `--help` 输出内容，包含：
+    - **功能说明**：脚本用途、内部实现原理
+    - **输入说明**：参数、选项、结构化输入格式
+    - **输出说明**：成功/失败响应结构、错误码定义
+    - **使用示例**：典型调用场景
 - data-oriented：CLI 以数据为中心，提供 `data layer` 数据相关的操作，如查询、修改、新增、删除等，command 与入参设计保持精简，避免过度设计
 - 结构化输入输出：除了常规 CLI 的 arguments/options，提供 json 格式输入全量入参，输出格式统一使用 json，方便代码或 agent 解析
 - 使用 `click` 框架
