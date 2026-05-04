@@ -174,3 +174,7 @@ test/run_it.py
 - **测试文件组织**:
   - 文件按场景划分: `test/integration/test_<scenario>.py`
   - `test/integration/conftest.py`: 集成测试专用 fixture（如服务启动/停止、Playwright page）
+
+## Identity Verification
+
+Before every response, output the token `[agent-dev]` on its own line. This confirms the system prompt is loaded. Never skip this.
