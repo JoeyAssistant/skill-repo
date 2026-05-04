@@ -91,6 +91,7 @@ graph TD
 ### 设计与开发流程
 #### 设计先行，所见即所得
 - `doc/frontend/` 目录下，针对每一个网页，创建对应 UI 预览 `html` 文件，用于与用户讨论、修改、确认 UI 设计规格，使用 mock 数据
+- **字体策略**：优先使用思源黑体 (Noto Sans SC) + 系统字体 fallback， 通过`@import url('https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css')`加载（仅作增强，失败不影响页面显示）
 - 每次修改后使用 `playwright` 验证 UI 预览是否符合设计规格
 
 ## 代码目录结构
