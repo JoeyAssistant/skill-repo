@@ -172,8 +172,8 @@ function renderDocument() {
   let html = ''; let inCodeBlock = false;
   DOC_LINES.forEach((line, i) => {
     const lineNum = i + 1;
-    if (line.trim().startsWith('```')) { inCodeBlock = !inCodeBlock; html += '<div class="doc-line ' + (inCodeBlock ? 'code-start' : 'code-end') + '"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
-    if (inCodeBlock) { html += '<div class="doc-line code-content"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
+    if (line.trim().startsWith('```')) { inCodeBlock = !inCodeBlock; html += '<div class="doc-line ' + (inCodeBlock ? 'code-start' : 'code-end') + '" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
+    if (inCodeBlock) { html += '<div class="doc-line code-content" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
     const cls = getLineClasses(lineNum);
     let rendered = escHtml(line);
     if (line.startsWith('# ')) rendered = '<h1-line>' + rendered + '</h1-line>';
@@ -186,7 +186,7 @@ function renderDocument() {
     html += '</div>';
     if (state.editingLine === lineNum) { html += '<div class="inline-comment"><textarea id="inlineTextarea" placeholder="Type your comment for Line ' + lineNum + '..."></textarea><div class="inline-actions"><button class="save-btn" data-save="' + lineNum + '">Save</button><button class="cancel-btn" data-cancel="' + lineNum + '">Cancel</button></div></div>'; }
     const uc = getUserCommentForLine(lineNum);
-    if (uc && state.editingLine !== lineNum) { html += '<div class="inline-comment-display"><span class="comment-icon">&#x1f4ac;</span><div class="comment-body"><div class="comment-text">' + escHtml(uc.text) + '</div><div class="comment-actions"><button data-edituc="' + lineNum + '">edit</button><button class="del-btn" data-deluc="' + lineNum + '">delete</button></div></div></div>'; }
+    if (uc && state.editingLine !== lineNum) { html += '<div class="inline-comment-display" data-line="' + lineNum + '"><span class="comment-icon">&#x1f4ac;</span><div class="comment-body"><div class="comment-text">' + escHtml(uc.text) + '</div><div class="comment-actions"><button data-edituc="' + lineNum + '">edit</button><button class="del-btn" data-deluc="' + lineNum + '">delete</button></div></div></div>'; }
   });
   panel.innerHTML = html;
   if (state.editingLine) { const ta = document.getElementById('inlineTextarea'); if (ta) ta.focus(); }
@@ -204,11 +204,13 @@ function handleDocClick(e) {
   if (editBtn) { e.stopPropagation(); state.editingLine = parseInt(editBtn.dataset.edituc); renderDocument(); return; }
   const delBtn = e.target.closest('[data-deluc]');
   if (delBtn) { e.stopPropagation(); state.userComments = state.userComments.filter(c => c.lineNum !== parseInt(delBtn.dataset.deluc)); updateAll(); return; }
-  const lineEl = e.target.closest('.doc-line:not(.code-start):not(.code-end):not(.code-content)');
+  const lineEl = e.target.closest('.doc-line, .inline-comment-display');
   if (lineEl && !e.target.closest('.add-comment-btn')) {
     const lineNum = parseInt(lineEl.dataset.line);
     const s = getAutoSuggestionForLine(lineNum);
-    if (s) { state.activeSuggestionId = s.id; renderSuggestions(); const card = document.querySelector('.suggestion-card[data-id="' + s.id + '"]'); if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    if (s) { state.activeSuggestionId = s.id; renderSuggestions(); }
+    const el = document.querySelector('.doc-line[data-line="' + lineNum + '"]');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 

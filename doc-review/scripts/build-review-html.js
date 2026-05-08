@@ -46,6 +46,28 @@ if (!docPath || !Array.isArray(docLines)) {
   process.exit(1);
 }
 
+// Validate suggestion targetText matches actual line content
+let hasTargetMismatch = false;
+for (const s of suggestions) {
+  const lineIdx = (s.targetLineStart || 1) - 1;
+  const actualLine = docLines[lineIdx] || '';
+  const targetText = s.targetText || '';
+  // Check if targetText is a substring of the actual line (handles escaping differences)
+  const normalizedLine = actualLine.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\\\/g, '\\').replace(/\\'/g, "'");
+  if (targetText && !normalizedLine.includes(targetText)) {
+    console.error(`ERROR: suggestion '${s.id}' targetText mismatch`);
+    console.error(`  lineRef: ${s.lineRef}`);
+    console.error(`  targetLineStart: ${s.targetLineStart}`);
+    console.error(`  expected (first 60 chars): "${actualLine.slice(0, 60)}"`);
+    console.error(`  targetText (first 60 chars): "${targetText.slice(0, 60)}"`);
+    hasTargetMismatch = true;
+  }
+}
+if (hasTargetMismatch) {
+  console.error('Target text mismatch errors detected. Fix the JSON before rebuilding.');
+  process.exit(1);
+}
+
 // Read the HTML template
 const templatePath = path.join(scriptDir, '..', 'references', 'review-template.html');
 let template;
