@@ -24,7 +24,7 @@ if (args.length < 1) {
   console.error('    "docLines": ["line1", "line2", ...],');
   console.error('    "suggestions": [{');
   console.error('      "id": "a1",');
-  console.error('      "lineRef": "Line 5-27",');
+  console.error('      "lineRef": "Line 5",');
   console.error('      "targetLineStart": 5,');
   console.error('      "targetLineEnd": 27,');
   console.error('      "targetText": "short excerpt",');
@@ -111,7 +111,7 @@ const docLinesJs = docLines.map(l => `  '${escJs(l)}'`).join(',\n');
 // Build suggestions JS array
 const suggestionsJs = suggestions.map((s, i) => {
   const id = s.id || `a${i + 1}`;
-  const lineRef = s.lineRef || `Line ${s.targetLineStart}${s.targetLineEnd !== s.targetLineStart ? '-' + s.targetLineEnd : ''}`;
+  const lineRef = s.lineRef || `Line ${s.targetLineStart}`;
   return `  {
     id: '${escJs(id)}',
     lineRef: '${escJs(lineRef)}',
