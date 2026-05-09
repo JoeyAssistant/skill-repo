@@ -128,6 +128,54 @@ Parse the user's pasted prompt and apply each change to the document. Changes fa
 | My Comments | Apply the user's comment as instruction |
 | Rejected | Skip (listed for context only) |
 
+**Applying strategy — Edit tool vs Python fallback:**
+
+Prefer the Edit tool for small, unique string replacements. But the Edit tool **fails reliably** on `old_string` containing markdown tables (`|`), backticks (`` ` ``), or mixed special characters. When Edit fails twice on the same block, switch to Python line-number replacement:
+
+```bash
+python3 << 'PYEOF'
+with open('<doc-path>', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+
+# Find target lines by content search
+start = None
+end = None
+for i, line in enumerate(lines):
+    if '<unique marker>' in line:
+        start = i
+    if start is not None and '<end marker>' in line:
+        end = i
+        break
+
+# Replace lines[start:end+1] with new content
+new_lines = [
+    '### New Section Title\n',
+    '\n',
+    '```python\n',
+    '@dataclass\n',
+    'class Example:\n',
+    '    field: str  # description\n',
+    '```\n',
+]
+
+lines[start:end+1] = new_lines
+
+with open('<doc-path>', 'w', encoding='utf-8') as f:
+    f.writelines(lines)
+print(f'Replaced lines {start+1}-{end+1}')
+PYEOF
+```
+
+**Cross-reference check after renames:**
+
+When a suggestion renames a field/class/enumeration, grep for ALL occurrences before moving on:
+
+```bash
+grep -n '<old_name>' <doc-path>
+```
+
+Update every match. Common cross-reference locations: mermaid diagrams, code blocks, inline comments, data examples.
+
 ### 6. Rebuild playground
 
 After applying changes:
