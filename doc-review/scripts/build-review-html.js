@@ -3,10 +3,19 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync, spawn } = require('child_process');
+const os = require('os');
+const http = require('http');
 
 const args = process.argv.slice(2);
+const serveMode = args.includes('--serve');
+if (serveMode) args.splice(args.indexOf('--serve'), 1);
+
 if (args.length < 1) {
-  console.error('Usage: node build-review-html.js <input.json> [output.html]');
+  console.error('Usage: node build-review-html.js [--serve] <input.json> [output.html]');
+  console.error('');
+  console.error('Options:');
+  console.error('  --serve    Auto-detect environment and open/serve the HTML');
   console.error('');
   console.error('Input JSON format:');
   console.error('  {');
@@ -52,7 +61,6 @@ for (const s of suggestions) {
   const lineIdx = (s.targetLineStart || 1) - 1;
   const actualLine = docLines[lineIdx] || '';
   const targetText = s.targetText || '';
-  // Check if targetText is a substring of the actual line (handles escaping differences)
   const normalizedLine = actualLine.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\\\/g, '\\').replace(/\\'/g, "'");
   if (targetText && !normalizedLine.includes(targetText)) {
     console.error(`ERROR: suggestion '${s.id}' targetText mismatch`);
@@ -76,6 +84,16 @@ try {
 } catch (e) {
   console.error('Failed to read template:', templatePath, e.message);
   process.exit(1);
+}
+
+// Read mermaid.min.js for inlining
+const mermaidPath = path.join(scriptDir, '..', 'references', 'mermaid.min.js');
+let mermaidJs = '';
+try {
+  mermaidJs = fs.readFileSync(mermaidPath, 'utf8');
+  console.log('Mermaid JS: loaded (' + Math.round(mermaidJs.length / 1024) + ' KB)');
+} catch (e) {
+  console.warn('Warning: mermaid.min.js not found at', mermaidPath, '- mermaid diagrams will not render');
 }
 
 // Escape a string for use inside a JS single-quoted string
@@ -108,20 +126,31 @@ const suggestionsJs = suggestions.map((s, i) => {
   }`;
 }).join(',\n');
 
-// Replace placeholders in template
-const html = template
-  .replace(/<!-- FILL: doc filename -->/g, path.basename(docPath))
-  .replace(/<!-- FILL: round number -->/g, String(round))
-  .replace(/<!-- FILL: doc path -->/g, escJs(docPath))
-  .replace(/<!-- FILL: doc filepath -->/g, escJs(docPath))
-  .replace(/\/\* FILL: DOC_LINES \*\//, docLinesJs)
-  .replace(/\/\* FILL: autoSuggestions \*\//, suggestionsJs);
+// Mermaid init code
+const mermaidInit = mermaidJs
+  ? `mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});`
+  : '/* mermaid not available */';
 
-// Validate JS syntax
+// Replace placeholders in template
+// Use function replacers to avoid $&/$`/$' special pattern interpretation
+const html = template
+  .replace(/\/\* FILL: MERMAID_JS \*\//, () => mermaidJs || '/* mermaid not loaded */')
+  .replace(/\/\* FILL: MERMAID_INIT \*\//, () => mermaidInit)
+  .replace(/<!-- FILL: doc filename -->/g, () => path.basename(docPath))
+  .replace(/<!-- FILL: round number -->/g, () => String(round))
+  .replace(/<!-- FILL: doc path -->/g, () => escJs(docPath))
+  .replace(/<!-- FILL: doc filepath -->/g, () => escJs(docPath))
+  .replace(/\/\* FILL: DOC_LINES \*\//, () => docLinesJs)
+  .replace(/\/\* FILL: autoSuggestions \*\//, () => suggestionsJs);
+
+// Validate JS syntax (skip mermaid block — known-good library code)
 try {
-  const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
-  if (scriptMatch) {
-    new Function(scriptMatch[1]);
+  const scriptMatches = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  for (const match of scriptMatches) {
+    const code = match[1];
+    // Skip large blocks (mermaid.min.js) and empty/template blocks
+    if (code.length > 200000 || code.trim().startsWith('/*') || code.trim().length < 50) continue;
+    new Function(code);
   }
   console.log('JS syntax validation: OK');
 } catch (e) {
@@ -146,3 +175,103 @@ if (htmlLinesMatch) {
 
 console.log(`Generated: ${outputPath}`);
 console.log(`Document: ${docPath} (${actualLines} lines, ${suggestions.length} suggestions, round ${round})`);
+
+// Serve or open the file
+if (serveMode) {
+  const filename = path.basename(outputPath);
+  const dir = path.dirname(outputPath);
+
+  if (process.platform === 'darwin') {
+    try {
+      execSync(`open "${outputPath}"`, { stdio: 'inherit' });
+      console.log('Opened in browser (macOS)');
+    } catch (e) {
+      console.error('Failed to open browser:', e.message);
+    }
+  } else if (process.env.DISPLAY && hasCommand('xdg-open')) {
+    try {
+      execSync(`xdg-open "${outputPath}"`, { stdio: 'inherit' });
+      console.log('Opened in browser (Linux GUI)');
+    } catch (e) {
+      console.error('Failed to open browser:', e.message);
+    }
+  } else {
+    serveWithPython(dir, filename);
+  }
+}
+
+function hasCommand(cmd) {
+  try { execSync(`which ${cmd} 2>/dev/null`, { encoding: 'utf8' }); return true; }
+  catch { return false; }
+}
+
+function serveWithPython(dir, filename) {
+  const port = findAvailablePort(8123, 8999);
+  const hostname = os.hostname();
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+
+  const hasPython3 = hasCommand('python3');
+  const pythonCmd = hasPython3 ? 'python3' : (hasCommand('python') ? 'python' : null);
+
+  if (!pythonCmd) {
+    console.error('No Python found. Cannot start HTTP server.');
+    console.log(`File is at: ${path.join(dir, filename)}`);
+    console.log('Please copy it to a machine with a browser.');
+    return;
+  }
+
+  const server = spawn(pythonCmd, ['-m', 'http.server', String(port)], {
+    cwd: dir,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    detached: false
+  });
+
+  console.log('\n=== HTTP Server Started (headless Linux) ===');
+  console.log(`Open in your browser:`);
+  console.log(`  http://localhost:${port}/${filename}`);
+  for (const ip of ips) {
+    console.log(`  http://${ip}:${port}/${filename}`);
+  }
+  console.log('Press Ctrl+C to stop the server.\n');
+
+  server.stdout.on('data', (data) => {
+    const msg = data.toString().trim();
+    if (msg) console.log('[http]', msg);
+  });
+  server.stderr.on('data', (data) => {
+    const msg = data.toString().trim();
+    if (msg && !msg.includes('Serving HTTP')) console.log('[http]', msg);
+  });
+
+  process.on('SIGINT', () => {
+    server.kill();
+    process.exit(0);
+  });
+  process.on('SIGTERM', () => {
+    server.kill();
+    process.exit(0);
+  });
+
+  // Keep the process alive
+  server.on('close', () => process.exit(0));
+}
+
+function findAvailablePort(start, end) {
+  for (let port = start; port <= end; port++) {
+    try {
+      const s = require('net').createServer();
+      s.listen(port);
+      s.close();
+      return port;
+    } catch {}
+  }
+  return 8080;
+}

@@ -31,36 +31,71 @@ Read the target document. Generate 3-7 review suggestions per round (fewer if do
 
 Write a JSON file and run the build script. **Do NOT manually construct HTML.**
 
-1. Write a JSON file to `<doc-dir>/<doc-name>-review.json`:
+**IMPORTANT — JSON construction rules:**
+- `targetLineStart` and `targetLineEnd` are **1-indexed** (matching the line numbers shown by Read tool). The build script converts to 0-indexed internally via `targetLineStart - 1`.
+- `targetText` must be a **substring** of the actual line content at `targetLineStart`. Use the first ~60 characters of that line.
+- `docLines` must be the **complete** file content as a string array (0-indexed). Use Python `f.read().splitlines()`.
 
-```json
-{
-  "docPath": "path/to/doc.md",
-  "round": 1,
-  "docLines": ["line1", "line2", "..."],
-  "suggestions": [
-    {
-      "id": "a1",
-      "lineRef": "Line 5-27",
-      "targetLineStart": 5,
-      "targetLineEnd": 27,
-      "targetText": "first ~60 chars of target content",
-      "suggestion": "what to improve and why",
-      "category": "clarity"
-    }
-  ]
-}
-```
+**MUST use Python to generate the JSON** — do NOT manually write line numbers or targetText. Manual construction causes indexing errors and repeated build failures.
 
-2. Run the build script:
+Run a single Python script to read the source doc, compute all indices, and write the JSON:
 
 ```bash
-node ~/.claude/skills/doc-review/scripts/build-review-html.js <doc-dir>/<doc-name>-review.json
+python3 -c "
+import json
+with open('<doc-path>', 'r') as f:
+    lines = f.read().splitlines()
+
+suggestions = []
+for each suggestion:
+    # Find the target line by content search
+    for i, line in enumerate(lines):
+        if '<unique substring of target line>' in line:
+            suggestions.append({
+                'id': 'a1',
+                'lineRef': f'Line {i+1}',
+                'targetLineStart': i + 1,  # 1-indexed
+                'targetLineEnd': i + 1,
+                'targetText': line[:60],    # first 60 chars of actual line
+                'suggestion': '...',
+                'category': 'clarity'
+            })
+            break
+
+data = {
+    'docPath': '<doc-path>',
+    'round': 1,
+    'docLines': lines,
+    'suggestions': suggestions
+}
+with open('<doc-dir>/<doc-name>-review.json', 'w') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+# Validate before returning
+for s in suggestions:
+    idx = s['targetLineStart'] - 1
+    assert lines[idx].startswith(s['targetText'][:20]) or s['targetText'] in lines[idx], f'{s[\"id\"]} mismatch'
+print(f'Validated {len(suggestions)} suggestions, {len(lines)} lines')
+"
+```
+
+Then run the build script:
+
+```bash
+node ~/.claude/skills/doc-review/scripts/build-review-html.js --serve <doc-dir>/<doc-name>-review.json
 ```
 
 The script outputs `<doc-name>-review.html` in the same directory with built-in validation (JS syntax + line count).
 
-3. Open in browser: `open <doc-dir>/<doc-name>-review.html`
+The `--serve` flag auto-detects the environment:
+   - **macOS**: opens in browser with `open`
+   - **Linux with GUI** (`$DISPLAY` + `xdg-open`): opens in browser with `xdg-open`
+   - **Headless Linux**: starts a Python HTTP server, prints the URL to access from your local browser
+
+   If you only want to build without serving, omit `--serve`:
+   ```bash
+   node ~/.claude/skills/doc-review/scripts/build-review-html.js <doc-dir>/<doc-name>-review.json
+   ```
 
 ### 3. Wait for user feedback
 
@@ -99,8 +134,7 @@ After applying changes:
 1. Re-read the updated document
 2. Generate new suggestions (don't repeat already-addressed items)
 3. **Before generating new HTML, delete any existing review HTML in the doc directory** — stale files cause "内容为空" bugs
-4. Write updated JSON and re-run the build script
-5. Open in browser
+4. Write updated JSON and re-run the build script with `--serve`
 
 If no new suggestions are warranted, write JSON with an empty `suggestions` array — the playground will show: "No items match this filter" and the user can still add inline comments.
 

@@ -45,6 +45,9 @@
   .doc-line .add-comment-btn:hover { border-color: var(--blue); color: var(--blue); }
   .doc-line.code-start, .doc-line.code-end { background: var(--bg2) !important; border-left-color: transparent !important; opacity: 1 !important; cursor: default; }
   .doc-line.code-content { background: var(--bg2) !important; border-left-color: transparent !important; opacity: 1 !important; cursor: default; }
+  .doc-line.mermaid-block { background: var(--bg2) !important; border-left-color: var(--purple) !important; padding: 8px 16px 8px 0; }
+  .doc-line.mermaid-block pre.mermaid { margin: 0; }
+  .doc-line.mermaid-block svg { max-width: 100%; height: auto; }
   .doc-line h1-line { font-size: 20px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif; color: #fff; line-height: 28px; }
   .doc-line h2-line { font-size: 16px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif; color: #fff; line-height: 26px; }
   .doc-line h3-line { font-size: 14px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif; color: #fff; }
@@ -139,6 +142,10 @@
   <div class="prompt-header"><span>Prompt Output</span><button class="copy-btn" id="copyBtn">Copy</button></div>
   <div class="prompt-content" id="promptContent"><div class="placeholder">Click a line to add a comment, or approve suggestions to generate a prompt...</div></div>
 </div>
+<script>/* FILL: MERMAID_JS */</script>
+<script>
+/* FILL: MERMAID_INIT */
+</script>
 <script>
 const DOC_LINES = [
 /* FILL: DOC_LINES */
@@ -167,12 +174,23 @@ function getLineClasses(lineNum) {
   return classes.join(' ');
 }
 
+let _mermaidNeedsRender = false;
 function renderDocument() {
   const panel = document.getElementById('docPanel');
-  let html = ''; let inCodeBlock = false;
+  let html = ''; let inCodeBlock = false; let inMermaid = false; let mermaidLines = []; let mermaidStartLine = 0;
+  panel.removeEventListener('click', handleDocClick);
   DOC_LINES.forEach((line, i) => {
     const lineNum = i + 1;
-    if (line.trim().startsWith('```')) { inCodeBlock = !inCodeBlock; html += '<div class="doc-line ' + (inCodeBlock ? 'code-start' : 'code-end') + '" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
+    const trimmed = line.trim();
+    if (inMermaid) {
+      if (trimmed.startsWith('```')) {
+        html += '<div class="doc-line mermaid-block" data-line="' + mermaidStartLine + '"><span class="line-num">' + mermaidStartLine + '</span><span class="line-content"><pre class="mermaid">' + escHtml(mermaidLines.join('\n')) + '</pre></span></div>';
+        inMermaid = false; mermaidLines = []; _mermaidNeedsRender = true;
+      } else { mermaidLines.push(line); }
+      return;
+    }
+    if (trimmed === '```mermaid') { inMermaid = true; mermaidStartLine = lineNum; return; }
+    if (trimmed.startsWith('```')) { inCodeBlock = !inCodeBlock; html += '<div class="doc-line ' + (inCodeBlock ? 'code-start' : 'code-end') + '" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
     if (inCodeBlock) { html += '<div class="doc-line code-content" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span><span class="line-content">' + escHtml(line) + '</span></div>'; return; }
     const cls = getLineClasses(lineNum);
     let rendered = escHtml(line);
@@ -189,6 +207,7 @@ function renderDocument() {
     if (uc && state.editingLine !== lineNum) { html += '<div class="inline-comment-display" data-line="' + lineNum + '"><span class="comment-icon">&#x1f4ac;</span><div class="comment-body"><div class="comment-text">' + escHtml(uc.text) + '</div><div class="comment-actions"><button data-edituc="' + lineNum + '">edit</button><button class="del-btn" data-deluc="' + lineNum + '">delete</button></div></div></div>'; }
   });
   panel.innerHTML = html;
+  if (_mermaidNeedsRender && typeof mermaid !== 'undefined') { mermaid.run(); _mermaidNeedsRender = false; }
   if (state.editingLine) { const ta = document.getElementById('inlineTextarea'); if (ta) ta.focus(); }
   panel.addEventListener('click', handleDocClick);
 }
@@ -276,9 +295,28 @@ document.addEventListener('keydown', (e) => {
   }
 });
 document.getElementById('copyBtn').addEventListener('click', () => {
-  navigator.clipboard.writeText(document.getElementById('promptContent').textContent).then(() => { const btn = document.getElementById('copyBtn'); btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500); });
+  copyText(document.getElementById('promptContent').textContent);
 });
 function escHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onCopySuccess, onCopyFallback);
+  } else {
+    onCopyFallback();
+  }
+  function onCopyFallback() {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); onCopySuccess(); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+  function onCopySuccess() {
+    var btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  }
+}
 updateAll();
 </script>
 </body>
