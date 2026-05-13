@@ -29,6 +29,89 @@ graph TD
     CLI <--> Data
 ```
 
+## Feature Management
+
+### 目录结构
+
+```
+.features/
+  index.md                          # 需求索引
+  <NNN>-<feature-name>/
+    DESIGN.md                       # 设计文档（从模板生成）
+    doc-changes/                    # doc 变更 diff 文件
+      <filename>.diff
+```
+
+- `.features/` 在项目根目录，纳入 git 管理
+- 编号 `NNN` 三位数字，自动递增（从 index.md 取 max + 1）
+- 目录名 kebab-case，如 `001-income-module`
+
+### index.md 格式
+
+```markdown
+# Feature Index
+
+| # | Name | Title | Priority | Status | Created | Updated |
+|---|------|-------|----------|--------|---------|---------|
+| 001 | income-module | 收入管理模块：记录工资/奖金收入流水 | P1 | done | 2026-05-12 | 2026-05-13 |
+```
+
+### 生命周期
+
+`draft` → `designing` → `approved` → `implementing` → `done` → `archived`
+
+| 状态 | 含义 | 触发时机 |
+|------|------|----------|
+| draft | 需求提出，待讨论 | 用户提出新需求 |
+| designing | 设计进行中，DESIGN.md 撰写中 | 开始撰写设计文档 |
+| approved | 设计通过 review，diff 通过审阅，待开发 | 所有 doc-changes/*.diff 审阅通过 |
+| implementing | 开发中 | agent-developer 开始编码 |
+| done | 开发完成，已合并 | agent-developer 确认完成 |
+| archived | 归档 | 需求不再迭代 |
+
+### DESIGN.md 模板
+
+```markdown
+# <Title>
+
+## 概述
+<!-- 背景、目标、与现有模块的关系 -->
+
+## 数据结构
+<!-- 枚举 + dataclass 定义 + mermaid 结构图 -->
+
+## CLI 命令
+<!-- --help 输出 + json-input 格式 + 输出示例 -->
+
+## 数据持久化
+<!-- 文件格式 + 初始内容 + 空数据行为 -->
+
+## 与现有模块的关系
+<!-- mermaid 图 + 依赖/被依赖说明 -->
+
+## Doc 变更清单
+<!-- 列出受影响的 doc 文件及变更类型，实际 diff 在 doc-changes/ 中 -->
+```
+
+### 工作流程
+
+收到新需求时，按以下步骤执行：
+
+1. **创建 feature**：在 index.md 新增一行（status=draft），创建 `doc-changes/` 目录
+2. **需求讨论**：与用户确认需求范围、数据结构、CLI 设计
+3. **撰写设计**：更新 status=designing，撰写 DESIGN.md
+4. **Review 设计文档**：使用 doc-review skill 对 DESIGN.md 进行 review，直至确认完成
+5. **生成 diff**：读取当前 doc 文件，基于 DESIGN.md 内容生成 `doc-changes/*.diff`（unified diff 格式）
+6. **Review diff**：逐个 diff 文件向用户展示，说明变更意图，用户逐一审阅通过
+7. **应用变更**：所有 diff 审阅通过后，将变更写入 doc 文件，更新 status=approved
+
+### diff 文件规范
+
+- 格式：标准 unified diff（`--- a/doc/xxx.md` / `+++ b/doc/xxx.md` / `@@ hunk @@`）
+- 基于 doc 文件当前内容生成，确保上下文行准确
+- 每个 doc 文件一个 `.diff` 文件，放在 `doc-changes/` 目录下
+- diff 只包含变更部分，不包含无关行
+
 ## 设计文档输出规范
 
 设计完成后，按以下结构输出文档到 `doc/` 目录：
