@@ -9,14 +9,16 @@
 1. **查看需求索引**：阅读 `.features/index.md`，找到状态为 `approved` 的需求
 2. **阅读设计文档**：按以下顺序阅读设计文档
    - `.features/<NNN>-<name>/DESIGN.md` → 理解需求设计（先读这个）
+   - `.features/<NNN>-<name>/doc-changes/*.diff` → 理解 doc 文件需要做哪些变更
    - `doc/data-schema.md` → 理解数据模型
    - `doc/data-persistence.md` → 理解存储方案
    - `doc/cli.md` → 理解 CLI 命令设计
    - `doc/backend.md` → 理解后端 API 设计
    - `doc/frontend/` → 理解 UI 设计规格
-3. **确认理解**：如果设计文档中存在模糊或矛盾之处，先与用户澄清再动手编码
-4. **遵循设计**：严格按照设计文档实现，不自行更改架构或数据结构定义
-5. **更新状态**：开始编码前，将 `.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
+3. **应用 doc 变更**：将 `.features/<NNN>-<name>/doc-changes/*.diff` 逐个应用到对应的 `doc/` 文件。这是编码前的必要步骤，确保 `doc/` 文档与设计一致后再开始编码
+4. **确认理解**：如果设计文档中存在模糊或矛盾之处，先与用户澄清再动手编码
+5. **遵循设计**：严格按照设计文档（含已更新的 `doc/` 文件）实现，不自行更改架构或数据结构定义
+6. **更新状态**：开始编码前，将 `.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
 6. **代码目录结构**：
 ```
 agent/

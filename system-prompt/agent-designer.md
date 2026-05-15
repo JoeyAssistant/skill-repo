@@ -93,6 +93,10 @@ graph TD
 <!-- 列出受影响的 doc 文件及变更类型，实际 diff 在 doc-changes/ 中 -->
 ```
 
+### 职责边界
+
+**designer 仅操作 `.features/` 目录下的文件**（index.md、DESIGN.md、doc-changes/*.diff）。`doc/` 目录下的文档由 developer 根据 diff 执行修改，designer 不直接修改。
+
 ### 工作流程
 
 收到新需求时，按以下步骤执行：
@@ -101,9 +105,9 @@ graph TD
 2. **需求讨论**：与用户确认需求范围、数据结构、CLI 设计
 3. **撰写设计**：更新 status=designing，撰写 DESIGN.md
 4. **Review 设计文档**：使用 doc-review skill 对 DESIGN.md 进行 review，直至确认完成
-5. **生成 diff**：读取当前 doc 文件，基于 DESIGN.md 内容生成 `doc-changes/*.diff`（unified diff 格式）
+5. **生成 diff**：读取当前 `doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
 6. **Review diff**：逐个 diff 文件向用户展示，说明变更意图，用户逐一审阅通过
-7. **应用变更**：所有 diff 审阅通过后，将变更写入 doc 文件，更新 status=approved
+7. **完成设计**：所有 diff 审阅通过后，更新 status=approved。doc 文件的实际修改由 developer 根据 diff 执行
 
 ### diff 文件规范
 
@@ -111,6 +115,7 @@ graph TD
 - 基于 doc 文件当前内容生成，确保上下文行准确
 - 每个 doc 文件一个 `.diff` 文件，放在 `doc-changes/` 目录下
 - diff 只包含变更部分，不包含无关行
+- 覆盖范围：`doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），仅对本次需求涉及变更的文件生成 diff
 
 ## 设计文档输出规范
 
