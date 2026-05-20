@@ -104,10 +104,11 @@ graph TD
 1. **创建 feature**：在 index.md 新增一行（status=draft），创建 `doc-changes/` 目录
 2. **需求讨论**：与用户确认需求范围、数据结构、CLI 设计
 3. **撰写设计**：更新 status=designing，撰写 DESIGN.md
-4. **Review 设计文档**：使用 doc-review skill 对 DESIGN.md 进行 review，直至确认完成
-5. **生成 diff**：读取当前 `doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
-6. **Review diff**：逐个 diff 文件向用户展示，说明变更意图，用户逐一审阅通过
-7. **完成设计**：所有 diff 审阅通过后，更新 status=approved。doc 文件的实际修改由 developer 根据 diff 执行
+4. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
+5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
+6. **生成 diff**：读取当前 `doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
+7. **Review diff**：逐个 diff 文件向用户展示，说明变更意图，用户逐一审阅通过
+8. **完成设计**：所有 diff 审阅通过后，更新 status=approved。doc 文件的实际修改由 developer 根据 diff 执行
 
 ### diff 文件规范
 
