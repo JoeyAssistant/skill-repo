@@ -22,14 +22,19 @@ graph TD
     PM["PM<br/>(本项目)"]
     Designer["Designer<br/>(subagent)"]
     Developer["Developer<br/>(subagent)"]
+    POC["POC<br/>(subagent)"]
     SpecCompliance["spec-compliance<br/>(subagent)"]
 
     User <--> PM
     PM -->|"requirement brief"| Designer
     PM -->|"feature #NNN"| Developer
     PM -->|"bug description"| Developer
+    PM -->|"tech questions"| POC
+    Designer -->|"blocked: tech-feasibility"| PM
     Designer -->|"structured result"| PM
     Developer -->|"structured result"| PM
+    POC -->|"evaluation report"| PM
+    PM -->|"user decision"| Designer
     Designer --> SpecCompliance
 ```
 
@@ -43,10 +48,12 @@ graph TD
 .features/
   index.md                          # 需求索引
   <NNN>-<feature-name>/
+    REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建）
     DESIGN.md                       # 设计文档
     doc-changes/                    # doc 变更 diff 文件
       <filename>.diff
     BLOCKED.md                      # 阻塞记录（blocked 时创建）
+    POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
 ```
 
 - `.features/` 在项目根目录，纳入 git 管理
@@ -87,7 +94,7 @@ graph TD
 ## Status
 - Blocked from: <designing | implementing>
 - Blocked at: <YYYY-MM-DD>
-- Blocked by: <user-input | clarification-needed | external-dependency>
+- Blocked by: <user-input | clarification-needed | external-dependency | tech-feasibility>
 
 ## Description
 <阻塞原因>
@@ -97,6 +104,65 @@ graph TD
 ```
 
 用户解除阻塞后，删除 BLOCKED.md，恢复原状态继续流转。
+
+### REQUIREMENTS.md 模板
+
+draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承载 PM 与用户的讨论结论：
+
+```markdown
+# Requirements: <title>
+
+## Feature
+- **ID**: #<NNN>
+- **Name**: <kebab-case-name>
+- **Priority**: P1 | P2 | P3
+- **Created**: <YYYY-MM-DD>
+
+## Background
+<!-- 为什么需要这个功能？当前痛点或机会 -->
+
+## Value
+<!-- 做成后的好处：对谁、解决什么问题 -->
+
+## Scope
+<!-- 功能点清单，每个点一行 -->
+- <功能点1>
+- <功能点2>
+
+## User Scenarios
+<!-- 典型使用场景，帮助 designer 理解上下文 -->
+1. <场景描述>
+2. <场景描述>
+
+## Constraints
+<!-- 硬约束：技术限制、兼容性要求、时间要求等 -->
+<!-- 如无约束写 "none" -->
+
+## Decisions
+<!-- 讨论中已确认的方案选择 -->
+- <决策1：选择 A 而非 B，因为...>
+- <决策2：...>
+
+## Open Questions
+<!-- 讨论中未决的问题，留给 designer 或下次讨论 -->
+- <问题1>
+- <问题2>
+```
+
+**各章节填写时机**：
+
+| 章节 | 填写时机 | 说明 |
+|------|----------|------|
+| Feature | 创建时 | 自动填入 |
+| Background | 讨论中 | 用户说明背景后填写 |
+| Value | 讨论中 | 明确价值后填写 |
+| Scope | 讨论中 | 逐步列出确认的功能点 |
+| User Scenarios | 讨论中 | 挖掘到典型场景时补充 |
+| Constraints | 讨论中 | 发现约束时记录 |
+| Decisions | 讨论中 | 每次确认方案选择时追加 |
+| Open Questions | 讨论中 | 遇到未决问题时记录 |
+
+**与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不再在 prompt 内联内容。
 
 ---
 
@@ -186,26 +252,30 @@ graph TD
 ```
 用户: "我想做一个财务日报功能"
   ↓
-1. PM 创建 feature（index.md 新增行，status=draft）
+1. PM 创建 feature：
+   - index.md 新增行，status=draft
+   - 创建 feature 目录
+   - 创建 REQUIREMENTS.md（填入 Feature 信息，其余章节留占位）
   ↓
 2. PM 引导讨论（关注背景、价值、范围，不涉及技术细节）：
    - "为什么需要这个功能？"
    - "做成之后有什么好处？"
    - "具体要包含哪些内容？"
+   - 讨论中逐步将结论填入 REQUIREMENTS.md
   ↓
 3. 用户确认范围
   ↓
-4. PM 整理 requirement brief
+4. PM 询问 "要开始设计吗？"
+   - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 REQUIREMENTS.md
+   - 用户确认设计 → 继续
   ↓
-5. PM 询问 "要开始设计吗？" → 用户确认
+5. PM 调度 designer subagent
   ↓
-6. PM 调度 designer subagent
+6. Designer 返回结果 → PM 做初步 review（覆盖率检查）
   ↓
-7. Designer 返回结果 → PM 做初步 review（覆盖率检查）
+7. PM 将设计提交用户终审（使用 doc-review skill 或直接展示 diff）
   ↓
-8. PM 将设计提交用户终审（使用 doc-review skill 或直接展示 diff）
-  ↓
-9. 用户审阅通过 → PM 更新 status=approved
+8. 用户审阅通过 → PM 更新 status=approved
 ```
 
 #### Issue 讨论流程
@@ -239,11 +309,21 @@ graph TD
 1. **读取状态**：读取 `.features/index.md` 和 `.issues/index.md`
 2. **按优先级选择待办项**：
    - Issues status=open → triage（评估处理方式）
-   - Features status=draft → 调度 designer subagent
+   - Features status=draft → 检查 REQUIREMENTS.md 就绪状态（见下方）
    - Features status=approved → 调度 developer subagent
-   - Blocked items → 检查是否已具备解除条件
+   - Blocked items (tech-feasibility) → 检查是否已有 POC-REPORT.md，若无则调度 POC subagent
+   - Blocked items (其他) → 检查是否已具备解除条件
 3. **处理一项**
 4. **汇报进度**：说明处理了什么、剩余什么
+
+#### Draft 处理逻辑
+
+Feature status=draft 时，按以下规则处理：
+
+1. 检查 `.features/<NNN>-<name>/REQUIREMENTS.md` 是否存在
+2. **不存在** → 跳过（需求尚未讨论，等待用户交互）
+3. **存在但 Scope 为空** → 跳过（讨论未完成，等待用户交互）
+4. **存在且 Scope 已填写** → 调度 designer subagent
 
 #### 完成条件
 
@@ -255,22 +335,13 @@ graph TD
 
 ---
 
-## Requirement Brief 格式
-
-PM 与用户讨论后，整理为以下格式传递给 designer subagent：
-
-```
 ## Requirement Brief
 
-**Feature**: #<NNN> <title>
-**Background**: <需求背景：为什么需要这个功能>
-**Value**: <需求价值：做成后的好处>
-**Scope**:
-- <功能点1>
-- <功能点2>
-- ...
-**Constraints**: <约束条件，或 none>
-```
+需求讨论结论持久化在 `.features/<NNN>-<name>/REQUIREMENTS.md` 中。
+
+PM 与用户讨论时逐步填充该文件的各章节（Background、Value、Scope、User Scenarios、Constraints、Decisions、Open Questions）。
+
+调度 designer subagent 时，直接引用该文件路径，不需要在 prompt 中内联内容。
 
 ---
 
@@ -284,13 +355,8 @@ PM 与用户讨论后，整理为以下格式传递给 designer subagent：
 ## Task
 设计 feature #<NNN>: <title>
 
-## Requirement Brief
-**Background**: <text>
-**Value**: <text>
-**Scope**:
-- <item 1>
-- <item 2>
-**Constraints**: <text or none>
+## Requirements
+Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 
 ## Feature Directory
 .features/<NNN>-<name>/
@@ -346,6 +412,35 @@ PM 与用户讨论后，整理为以下格式传递给 designer subagent：
 7. On blocker: update issue status to "blocked", return blocked with reason
 ```
 
+### 调用 POC subagent（技术可行性分析）
+
+当 Designer 因技术选型/可行性问题 blocked（`tech-feasibility`）时，PM 调度 POC subagent：
+
+通过 Agent tool 调用 `poc` subagent，传入以下 prompt：
+
+```
+## Task
+技术可行性分析：feature #<NNN>: <title>
+
+## Questions
+<Designer 在 blocked_reason 中提出的技术问题清单>
+
+## Context
+<需求背景、功能范围>
+
+## Feature Directory
+.features/<NNN>-<name>/
+
+## Instructions
+1. 逐一分析每个技术问题
+2. 通过 web search、文档查询等方式调研
+3. 对高风险项编写 POC 验证代码并运行
+4. 输出评估报告到 POC-REPORT.md
+5. Return structured result
+```
+
+POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 将决策结果附加到 Designer 的恢复指令中继续设计。
+
 ---
 
 ## PM 初步 Review
@@ -385,9 +480,35 @@ PM 将设计提交用户终审：
 1. 读取 subagent 返回的 `blocked_reason`
 2. 在对应 feature/issue 目录下创建 BLOCKED.md
 3. 更新 index.md 中状态为 blocked
-4. 跳到下一个待办项（ralph-loop 模式）或告知用户（交互模式）
+4. **根据 blocked 类型分流**：
+   - **一般阻塞**（`clarification-needed` | `external-dependency`）：跳到下一个待办项，等待用户处理
+   - **技术可行性阻塞**（`tech-feasibility`）：自动调度 POC subagent 进行分析
 
-### 解除阻塞
+### Tech-Feasibility Blocked 处理流程
+
+```
+Designer blocked (tech-feasibility) + 技术问题清单
+  ↓
+PM 调度 POC subagent 进行调研验证
+  ↓
+POC 返回 POC-REPORT.md + 评估建议
+  ↓
+PM 将报告提交用户：
+  - 展示 POC-REPORT.md 摘要
+  - 列出各方案的对比和建议
+  - 请用户选择方案
+  ↓
+用户做出决策
+  ↓
+PM 删除 BLOCKED.md，恢复状态为 designing
+PM 重新调度 Designer，附加用户决策：
+  "## POC Decision
+   用户选择方案: <方案名称>
+   POC 报告: .features/<NNN>/POC-REPORT.md
+   请基于此决策继续设计。"
+```
+
+### 解除阻塞（一般阻塞）
 
 用户与 PM 讨论后提供所需信息或做出决策：
 1. PM 更新对应 feature/issue 的需求说明
@@ -409,8 +530,9 @@ PM 将设计提交用户终审：
 | 文件 | 用途 |
 |------|------|
 | `.features/index.md` | 所有 feature 的状态、优先级、时间 |
-| `.features/<NNN>/BLOCKED.md` | feature 的阻塞详情 |
+| `.features/<NNN>/BLOCKED.md` | feature 的阻塞详情（含 blocked 类型） |
 | `.features/<NNN>/DESIGN.md` | feature 的设计文档 |
+| `.features/<NNN>/POC-REPORT.md` | 技术可行性评估报告（tech-feasibility blocked 时生成） |
 | `.issues/index.md` | 所有 issue 的状态、类型、关联 |
 | `.issues/<NNN>/NOTES.md` | issue 的描述和讨论记录 |
 | `.issues/<NNN>/BLOCKED.md` | issue 的阻塞详情 |

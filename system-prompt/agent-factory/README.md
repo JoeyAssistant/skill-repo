@@ -8,6 +8,7 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 User ←→ PM (agent-pm.md, system prompt)
             ├── designer (subagent, .claude/agents/designer.md)
             ├── developer (subagent, .claude/agents/developer.md)
+            ├── poc (subagent, .claude/agents/poc.md)
             └── spec-compliance (subagent, .claude/agents/spec-compliance.md)
 ```
 
@@ -22,12 +23,13 @@ User ←→ PM (agent-pm.md, system prompt)
 
 ### 2. 安装 subagents
 
-将三个 subagent 复制到项目的 `.claude/agents/` 目录：
+将四个 subagent 复制到项目的 `.claude/agents/` 目录：
 
 ```bash
 mkdir -p <project-root>/.claude/agents
 cp designer.md <project-root>/.claude/agents/designer.md
 cp developer.md <project-root>/.claude/agents/developer.md
+cp poc.md <project-root>/.claude/agents/poc.md
 cp spec-compliance.md <project-root>/.claude/agents/spec-compliance.md
 ```
 
@@ -70,7 +72,9 @@ PM 会自动：
 1. 检查 open issue → triage
 2. 检查 draft feature → 调度 designer
 3. 检查 approved feature → 调度 developer
-4. 检查 blocked item → 尝试继续
+4. 检查 blocked item (tech-feasibility) → 调度 POC 分析
+5. 检查 blocked item (其他) → 尝试继续
+6. 全部处理完毕后输出 `<promise>PM_BATCH_COMPLETE</promise>`
 5. 全部处理完毕后输出 `<promise>PM_BATCH_COMPLETE</promise>`
 
 ### 直接调用 subagent
@@ -93,6 +97,8 @@ project-root/
       doc-changes/
         <filename>.diff
       BLOCKED.md          # blocked 时创建
+      POC-REPORT.md       # 技术可行性评估报告（tech-feasibility blocked 时生成）
+      poc/                # POC 验证代码（验证完成后保留）
   .issues/
     index.md
     <NNN>-<name>/
@@ -102,6 +108,7 @@ project-root/
     agents/
       designer.md
       developer.md
+      poc.md
       spec-compliance.md
   agent/
   cli/
@@ -119,6 +126,7 @@ project-root/
 | `agent-pm.md` | PM system prompt，用户主入口 |
 | `designer.md` | Designer subagent 定义，负责设计文档输出 |
 | `developer.md` | Developer subagent 定义，负责代码实现 |
+| `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
 | `spec-compliance.md` | 规范合规检查 subagent（designer 内部调用） |
 
 ## 生命周期
