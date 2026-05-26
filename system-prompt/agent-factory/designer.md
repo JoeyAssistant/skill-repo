@@ -101,7 +101,9 @@ graph TD
 
 ### 生命周期
 
-`draft` → `designing` → `approved` → `implementing` → `done` → `archived`
+`draft` → `designing` → `approved` → `implementing` → `done`
+
+任何阶段均可流转至 `cancelled`。
 
 | 状态 | 含义 | 触发时机 |
 |------|------|----------|
@@ -110,7 +112,7 @@ graph TD
 | approved | 设计通过 review，diff 通过审阅，待开发 | 所有 doc-changes/*.diff 审阅通过 |
 | implementing | 开发中 | developer 开始编码 |
 | done | 开发完成，已合并 | developer 确认完成 |
-| archived | 归档 | 需求不再迭代 |
+| cancelled | 需求取消/废弃，不再继续 | 任何阶段用户决定取消 |
 
 ### DESIGN.md 模板
 
