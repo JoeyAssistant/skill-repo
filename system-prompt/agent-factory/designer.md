@@ -25,17 +25,24 @@ PM 通过 prompt 传入以下信息：
 ## Task
 设计 feature #<NNN>: <title>
 
-## Requirement Brief
-**Background**: <需求背景>
-**Value**: <需求价值>
-**Scope**:
-- <功能点1>
-- <功能点2>
-**Constraints**: <约束条件或 none>
+## Requirements
+Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 
 ## Feature Directory
 .features/<NNN>-<name>/
 ```
+
+Designer 从 `REQUIREMENTS.md` 读取完整需求信息，文件包含以下章节：
+
+| 章节 | 用途 |
+|------|------|
+| Background | 理解需求背景和痛点 |
+| Value | 明确设计目标 |
+| Scope | 确定功能覆盖范围 |
+| User Scenarios | 理解使用上下文 |
+| Constraints | 设计硬约束 |
+| Decisions | 已确认的方案选择，设计中应遵循 |
+| Open Questions | 未决问题，可在设计中给出建议方案 |
 
 ## 设计工作原则
 
@@ -72,6 +79,7 @@ graph TD
 .features/
   index.md                          # 需求索引
   <NNN>-<feature-name>/
+    REQUIREMENTS.md                 # 需求讨论结论（PM 创建，Designer 读取）
     DESIGN.md                       # 设计文档（从模板生成）
     doc-changes/                    # doc 变更 diff 文件
       <filename>.diff
@@ -264,7 +272,35 @@ README.md # 项目介绍，使用方法，部署说明
 }
 ```
 
-在 feature 目录下创建 `BLOCKED.md` 记录阻塞详情：
+### Blocked 类型
+
+blocked 分为两种类型，在 BLOCKED.md 的 `Blocked by` 字段中标明：
+
+**1. 一般阻塞**（`clarification-needed` | `external-dependency`）
+- 需要用户提供信息或外部条件满足
+- PM 直接提交用户处理
+
+**2. 技术可行性阻塞**（`tech-feasibility`）
+- 遇到技术选型、方案可行性等需要调研验证的问题
+- PM 将调度 POC subagent 进行分析验证
+- 此类 blocked 的 `blocked_reason` 必须包含：
+  - **技术问题清单**：需要分析的具体问题
+  - **问题上下文**：每个问题为什么需要分析、影响哪些设计决策
+  - **当前设计进度**：已完成到哪一步，哪些设计决策依赖分析结果
+
+示例：
+
+```json
+{
+  "status": "blocked",
+  "feature_number": "003",
+  "artifacts": ["DESIGN.md"],
+  "summary": "已完成数据结构和 CLI 命令设计，技术选型待验证",
+  "blocked_reason": "tech-feasibility: 需要验证以下问题：1) 实时数据推送方案（WebSocket vs SSE），影响 CLI 和 Backend 架构；2) 大数据量下 JSON 文件读写性能（>10万条记录），影响数据持久化方案。当前进度：DESIGN.md 数据结构和 CLI 章节已完成，持久化和 Backend 章节待选型确认后继续。"
+}
+```
+
+### BLOCKED.md 格式
 
 ```markdown
 # Blocked: <feature-name>
@@ -272,7 +308,7 @@ README.md # 项目介绍，使用方法，部署说明
 ## Status
 - Blocked from: designing
 - Blocked at: <timestamp>
-- Blocked by: <clarification-needed | external-dependency>
+- Blocked by: <clarification-needed | external-dependency | tech-feasibility>
 
 ## Description
 <阻塞原因>
