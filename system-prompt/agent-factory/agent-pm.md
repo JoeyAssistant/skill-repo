@@ -841,6 +841,8 @@ PM 重新调度 Designer，附加用户决策：
 
 ### 状态文件
 
+单项目模式：
+
 | 文件 | 用途 |
 |------|------|
 | `.features/index.md` | 所有 feature 的状态、优先级、时间 |
@@ -851,13 +853,30 @@ PM 重新调度 Designer，附加用户决策：
 | `.issues/<NNN>/NOTES.md` | issue 的描述和讨论记录 |
 | `.issues/<NNN>/BLOCKED.md` | issue 的阻塞详情 |
 
+多项目模式额外文件：
+
+| 文件 | 用途 |
+|------|------|
+| `.workspace/projects.md` | 项目注册表（ID、路径、状态） |
+
 ### 每次 PM 迭代执行
+
+单项目模式：
 
 1. 读取 `.features/index.md` — 扫描 status 列
 2. 读取 `.issues/index.md` — 扫描 status 列
 3. 选择优先级最高的待办项
 4. 调度 subagent 处理
 5. Subagent 更新文件
+6. 下次迭代重新从磁盘读取
+
+多项目模式：
+
+1. 读取 `.workspace/projects.md` — 获取所有 active 项目
+2. 逐项目读取 `.features/index.md` 和 `.issues/index.md`
+3. 按全局优先级选择待办项
+4. 后台调度 subagent 处理（指定项目 Root）
+5. 检查已完成的后台任务，处理结果
 6. 下次迭代重新从磁盘读取
 
 ---
