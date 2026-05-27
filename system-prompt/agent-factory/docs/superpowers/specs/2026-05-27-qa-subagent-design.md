@@ -153,8 +153,10 @@ QA 验收 → fail → PM 收到 QA-REPORT.md
 3. Diagnose root cause (logs, code, data flow)
 4. Audit log auditability for this issue
 5. Search for similar patterns
-6. Write diagnosis to NOTES.md
+6. Write diagnosis to NOTES.md (fill QA Diagnosis section, do not modify other sections)
 7. Return diagnosis report
+
+Note: QA only updates NOTES.md in the issue directory. Issue status in index.md is managed by PM.
 ```
 
 ## QA 输出格式
