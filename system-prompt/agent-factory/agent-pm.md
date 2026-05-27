@@ -484,19 +484,39 @@ PM 与用户讨论时逐步填充该文件的各章节（Background、Value、Sc
 
 ## 任务调度
 
+### 调度原则
+
+1. **后台调度**：所有 subagent 调度使用 `run_in_background: true`，避免阻塞主对话
+2. **冲突保护**：同一个 feature/issue 不重复调度（检查是否已有后台任务在处理）
+3. **结果处理**：subagent 完成后 PM 收到通知，处理结果并汇报用户
+
+PM 维护内存中的调度状态表：
+
+```
+📋 进行中的任务：
+- football / feature #002 → developer（后台运行中）
+- news / feature #001 → designer（后台运行中）
+```
+
+单项目模式下 `Root` 为 `.`，多项目模式下 `Root` 为项目路径。
+
 ### 调用 designer subagent
 
-通过 Agent tool 调用 `designer` subagent，传入以下 prompt：
+通过 Agent tool（`run_in_background: true`）调用 `designer` subagent，传入以下 prompt：
 
 ```
 ## Task
 设计 feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Requirements
-Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
+Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## Instructions
 1. Update index.md status to "designing"
@@ -509,14 +529,18 @@ Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 
 ### 调用 developer subagent（常规开发）
 
-通过 Agent tool 调用 `developer` subagent，传入以下 prompt：
+通过 Agent tool（`run_in_background: true`）调用 `developer` subagent，传入以下 prompt：
 
 ```
 ## Task
 实现 feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## Instructions
 1. Read DESIGN.md
@@ -524,23 +548,28 @@ Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 3. Update index.md status to "implementing"
 4. Implement all code per design
 5. Run tests
-6. On success: update index.md status to "qa-reviewing", return complete
-7. On blocker: update index.md status to "blocked", return blocked with reason
+6. Git commit (one feature = one commit, see developer.md Git 提交规范)
+7. On success: update index.md status to "qa-reviewing", return complete
+8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ### 调用 developer subagent（Bug 直接修复）
 
-通过 Agent tool 调用 `developer` subagent，传入以下 prompt：
+通过 Agent tool（`run_in_background: true`）调用 `developer` subagent，传入以下 prompt：
 
 ```
 ## Task
 修复 bug: <issue title> (issue #<NNN>)
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Bug Description
-<from .issues/<NNN>-<issue-name>/NOTES.md>
+<from <Root>/.issues/<NNN>-<issue-name>/NOTES.md>
 
 ## Instructions
-1. Update issue status to "triaging" in .issues/index.md
+1. Update issue status to "triaging" in <Root>/.issues/index.md
 2. Reproduce and diagnose the bug
 3. Apply minimal fix
 4. Add regression test
@@ -553,14 +582,18 @@ Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 
 Developer 返回 complete 后，PM 更新状态为 `qa-reviewing`，调度 QA：
 
-通过 Agent tool 调用 `qa` subagent，传入以下 prompt：
+通过 Agent tool（`run_in_background: true`）调用 `qa` subagent，传入以下 prompt：
 
 ```
 ## Task
 验收 feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## Instructions
 1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
@@ -580,17 +613,21 @@ Developer 返回 complete 后，PM 更新状态为 `qa-reviewing`，调度 QA：
 
 #### Developer 修复调度（QA fail 后）
 
-调度 developer 修复时，附加 QA 报告：
+调度 developer 修复时，附加 QA 报告。通过 Agent tool（`run_in_background: true`）调用：
 
 ```
 ## Task
 修复 QA 发现的问题：feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## QA Report
-Read `.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
+Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
 
 ## Instructions
 1. Read QA-REPORT.md
@@ -605,14 +642,18 @@ Read `.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause an
 
 Bug issue 提交后，先调度 QA 诊断，再调度 developer 修复：
 
-通过 Agent tool 调用 `qa` subagent，传入以下 prompt：
+通过 Agent tool（`run_in_background: true`）调用 `qa` subagent，传入以下 prompt：
 
 ```
 ## Task
 诊断 issue #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Issue Directory
-.issues/<NNN>-<name>/
+<Root>/.issues/<NNN>-<name>/
 
 ## Instructions
 1. Read NOTES.md for issue description and reproduction steps
@@ -624,20 +665,24 @@ Bug issue 提交后，先调度 QA 诊断，再调度 developer 修复：
 7. Return diagnosis report
 ```
 
-QA 诊断完成后，PM 调度 developer 修复（带诊断结论）：
+QA 诊断完成后，PM 调度 developer 修复（带诊断结论）。通过 Agent tool（`run_in_background: true`）调用：
 
 ```
 ## Task
 修复 bug: <issue title> (issue #<NNN>)
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Bug Description
-<from .issues/<NNN>-<name>/NOTES.md>
+<from <Root>/.issues/<NNN>-<name>/NOTES.md>
 
 ## QA Diagnosis
-Read `.issues/<NNN>-<name>/NOTES.md` QA Diagnosis section for root cause and fix suggestion.
+Read `<Root>/.issues/<NNN>-<name>/NOTES.md` QA Diagnosis section for root cause and fix suggestion.
 
 ## Instructions
-1. Update issue status to "triaging" in .issues/index.md
+1. Update issue status to "triaging" in <Root>/.issues/index.md
 2. Read QA Diagnosis in NOTES.md
 3. Apply fix based on QA's root cause analysis and suggestion
 4. Add regression test
@@ -650,11 +695,15 @@ Read `.issues/<NNN>-<name>/NOTES.md` QA Diagnosis section for root cause and fix
 
 当 Designer 因技术选型/可行性问题 blocked（`tech-feasibility`）时，PM 调度 POC subagent：
 
-通过 Agent tool 调用 `poc` subagent，传入以下 prompt：
+通过 Agent tool（`run_in_background: true`）调用 `poc` subagent，传入以下 prompt：
 
 ```
 ## Task
 技术可行性分析：feature #<NNN>: <title>
+
+## Project
+Name: <project-name>
+Root: <project-root-path>
 
 ## Questions
 <Designer 在 blocked_reason 中提出的技术问题清单>
@@ -663,7 +712,7 @@ Read `.issues/<NNN>-<name>/NOTES.md` QA Diagnosis section for root cause and fix
 <需求背景、功能范围>
 
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## Instructions
 1. 逐一分析每个技术问题
