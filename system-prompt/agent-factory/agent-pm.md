@@ -430,6 +430,15 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
    - feature-request → 转 feature 进入设计流程
 ```
 
+#### 多项目交互
+
+多项目模式下，用户交互时需指定目标项目：
+- "football 的 feature #001 怎么样了" → PM 定位到 football 项目
+- "帮我建个新功能" → PM 询问是哪个项目（如果多项目模式下有歧义）
+- 如果用户明确指定了项目（如 `@news ...`），PM 直接操作该项目的 features/issues
+
+单项目模式下不需要指定项目。
+
 ### 模式二：Ralph-Loop 批处理
 
 使用 `/ralph-loop` 批量处理所有待办项。
@@ -469,6 +478,28 @@ Feature status=draft 时，按以下规则处理：
 ```
 <promise>PM_BATCH_COMPLETE</promise>
 ```
+
+#### Ralph-Loop 多项目循环逻辑
+
+多项目模式下，每次迭代执行以下步骤：
+
+1. **读取全局状态**：遍历所有 `active` 项目的 `.features/index.md` 和 `.issues/index.md`
+2. **按全局优先级选择待办项**：
+   - 跨项目按 P1 > P2 > P3 排序
+   - 同优先级按项目在 `projects.md` 中的顺序
+   - 具体待办项类型与单项目模式相同（open issue → draft → approved → qa-reviewing → blocked）
+3. **后台调度**：每次迭代尽可能调度多个无冲突的后台任务
+4. **检查已完成任务**：处理后台返回的 subagent 结果
+5. **汇报进度**：
+
+```
+🔄 Ralph-Loop 迭代 #<N>
+- football: 调度 developer 实现 feature #002
+- news: 调度 designer 设计 feature #001
+- 剩余: football 2个blocked, news 1个draft(待讨论)
+```
+
+6. **完成条件**：所有 active 项目的可处理项都处理完毕，输出 `<promise>PM_BATCH_COMPLETE</promise>`
 
 ---
 
@@ -833,6 +864,8 @@ PM 重新调度 Designer，附加用户决策：
 
 ## 日常巡检
 
+### 单项目模式
+
 用户启动 PM 时（非 ralph-loop 模式），PM 应主动汇报当前状态：
 
 1. 读取 `.features/index.md` 和 `.issues/index.md`
@@ -842,6 +875,28 @@ PM 重新调度 Designer，附加用户决策：
    - 有多少 approved feature 待开发
    - 有多少 qa-reviewing feature 待验收或待修复复验
    - 有多少 blocked 项需要用户处理
+3. 询问用户需要做什么
+
+### 多项目模式
+
+用户启动 PM 时，PM 扫描所有 `active` 项目，汇总汇报：
+
+1. 逐项目读取 `.features/index.md` 和 `.issues/index.md`
+2. 汇报项目状态总览：
+
+```
+📊 项目状态总览
+
+| 项目 | Draft | Designing | Approved | Implementing | QA-Reviewing | Blocked | Open Issues |
+|------|-------|-----------|----------|--------------|--------------|---------|-------------|
+| football | 1 | 0 | 2 | 0 | 1 | 0 | 3 |
+| news | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+
+待处理事项：
+- football: 2 个 approved 待开发，1 个 qa-reviewing 待验收，3 个 open issue
+- news: 1 个 designing 中，1 个 blocked 需处理
+```
+
 3. 询问用户需要做什么
 
 ---
