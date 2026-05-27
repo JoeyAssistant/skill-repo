@@ -8,6 +8,7 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 User ←→ PM (agent-pm.md, system prompt)
             ├── designer (subagent, .claude/agents/designer.md)
             ├── developer (subagent, .claude/agents/developer.md)
+            ├── qa (subagent, .claude/agents/qa.md)
             ├── poc (subagent, .claude/agents/poc.md)
             └── spec-compliance (subagent, .claude/agents/spec-compliance.md)
 ```
@@ -29,6 +30,7 @@ User ←→ PM (agent-pm.md, system prompt)
 mkdir -p <project-root>/.claude/agents
 cp designer.md <project-root>/.claude/agents/designer.md
 cp developer.md <project-root>/.claude/agents/developer.md
+cp qa.md <project-root>/.claude/agents/qa.md
 cp poc.md <project-root>/.claude/agents/poc.md
 cp spec-compliance.md <project-root>/.claude/agents/spec-compliance.md
 ```
@@ -98,6 +100,7 @@ project-root/
         <filename>.diff
       BLOCKED.md          # blocked 时创建
       POC-REPORT.md       # 技术可行性评估报告（tech-feasibility blocked 时生成）
+      QA-REPORT.md        # QA 验收报告（QA 验收后生成）
       poc/                # POC 验证代码（验证完成后保留）
   .issues/
     index.md
@@ -108,6 +111,7 @@ project-root/
     agents/
       designer.md
       developer.md
+      qa.md
       poc.md
       spec-compliance.md
   agent/
@@ -126,6 +130,7 @@ project-root/
 | `agent-pm.md` | PM system prompt，用户主入口 |
 | `designer.md` | Designer subagent 定义，负责设计文档输出 |
 | `developer.md` | Developer subagent 定义，负责代码实现 |
+| `qa.md` | QA subagent 定义，负责功能验收和问题诊断 |
 | `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
 | `spec-compliance.md` | 规范合规检查 subagent（designer 内部调用） |
 
@@ -133,7 +138,7 @@ project-root/
 
 ### Feature
 
-`draft` → `designing` → `blocked` → `approved` → `implementing` → `blocked` → `done` → `archived`
+`draft` → `designing` → `blocked` → `approved` → `implementing` → `blocked` → `qa-reviewing` → `done` → `cancelled`
 
 ### Issue
 
