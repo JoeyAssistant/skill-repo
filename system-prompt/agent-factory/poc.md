@@ -25,6 +25,10 @@ PM 通过 prompt 传入以下信息：
 ## Task
 技术可行性分析：feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Questions
 <Designer 提出的技术风险/选型问题列表，每个问题包含上下文说明>
 
@@ -32,7 +36,7 @@ PM 通过 prompt 传入以下信息：
 <需求背景、功能范围>
 
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 ```
 
 ## 工作流程
@@ -51,7 +55,7 @@ PM 通过 prompt 传入以下信息：
 POC 代码写在 feature 目录下：
 
 ```
-.features/<NNN>-<name>/
+{Root}/.features/<NNN>-<name>/
   poc/                     # POC 验证目录
     requirements.txt       # POC 依赖（如有）
     *.py                   # 验证脚本
