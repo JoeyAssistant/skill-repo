@@ -61,7 +61,7 @@ PM:   [调度 developer]
 ```
 用户: 登录页面点击提交就崩溃了
 PM:   [创建 issue #NNN，确认复现步骤]
-PM:   [triage: bug → 调度 developer 直接修复]
+PM:   [triage: bug → 调度 QA 诊断 → 调度 developer 修复]
 ```
 
 ### Ralph-Loop 模式：批量处理
@@ -74,10 +74,10 @@ PM 会自动：
 1. 检查 open issue → triage
 2. 检查 draft feature → 调度 designer
 3. 检查 approved feature → 调度 developer
-4. 检查 blocked item (tech-feasibility) → 调度 POC 分析
-5. 检查 blocked item (其他) → 尝试继续
-6. 全部处理完毕后输出 `<promise>PM_BATCH_COMPLETE</promise>`
-5. 全部处理完毕后输出 `<promise>PM_BATCH_COMPLETE</promise>`
+4. 检查 qa-reviewing feature → 调度 QA 验收
+5. 检查 blocked item (tech-feasibility) → 调度 POC 分析
+6. 检查 blocked item (其他) → 尝试继续
+7. 全部处理完毕后输出 `<promise>PM_BATCH_COMPLETE</promise>`
 
 ### 直接调用 subagent
 
@@ -138,7 +138,9 @@ project-root/
 
 ### Feature
 
-`draft` → `designing` → `blocked` → `approved` → `implementing` → `blocked` → `qa-reviewing` → `done` → `cancelled`
+`draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
+
+`blocked` 为可逆中间状态，`cancelled` 可从任何状态直接流转。
 
 ### Issue
 
