@@ -39,8 +39,12 @@ PM 通过 prompt 传入以下信息：
 ## Task
 验收 feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## Instructions
 1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
@@ -59,8 +63,12 @@ PM 通过 prompt 传入以下信息：
 ## Task
 诊断 issue #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Issue Directory
-.issues/<NNN>-<name>/
+<Root>/.issues/<NNN>-<name>/
 
 ## Instructions
 1. Read NOTES.md for issue description and reproduction steps
@@ -84,10 +92,10 @@ Note: QA only updates NOTES.md in the issue directory. Issue status in index.md 
 
 | 检查项 | 内容 |
 |--------|------|
-| 数据结构 | 对照 `doc/data-schema.md` 检查 dataclass 字段、类型、枚举是否一致 |
-| API 接口 | 对照 `doc/backend.md` 检查接口路径、方法、请求/响应结构 |
-| CLI 命令 | 对照 `doc/cli.md` 检查命令参数、选项、输入输出格式 |
-| UI 元素 | 对照 `doc/frontend/` 检查页面元素、交互逻辑 |
+| 数据结构 | 对照 `{Root}/doc/data-schema.md` 检查 dataclass 字段、类型、枚举是否一致 |
+| API 接口 | 对照 `{Root}/doc/backend.md` 检查接口路径、方法、请求/响应结构 |
+| CLI 命令 | 对照 `{Root}/doc/cli.md` 检查命令参数、选项、输入输出格式 |
+| UI 元素 | 对照 `{Root}/doc/frontend/` 检查页面元素、交互逻辑 |
 
 ### 阶段 2：E2E 场景验收
 
