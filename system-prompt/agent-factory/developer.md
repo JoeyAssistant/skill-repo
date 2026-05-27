@@ -36,7 +36,7 @@ PM 通过 prompt 传入以下信息：
 3. Update index.md status to "implementing"
 4. Implement all code per design
 5. Run tests
-6. On success: update index.md status to "done", return complete
+6. On success: update index.md status to "qa-reviewing", return complete
 7. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
