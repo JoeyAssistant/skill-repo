@@ -22,19 +22,23 @@ graph TD
     PM["PM<br/>(本项目)"]
     Designer["Designer<br/>(subagent)"]
     Developer["Developer<br/>(subagent)"]
+    QA["QA<br/>(subagent)"]
     POC["POC<br/>(subagent)"]
     SpecCompliance["spec-compliance<br/>(subagent)"]
 
     User <--> PM
     PM -->|"requirement brief"| Designer
     PM -->|"feature #NNN"| Developer
-    PM -->|"bug description"| Developer
+    PM -->|"feature #NNN"| QA
+    PM -->|"issue #NNN"| QA
     PM -->|"tech questions"| POC
     Designer -->|"blocked: tech-feasibility"| PM
     Designer -->|"structured result"| PM
     Developer -->|"structured result"| PM
+    QA -->|"structured result"| PM
     POC -->|"evaluation report"| PM
     PM -->|"user decision"| Designer
+    PM -->|"QA report"| Developer
     Designer --> SpecCompliance
 ```
 
@@ -72,7 +76,7 @@ graph TD
 
 ### 生命周期
 
-`draft` → `designing` → `approved` → `implementing` → `done`
+`draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
                  ↘ blocked ↗
 
 任何阶段均可流转至 `cancelled`。
@@ -84,7 +88,8 @@ graph TD
 | **blocked** | **需要用户介入，等待外部输入** | designer/developer 无法独立完成 |
 | approved | 设计通过 review，diff 通过审阅，待开发 | 用户终审通过 |
 | implementing | 开发中，已调度 developer subagent | PM 调度开发 |
-| done | 开发完成，已合并 | developer 确认完成 |
+| qa-reviewing | QA 验收中，已调度 QA subagent | Developer 返回 complete 后 PM 调度 QA |
+| done | 验收通过，功能完成 | QA 返回 pass |
 | cancelled | 需求取消/废弃，不再继续 | 任何阶段用户决定取消 |
 
 ### BLOCKED.md 格式
@@ -235,6 +240,15 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
 1. ...
 2. ...
 
+## QA Diagnosis
+<!-- QA 诊断后填写，PM 调度 QA 时此章节为空 -->
+- **Root Cause**:
+- **Fix Suggestion**:
+- **Log Auditability**:
+- **Log Improvement**:
+- **Similar Patterns**:
+- **Impact Assessment**:
+
 ## Impact
 <!-- 影响范围：谁/什么功能受到影响 -->
 
@@ -293,7 +307,7 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
    - feature-request: 具体期望、使用场景
   ↓
 3. PM triage：
-   - bug → 调度 developer 直接修复
+   - bug → 调度 QA 诊断，诊断完成后调度 developer 修复
    - feature-request → 转 feature 进入设计流程
 ```
 
@@ -314,6 +328,7 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
    - Issues status=open → triage（评估处理方式）
    - Features status=draft → 检查 REQUIREMENTS.md 就绪状态（见下方）
    - Features status=approved → 调度 developer subagent
+   - Features status=qa-reviewing → 调度 QA subagent 验收
    - Blocked items (tech-feasibility) → 检查是否已有 POC-REPORT.md，若无则调度 POC subagent
    - Blocked items (其他) → 检查是否已具备解除条件
 3. **处理一项**
@@ -390,7 +405,7 @@ Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 3. Update index.md status to "implementing"
 4. Implement all code per design
 5. Run tests
-6. On success: update index.md status to "done", return complete
+6. On success: update index.md status to "qa-reviewing", return complete
 7. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
@@ -409,6 +424,103 @@ Read `.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 1. Update issue status to "triaging" in .issues/index.md
 2. Reproduce and diagnose the bug
 3. Apply minimal fix
+4. Add regression test
+5. Run full test suite
+6. On success: update issue status to "closed", return complete
+7. On blocker: update issue status to "blocked", return blocked with reason
+```
+
+### 调用 QA subagent（Feature 验收）
+
+Developer 返回 complete 后，PM 更新状态为 `qa-reviewing`，调度 QA：
+
+通过 Agent tool 调用 `qa` subagent，传入以下 prompt：
+
+```
+## Task
+验收 feature #<NNN>: <title>
+
+## Feature Directory
+.features/<NNN>-<name>/
+
+## Instructions
+1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
+2. Verify design compliance (data schema, API, CLI, UI)
+3. Start services and run E2E scenarios
+4. For each issue found: diagnose root cause, check log auditability
+5. For confirmed issues: search for similar patterns
+6. Generate QA-REPORT.md
+7. Return structured result
+```
+
+#### QA 验收结果处理
+
+- **QA 返回 pass** → 更新 index.md status 为 `done`
+- **QA 返回 fail** → 调度 developer 修复（附带 QA-REPORT.md 中的问题清单），修复后再次调度 QA 复验
+- **修复循环最多 3 轮**，超过仍不通过则升级用户决策
+
+#### Developer 修复调度（QA fail 后）
+
+调度 developer 修复时，附加 QA 报告：
+
+```
+## Task
+修复 QA 发现的问题：feature #<NNN>: <title>
+
+## Feature Directory
+.features/<NNN>-<name>/
+
+## QA Report
+Read `.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
+
+## Instructions
+1. Read QA-REPORT.md
+2. Fix each issue listed in QA report
+3. Add regression tests for each fix
+4. Run full test suite
+5. On success: update index.md status to "qa-reviewing", return complete
+6. On blocker: update index.md status to "blocked", return blocked with reason
+```
+
+### 调用 QA subagent（Issue 诊断）
+
+Bug issue 提交后，先调度 QA 诊断，再调度 developer 修复：
+
+通过 Agent tool 调用 `qa` subagent，传入以下 prompt：
+
+```
+## Task
+诊断 issue #<NNN>: <title>
+
+## Issue Directory
+.issues/<NNN>-<name>/
+
+## Instructions
+1. Read NOTES.md for issue description and reproduction steps
+2. Reproduce the issue
+3. Diagnose root cause (logs, code, data flow)
+4. Audit log auditability for this issue
+5. Search for similar patterns
+6. Write diagnosis to NOTES.md (fill QA Diagnosis section, do not modify other sections)
+7. Return diagnosis report
+```
+
+QA 诊断完成后，PM 调度 developer 修复（带诊断结论）：
+
+```
+## Task
+修复 bug: <issue title> (issue #<NNN>)
+
+## Bug Description
+<from .issues/<NNN>-<name>/NOTES.md>
+
+## QA Diagnosis
+Read `.issues/<NNN>-<name>/NOTES.md` QA Diagnosis section for root cause and fix suggestion.
+
+## Instructions
+1. Update issue status to "triaging" in .issues/index.md
+2. Read QA Diagnosis in NOTES.md
+3. Apply fix based on QA's root cause analysis and suggestion
 4. Add regression test
 5. Run full test suite
 6. On success: update issue status to "closed", return complete
@@ -560,6 +672,7 @@ PM 重新调度 Designer，附加用户决策：
    - 有多少 open issue 待 triage
    - 有多少 draft feature 待设计
    - 有多少 approved feature 待开发
+   - 有多少 qa-reviewing feature 待验收或待修复复验
    - 有多少 blocked 项需要用户处理
 3. 询问用户需要做什么
 
