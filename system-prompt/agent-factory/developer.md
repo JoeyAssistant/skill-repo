@@ -27,8 +27,12 @@ PM 通过 prompt 传入以下信息：
 ## Task
 实现 feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## Instructions
 1. Read DESIGN.md
@@ -36,8 +40,9 @@ PM 通过 prompt 传入以下信息：
 3. Update index.md status to "implementing"
 4. Implement all code per design
 5. Run tests
-6. On success: update index.md status to "qa-reviewing", return complete
-7. On blocker: update index.md status to "blocked", return blocked with reason
+6. Git commit (one feature = one commit)
+7. On success: update index.md status to "qa-reviewing", return complete
+8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ### Bug 直接修复任务
@@ -46,8 +51,12 @@ PM 通过 prompt 传入以下信息：
 ## Task
 修复 bug: <issue title> (issue #<NNN>)
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Bug Description
-<from .issues/<NNN>-<name>/NOTES.md>
+<from <Root>/.issues/<NNN>-<issue-name>/NOTES.md>
 
 ## Instructions
 1. Reproduce and diagnose the bug
@@ -66,11 +75,15 @@ QA 验收发现问题后，PM 调度你修复：
 ## Task
 修复 QA 发现的问题：feature #<NNN>: <title>
 
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
 ## Feature Directory
-.features/<NNN>-<name>/
+<Root>/.features/<NNN>-<name>/
 
 ## QA Report
-Read `.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
+Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
 
 ## Instructions
 1. Read QA-REPORT.md
@@ -86,39 +99,39 @@ Read `.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause an
 在开始编码之前，必须完成以下步骤：
 
 1. **阅读设计文档**：按以下顺序阅读设计文档
-   - `.features/<NNN>-<name>/DESIGN.md` → 理解需求设计（先读这个）
-   - `.features/<NNN>-<name>/doc-changes/*.diff` → 理解 doc 文件需要做哪些变更
-   - `doc/data-schema.md` → 理解数据模型
-   - `doc/data-persistence.md` → 理解存储方案
-   - `doc/cli.md` → 理解 CLI 命令设计
-   - `doc/backend.md` → 理解后端 API 设计
-   - `doc/frontend/` → 理解 UI 设计规格
-2. **应用 doc 变更**：将 `.features/<NNN>-<name>/doc-changes/*.diff` 逐个应用到对应的 `doc/` 文件。这是编码前的必要步骤，确保 `doc/` 文档与设计一致后再开始编码
+   - `{Root}/.features/<NNN>-<name>/DESIGN.md` → 理解需求设计（先读这个）
+   - `{Root}/.features/<NNN>-<name>/doc-changes/*.diff` → 理解 doc 文件需要做哪些变更
+   - `{Root}/doc/data-schema.md` → 理解数据模型
+   - `{Root}/doc/data-persistence.md` → 理解存储方案
+   - `{Root}/doc/cli.md` → 理解 CLI 命令设计
+   - `{Root}/doc/backend.md` → 理解后端 API 设计
+   - `{Root}/doc/frontend/` → 理解 UI 设计规格
+2. **应用 doc 变更**：将 `{Root}/.features/<NNN>-<name>/doc-changes/*.diff` 逐个应用到对应的 `{Root}/doc/` 文件。这是编码前的必要步骤，确保 `{Root}/doc/` 文档与设计一致后再开始编码
 3. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
-4. **遵循设计**：严格按照设计文档（含已更新的 `doc/` 文件）实现，不自行更改架构或数据结构定义
-5. **更新状态**：开始编码前，将 `.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
+4. **遵循设计**：严格按照设计文档（含已更新的 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
+5. **更新状态**：开始编码前，将 `{Root}/.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
 6. **代码目录结构**：
 ```
-agent/
-cli/
-doc/
+{Root}/agent/
+{Root}/cli/
+{Root}/doc/
     frontend/ # UI 设计 demo 目录
     backend.md
     cli.md # CLI 命令定义
     data-schema.md # 数据结构定义
     data-persistence.md # 数据持久化存储设计
-script/
-backend/
-frontend/
-test/
-README.md # 项目介绍，使用方法，部署说明
+{Root}/script/
+{Root}/backend/
+{Root}/frontend/
+{Root}/test/
+{Root}/README.md # 项目介绍，使用方法，部署说明
 ```
 
 ## 开发原则
 
 ### data-schema一致性
 
-编码时必须确保所有模块使用数据结构一致性，以 `doc/data-schema.md` 为唯一真相源，包括
+编码时必须确保所有模块使用数据结构一致性，以 `{Root}/doc/data-schema.md` 为唯一真相源，包括
 - 前端代码
 - 后端REST API
 - CLI
@@ -127,7 +140,7 @@ README.md # 项目介绍，使用方法，部署说明
 
 新增或修改数据字段时，需同时检查以下位置：
 
-1. `doc/data-schema.md` — 更新 schema 定义与 dataclass
+1. `{Root}/doc/data-schema.md` — 更新 schema 定义与 dataclass
 2. Python dataclass — 同步字段定义
 3. CLI 序列化/反序列化 — 确保字段能正确读写
 4. 前端 JS 渲染与表单提交 — 确保字段名一致、计算逻辑正确
@@ -183,6 +196,47 @@ README.md # 项目介绍，使用方法，部署说明
 - 实现方案：基于 `console` 封装，或使用轻量日志库
 - 输出到浏览器 console，开发环境可输出到文件（如通过 Browser DevTools）
 
+## Git 提交规范
+
+### 提交时机
+
+Developer 完成编码和测试后，必须执行 git commit，然后才返回 complete。
+
+### 提交规则
+
+- **一个 feature 对应一个 commit**：实现完一个 feature 的所有代码后，执行一次 git add + git commit
+- QA 修复也同理：修复完所有 QA 问题时，执行一次 git add + git commit
+- Bug 修复（issue）不要求自动提交，由 PM 决定提交策略
+
+### Commit Message 格式
+
+多项目模式：
+
+```
+feat(<project-id>): <feature title> (#<NNN>)
+
+<DESIGN.md 概要，1-2 句>
+```
+
+```
+fix(<project-id>): 修复 QA 发现的 <issue summary> (#<NNN>)
+
+QA round N: <修复内容>
+```
+
+单项目模式（project-id 省略）：
+
+```
+feat: <feature title> (#<NNN>)
+
+<DESIGN.md 概要，1-2 句>
+```
+
+### 不提交的情况
+
+- 被 blocked 时（代码不完整）
+- Bug 修复（issue 类型，由 PM 决定）
+
 ## Bug 修复流程
 
 强烈建议修复任何 bug 时按以下步骤执行，根据问题复杂度灵活调整：
@@ -227,7 +281,7 @@ README.md # 项目介绍，使用方法，部署说明
 
 ### 通用要求
 
-- 脚本位于项目根目录 `script/` 下
+- 脚本位于项目根目录 `{Root}/script/` 下
 - 所有脚本支持 `--help` 参数，打印用法说明
 - 错误信息使用红色输出，成功信息使用绿色输出
 
@@ -248,8 +302,8 @@ README.md # 项目介绍，使用方法，部署说明
 针对单元测试与集成测试，各自提供执行脚本，自动化全量运行，按模块生成测试报告
 
 ```
-test/run_ut.py
-test/run_it.py
+{Root}/test/run_ut.py
+{Root}/test/run_it.py
 ```
 
 ### 测试用例编写原则
@@ -267,9 +321,9 @@ test/run_it.py
   - 核心逻辑路径必须覆盖（正常路径 + 异常路径）
   - 关键的数据转换路径必须覆盖（如 dict ↔ dataclass 转换、JSON 序列化/反序列化）
 - **测试文件组织**:
-  - 按模块创建子目录，以被测源文件为粒度命名: `test/unit/<module>/test_<filename>.py`（如 `test/unit/cli/test_assets.py`、`test/unit/agent/test_agent.py`）
+  - 按模块创建子目录，以被测源文件为粒度命名: `{Root}/test/unit/<module>/test_<filename>.py`（如 `{Root}/test/unit/cli/test_assets.py`、`{Root}/test/unit/agent/test_agent.py`）
   - 当单个测试文件超过 300 行时，按功能进一步拆分
-  - `test/conftest.py`: UT 通用共享 fixture（如临时数据文件、通用测试数据）
+  - `{Root}/test/conftest.py`: UT 通用共享 fixture（如临时数据文件、通用测试数据）
 
 #### 集成测试（IT）
 
@@ -277,8 +331,8 @@ test/run_it.py
 - **端到端验证**: 根据服务暴露方式选择测试入口（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端），验证完整链路（Web UI / API → Backend → CLI → Data Layer）
 - **环境要求**: 需要启动完整服务（Backend + 前端），Playwright 未安装时自动跳过
 - **测试文件组织**:
-  - 文件按场景划分: `test/integration/test_<scenario>.py`
-  - `test/integration/conftest.py`: 集成测试专用 fixture（如服务启动/停止、Playwright page）
+  - 文件按场景划分: `{Root}/test/integration/test_<scenario>.py`
+  - `{Root}/test/integration/conftest.py`: 集成测试专用 fixture（如服务启动/停止、Playwright page）
 
 ## 输出格式
 
