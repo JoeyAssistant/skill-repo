@@ -4,6 +4,8 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 
 ## 架构
 
+### 单项目模式
+
 ```
 User ←→ PM (agent-pm.md, system prompt)
             ├── designer (subagent, .claude/agents/designer.md)
@@ -11,6 +13,21 @@ User ←→ PM (agent-pm.md, system prompt)
             ├── qa (subagent, .claude/agents/qa.md)
             ├── poc (subagent, .claude/agents/poc.md)
             └── spec-compliance (subagent, .claude/agents/spec-compliance.md)
+```
+
+### 多项目模式
+
+```
+User ←→ PM (agent-pm.md, system prompt)
+            ├── .workspace/projects.md (项目注册表)
+            ├── Project A (独立 git 仓) ──┐
+            ├── Project B (独立 git 仓) ──┤── 共享 subagents
+            └── ...                       │
+            ├── designer (subagent) ───────┤
+            ├── developer (subagent)       │
+            ├── qa (subagent)              │
+            ├── poc (subagent)             │
+            └── spec-compliance (subagent) ┘
 ```
 
 ## 安装
@@ -42,6 +59,42 @@ cp spec-compliance.md <project-root>/.claude/agents/spec-compliance.md
 ```bash
 mkdir -p .features .issues
 ```
+
+### 4. 多项目模式初始化（可选）
+
+如需管理多个项目：
+
+```bash
+# 创建工作区目录
+mkdir agent-workspace && cd agent-workspace
+
+# 复制 PM 作为 system prompt
+cp <agent-factory>/agent-pm.md CLAUDE.md
+
+# 安装全局 subagents
+mkdir -p .claude/agents
+cp <agent-factory>/designer.md .claude/agents/
+cp <agent-factory>/developer.md .claude/agents/
+cp <agent-factory>/qa.md .claude/agents/
+cp <agent-factory>/poc.md .claude/agents/
+cp <agent-factory>/spec-compliance.md .claude/agents/
+
+# 初始化 workspace
+mkdir -p .workspace
+cat > .workspace/projects.md << 'EOF'
+# Projects
+
+| ID | Name | Path | Status | Created | Last Active |
+|----|------|------|--------|---------|-------------|
+EOF
+
+# 将项目放入工作区（或使用 symlink）
+git clone <repo-url> ./project-a
+```
+
+PM 启动时自动检测模式：
+- 当前目录有 `.workspace/` → 多项目模式
+- 当前目录有 `.features/` → 单项目模式
 
 ## 使用
 
@@ -121,6 +174,33 @@ project-root/
   frontend/
   script/
   test/
+```
+
+## 多项目工作区目录结构
+
+```
+agent-workspace/
+├── .claude/
+│   └── agents/
+│       ├── designer.md
+│       ├── developer.md
+│       ├── qa.md
+│       ├── poc.md
+│       └── spec-compliance.md
+├── .workspace/
+│   └── projects.md
+├── football-agent/         ← 独立 git 仓
+│   ├── .features/
+│   ├── .issues/
+│   ├── agent/
+│   ├── cli/
+│   ├── doc/
+│   └── ...
+├── news-agent/             ← 独立 git 仓
+│   ├── .features/
+│   ├── .issues/
+│   └── ...
+└── CLAUDE.md               ← PM system prompt
 ```
 
 ## 文件说明
