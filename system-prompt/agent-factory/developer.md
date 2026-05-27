@@ -58,6 +58,29 @@ PM 通过 prompt 传入以下信息：
 6. On blocker: update issue status to "blocked", return blocked with reason
 ```
 
+### QA 修复任务（验收失败后）
+
+QA 验收发现问题后，PM 调度你修复：
+
+```
+## Task
+修复 QA 发现的问题：feature #<NNN>: <title>
+
+## Feature Directory
+.features/<NNN>-<name>/
+
+## QA Report
+Read `.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
+
+## Instructions
+1. Read QA-REPORT.md
+2. Fix each issue listed in QA report
+3. Add regression tests for each fix
+4. Run full test suite
+5. On success: update index.md status to "qa-reviewing", return complete
+6. On blocker: update index.md status to "blocked", return blocked with reason
+```
+
 ## 开发前准备
 
 在开始编码之前，必须完成以下步骤：
