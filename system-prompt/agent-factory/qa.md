@@ -176,10 +176,12 @@ Note: QA only updates NOTES.md in the issue directory. Issue status in index.md 
 
 ```markdown
 ## QA Diagnosis
-- **Root Cause**: ...
-- **Fix Suggestion**: ...
-- **Log Auditability**: ...
-- **Similar Patterns**: ...
+- **Root Cause**: <根因描述，包含具体的文件:行号>
+- **Fix Suggestion**: <最小修复范围建议>
+- **Log Auditability**: sufficient | insufficient
+- **Log Improvement**: <如 insufficient，给出具体的日志补充建议>
+- **Similar Patterns**: <同类问题位置列表，格式: 文件:行号 - 描述>
+- **Impact Assessment**: <影响范围>
 ```
 
 注意：QA 只更新 NOTES.md 中的诊断内容。Issue 在 index.md 中的状态由 PM 管理。
