@@ -179,12 +179,10 @@ function scrollToLine(n) { const el = document.querySelector('.doc-line-wrap[dat
 function renderDocument() {
   const content = document.getElementById('docContent');
   let html = '';
-  let inCodeBlock = false;
-  let inMermaid = false;
-  let mermaidLines = [];
-  let mermaidStartLine = 0;
+  let i = 0;
 
-  DOC_LINES.forEach(function(line, i) {
+  while (i < DOC_LINES.length) {
+    const line = DOC_LINES[i];
     const lineNum = i + 1;
     const trimmed = line.trim();
     const hasComment = state.comments.some(function(c) { return c.lineNum === lineNum; });
@@ -193,28 +191,47 @@ function renderDocument() {
     if (hasComment) cls += ' has-comment';
     if (isActive) cls += ' active';
 
-    // Mermaid blocks
-    if (inMermaid) {
-      if (trimmed.startsWith('```')) {
-        html += '<div class="' + cls + '" data-line="' + mermaidStartLine + '"><span class="line-num">' + mermaidStartLine + '</span>';
-        html += '<div class="line-content"><pre class="mermaid">' + escapeHtml(mermaidLines.join('\n')) + '</pre></div></div>';
-        inMermaid = false; mermaidLines = [];
-        if (typeof mermaid !== 'undefined') mermaid.run();
-      } else { mermaidLines.push(line); }
-      return;
+    // --- Mermaid block: collect whole block, render as <pre class="mermaid"> ---
+    if (trimmed === '```mermaid') {
+      const blockLines = [];
+      i++;
+      while (i < DOC_LINES.length && DOC_LINES[i].trim() !== '```') { blockLines.push(DOC_LINES[i]); i++; }
+      if (i < DOC_LINES.length) i++; // skip closing ```
+      html += '<div class="' + cls + '" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span>';
+      html += '<div class="line-content"><pre class="mermaid">' + escapeHtml(blockLines.join('\n')) + '</pre></div></div>';
+      continue;
     }
-    if (trimmed === '```mermaid') { inMermaid = true; mermaidStartLine = lineNum; return; }
 
-    // Code blocks
-    if (trimmed.startsWith('```')) { inCodeBlock = !inCodeBlock; }
+    // --- Code block: collect whole block, render via marked ---
+    if (trimmed.startsWith('```')) {
+      const lang = trimmed.slice(3).trim();
+      const blockLines = [];
+      i++;
+      while (i < DOC_LINES.length && DOC_LINES[i].trim() !== '```') { blockLines.push(DOC_LINES[i]); i++; }
+      if (i < DOC_LINES.length) i++; // skip closing ```
+      const rendered = marked.parse('```' + lang + '\n' + blockLines.join('\n') + '\n```', { gfm: true });
+      html += '<div class="' + cls + '" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span>';
+      html += '<div class="line-content">' + rendered + '</div></div>';
+      continue;
+    }
 
-    // Render line content via marked
+    // --- Table: collect consecutive | lines, render as one table ---
+    if (trimmed.startsWith('|')) {
+      const tableLines = [line];
+      let j = i + 1;
+      while (j < DOC_LINES.length && DOC_LINES[j].trim().startsWith('|')) { tableLines.push(DOC_LINES[j]); j++; }
+      let rendered = marked.parse(tableLines.join('\n'), { gfm: true });
+      rendered = rendered.replace(/^<p>(.*?)<\/p>\s*$/s, '$1');
+      html += '<div class="' + cls + '" data-line="' + lineNum + '"><span class="line-num">' + lineNum + '</span>';
+      html += '<div class="line-content">' + rendered + '</div></div>';
+      i = j;
+      continue;
+    }
+
+    // --- Regular line ---
     let rendered = marked.parse(line || '\n', { gfm: true, breaks: true });
-
-    // Strip wrapping <p> for non-paragraph lines
     if (line.startsWith('# ') || line.startsWith('## ') || line.startsWith('### ') ||
-        line.startsWith('- ') || line.startsWith('> ') || line.startsWith('| ') ||
-        line.startsWith('|-') || line.trim() === '' || trimmed.startsWith('```')) {
+        line.startsWith('- ') || line.startsWith('> ') || line.trim() === '') {
       rendered = rendered.replace(/^<p>(.*?)<\/p>\s*$/s, '$1');
     }
 
@@ -222,13 +239,18 @@ function renderDocument() {
     html += '<span class="line-num">' + lineNum + '</span>';
     html += '<div class="line-content">' + rendered + '</div>';
     html += '</div>';
-  });
+    i++;
+  }
 
   content.innerHTML = html;
 
   // Syntax highlight code blocks
   if (typeof hljs !== 'undefined') {
     content.querySelectorAll('pre code').forEach(function(block) { hljs.highlightElement(block); });
+  }
+  // Render mermaid diagrams AFTER DOM insertion
+  if (typeof mermaid !== 'undefined') {
+    mermaid.run();
   }
 }
 
