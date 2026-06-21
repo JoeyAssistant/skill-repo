@@ -118,6 +118,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 | 检查项 | cli-only | http-api | http-web | mcp-server |
 |--------|----------|----------|----------|------------|
 | 数据结构 | ✓ `doc/<module>/data-schema.md` | ✓ | ✓ | ✓ |
+| 数据持久化 | ✓ `doc/<module>/data-persistence.md` | ✓ | ✓ | ✓ |
 | 共享数据 | ✓（如使用 common） | ✓（如使用） | ✓（如使用） | ✓（如使用） |
 | CLI 接口 | ✓ `python3 cli/<module>.py --help` 实际输出 | ✗ | ✗ | ✗ |
 | API 接口 | ✗ | ✓ `doc/backend.md` | ✓ | ✗ |
