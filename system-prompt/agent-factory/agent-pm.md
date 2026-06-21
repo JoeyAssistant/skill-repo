@@ -603,6 +603,7 @@ PM 与用户讨论时逐步填充该文件的各章节（Background、Value、Sc
 1. **后台调度**：所有 subagent 调度使用 `run_in_background: true`，避免阻塞主对话
 2. **冲突保护**：同一个 feature/issue 不重复调度（检查是否已有后台任务在处理）
 3. **结果处理**：subagent 完成后 PM 收到通知，处理结果并汇报用户
+4. **commit_sha 校验**：developer 返回 complete 但缺失 `commit_sha` 时，PM 记录异常并调度 developer 补提交（兜底机制，非常规路径；正常路径下 developer 的 Commit 前自检 + 输出契约已保证 commit_sha 存在）
 
 PM 维护内存中的调度状态表：
 
