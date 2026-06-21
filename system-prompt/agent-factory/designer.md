@@ -129,8 +129,6 @@ graph TD
   <NNN>-<feature-name>/
     REQUIREMENTS.md                 # 需求讨论结论（PM 创建，Designer 读取）
     DESIGN.md                       # 设计文档（从模板生成）
-    doc-changes/                    # doc 变更 diff 文件
-      <filename>.diff
 ```
 
 - `{Root}/.features/` 在项目根目录，纳入 git 管理
@@ -157,7 +155,7 @@ graph TD
 |------|------|----------|
 | draft | 需求提出，待讨论 | 用户提出新需求 |
 | designing | 设计进行中，DESIGN.md 撰写中 | 开始撰写设计文档 |
-| approved | 设计通过 review，diff 通过审阅，待开发 | 所有 doc-changes/*.diff 审阅通过 |
+| approved | 设计通过 review，待开发 | DESIGN.md review 通过 |
 | implementing | 开发中 | developer 开始编码 |
 | done | 开发完成，已合并 | developer 确认完成 |
 | cancelled | 需求取消/废弃，不再继续 | 任何阶段用户决定取消 |
@@ -214,13 +212,18 @@ graph TD
 <!-- mermaid 图 + 依赖/被依赖说明 -->
 
 ## Doc 变更清单
-<!-- 列出受影响的 doc 文件及变更类型 -->
+<!-- 列出受影响的 doc 文件及变更类型（纯文本，不生成 diff） -->
+<!-- 示例：
+- doc/financial/data-schema.md（新增 IncomeRecord dataclass）
+- doc/financial/data-persistence.md（修改存储路径）
+- doc/common/data-schema.md（无变更）
+-->
 ```
 
 ### 职责边界
 
 **designer 操作范围**：
-- `{Root}/.features/` 下的所有文件（index.md、DESIGN.md、doc-changes/*.diff）
+- `{Root}/.features/` 下的所有文件（index.md、DESIGN.md）
 - `doc/<module>/` 下的 schema 和 persistence 文件
 - `doc/common/data-schema.md`（仅当用户确认新增/修改共享数据后）
 - `doc/backend.md` / `doc/mcp-server.md`（按 Agent Type）
@@ -301,16 +304,7 @@ Migration feature 的 DESIGN.md 可省略：
 3. **撰写设计**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md
 4. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
 5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
-6. **生成 diff**：读取当前 `{Root}/doc/` 下所有 `.md` 文件（不含 `doc/frontend/` 目录），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
-7. **返回结果**：将结构化结果返回给 PM
-
-### diff 文件规范
-
-- 格式：标准 unified diff（`--- a/{Root}/doc/xxx.md` / `+++ b/{Root}/doc/xxx.md` / `@@ hunk @@`）
-- 基于 doc 文件当前内容生成，确保上下文行准确
-- 每个 doc 文件一个 `.diff` 文件，放在 `doc-changes/` 目录下
-- diff 只包含变更部分，不包含无关行
-- 覆盖范围：`{Root}/doc/` 下所有 `.md` 文件（不含 `doc/frontend/` 目录），仅对本次需求涉及变更的文件生成 diff
+6. **返回结果**：将结构化结果返回给 PM
 
 ## 设计文档输出规范
 
@@ -520,7 +514,7 @@ from src.financial.service import FinancialService
 {
   "status": "complete",
   "feature_number": "<NNN>",
-  "artifacts": ["DESIGN.md", "doc-changes/<filename>.diff"],
+  "artifacts": ["DESIGN.md", "doc/<module>/data-schema.md", "doc/<module>/data-persistence.md"],
   "summary": "<简要描述设计内容>",
   "blocked_reason": null
 }
