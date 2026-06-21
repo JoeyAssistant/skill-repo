@@ -82,29 +82,71 @@ Root: <project-root-path>
 Note: QA only updates NOTES.md in the issue directory. Issue status in index.md is managed by PM.
 ```
 
+## 按 Agent Type 差异化验收
+
+QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
+
+| Agent Type | 验收入口 | 跳过项 |
+|------------|----------|--------|
+| `cli-only` | 执行 `python3 cli/<module>.py --help` + 各子命令 | backend / frontend / mcp-server |
+| `http-api` | HTTP API 调用（启动 backend，调 REST API） | CLI / frontend / mcp-server |
+| `http-web` | Playwright 操作 Web UI（完整端到端） | CLI / mcp-server |
+| `mcp-server` | MCP client 模拟调用 tools | CLI / backend / frontend |
+
+### mcp-server 形态的验收特殊性
+
+- 启动 mcp-server（按 Deploy Mode）
+- 用 MCP client（如 Claude Code inspector、mcp CLI）调用每个 tool
+- 验证 tool 返回结构与 `doc/mcp-server.md` 定义的 output schema 一致
+- 验证每个 tool 实际调用了 `src/<module>/service.py` 的对应方法
+
+### Migration feature 的验收特殊性
+
+- 不验收新功能（设计上不变）
+- **重点**：迁移前后行为一致性
+- 跑全量回归测试，所有用例必须 PASS
+- 对比迁移前后的 E2E 输出（如可能）
+
 ## 验收工作流程
 
 验收按以下 4 个阶段执行：
 
 ### 阶段 1：设计合规检查
 
-对照 DESIGN.md 检查实现：
+对照 DESIGN.md 检查实现，按 Agent Type 启用对应检查：
 
-| 检查项 | 内容 |
-|--------|------|
-| 数据结构 | 对照 `{Root}/doc/data-schema.md` 检查 dataclass 字段、类型、枚举是否一致 |
-| API 接口 | 对照 `{Root}/doc/backend.md` 检查接口路径、方法、请求/响应结构 |
-| CLI 命令 | 对照 `{Root}/doc/cli.md` 检查命令参数、选项、输入输出格式 |
-| UI 元素 | 对照 `{Root}/doc/frontend/` 检查页面元素、交互逻辑 |
+| 检查项 | cli-only | http-api | http-web | mcp-server |
+|--------|----------|----------|----------|------------|
+| 数据结构 | ✓ `doc/<module>/data-schema.md` | ✓ | ✓ | ✓ |
+| 共享数据 | ✓（如使用 common） | ✓（如使用） | ✓（如使用） | ✓（如使用） |
+| CLI 接口 | ✓ `python3 cli/<module>.py --help` 实际输出 | ✗ | ✗ | ✗ |
+| API 接口 | ✗ | ✓ `doc/backend.md` | ✓ | ✗ |
+| UI 元素 | ✗ | ✗ | ✓ `doc/frontend/` | ✗ |
+| MCP tools | ✗ | ✗ | ✗ | ✓ `doc/mcp-server.md` |
 
 ### 阶段 2：E2E 场景验收
 
-启动服务，按 REQUIREMENTS.md 中每个 User Scenario 走完整链路：
+按 Agent Type 选择验收入口，逐一执行每个 User Scenario：
 
-1. 启动后端和前端服务
-2. 逐一执行每个 User Scenario
-3. 验证完整链路（Web UI / API → Backend → CLI → Data Layer）
-4. 记录每个场景的执行结果和发现的问题
+**cli-only**：
+1. 准备测试输入（JSON / 参数）
+2. 执行 `python3 cli/<module>.py <command> [args]`
+3. 验证输出格式与 `--help` 描述一致
+4. 验证完整链路（CLI → src/<module>/service → Data Layer）
+
+**http-api / http-web**：
+1. 启动 backend 服务（http-web 同时启动 frontend）
+2. 通过 HTTP API 调用（http-web 用 Playwright 操作 UI）
+3. 验证响应结构与 `doc/backend.md` 设计一致
+4. 验证完整链路（Web UI / API → Backend → src/<module>/service → Data Layer）
+
+**mcp-server**：
+1. 按 Deploy Mode 启动 mcp-server
+2. 用 MCP client 调用 tool
+3. 验证返回结构与 `doc/mcp-server.md` output schema 一致
+4. 验证完整链路（MCP tool → src/<module>/service → Data Layer）
+
+记录每个场景的执行结果和发现的问题。
 
 ### 阶段 3：日志审计
 
