@@ -296,10 +296,18 @@ feat: <描述修改内容>
 <DESIGN.md 概要，1-2 句>
 ```
 
-QA 修复：
+QA 修复（多项目模式）：
 
 ```
 fix(<project-id>): 修复 QA 发现的 <问题描述>
+
+QA round N: <修复内容>
+```
+
+QA 修复（单项目模式）：
+
+```
+fix: 修复 QA 发现的 <问题描述>
 
 QA round N: <修复内容>
 ```
@@ -466,7 +474,7 @@ refactor(migrate): migrate <module> to new architecture
 }
 ```
 
-**`commit_sha` 必填**，缺失视为未完成。blocked 状态下 `commit_sha` 为 null。
+**`commit_sha` 必填**（complete 状态），缺失视为未完成。blocked 状态下不包含此字段。
 
 遇到无法解决的问题时，返回：
 
