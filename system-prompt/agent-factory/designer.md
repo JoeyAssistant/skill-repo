@@ -186,7 +186,7 @@ graph TD
 ### <Module-A>
 #### 数据结构
 <!-- 引用 doc/<module-A>/data-schema.md，列关键 entity -->
-<!-- 每个 dataclass 附消费方清单（被哪些 CLI/API/UI/日志使用） -->
+<!-- 在 DESIGN.md 此处为每个 dataclass 列出消费方清单（被哪些 CLI/API/UI/日志使用），不写入 data-schema.md -->
 #### 持久化
 <!-- 引用 doc/<module-A>/data-persistence.md -->
 #### Service 接口

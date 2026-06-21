@@ -31,7 +31,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S5 | 无过度设计 | 不包含非必要的字段和结构 | 每个字段都能对应到明确的消费方（CLI/API/UI/日志/持久化反序列化）；与 S8/S9 协同检查 |
 | S6 | 纯数据结构 | 不包含业务逻辑代码或持久化内容 | 仅定义数据结构，不包含函数、方法、存储逻辑 |
 | S7 | 唯一真值声明 | 文档说明其作为数据结构唯一真值的地位 | 文档中声明跨文档一致性要求 |
-| S8 | 字段消费方标注 | DESIGN.md 中每个 dataclass 附消费方清单 | DESIGN.md「各 Module 设计 > 数据结构」章节中，每个 dataclass 列出消费方（CLI/API/UI/日志） |
+| S8 | 字段消费方标注 | DESIGN.md 中每个 dataclass 附消费方清单 | DESIGN.md「各 Module 设计 > 数据结构」章节中，每个 dataclass 列出消费方（CLI/API/UI/日志）。注：此检查需同时读取 DESIGN.md，结果归入对应 data-schema.md 条目下 |
 | S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
