@@ -199,8 +199,6 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
   <NNN>-<feature-name>/
     REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建）
     DESIGN.md                       # 设计文档
-    doc-changes/                    # doc 变更 diff 文件
-      <filename>.diff
     BLOCKED.md                      # 阻塞记录（blocked 时创建）
     POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
 ```
@@ -234,7 +232,7 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 | draft | 需求提出，待讨论 | 用户提出新需求 |
 | designing | 设计进行中，已调度 designer subagent | PM 调度设计 |
 | **blocked** | **需要用户介入，等待外部输入** | designer/developer 无法独立完成 |
-| approved | 设计通过 review，diff 通过审阅，待开发 | 用户终审通过 |
+| approved | 设计通过 review，待开发 | 用户终审通过 |
 | implementing | 开发中，已调度 developer subagent | PM 调度开发 |
 | qa-reviewing | QA 验收中，已调度 QA subagent | Developer 返回 complete 后 PM 调度 QA |
 | done | 验收通过，功能完成 | QA 返回 pass |
@@ -651,8 +649,7 @@ Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement detail
 4. Create DESIGN.md following the template (select artifacts per Agent Type)
 5. Run spec-compliance check
 6. Use doc-review skill to refine
-7. Generate doc-changes/*.diff
-8. Return structured result
+7. Return structured result
 ```
 
 ### 调用 developer subagent（常规开发）
@@ -672,13 +669,12 @@ Root: <project-root-path>
 
 ## Instructions
 1. Read DESIGN.md
-2. Apply doc-changes/*.diff to doc/ files
-3. Update index.md status to "implementing"
-4. Implement all code per design (按 Agent Type 选 artifact)
-5. Run tests
-6. Git commit (one feature = one commit; migration feature 用 refactor(migrate): 前缀)
-7. On success: update index.md status to "qa-reviewing", return complete
-8. On blocker: update index.md status to "blocked", return blocked with reason
+2. Update index.md status to "implementing"
+3. Implement all code per design (按 Agent Type 选 artifact)
+4. Run tests
+5. Git commit (one feature = one commit; migration feature 用 refactor(migrate): 前缀)
+6. On success: update index.md status to "qa-reviewing", return complete
+7. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ### 调用 developer subagent（Bug 直接修复）
@@ -861,8 +857,8 @@ Designer subagent 返回设计结果后，PM 进行初步 review：
 ### Review 标准
 
 - **需求覆盖率**：DESIGN.md 是否覆盖了 requirement brief 中的每个功能点
-- **完整性**：DESIGN.md 各章节是否完整填写（概述、数据结构、CLI 命令、持久化、模块关系、doc 变更清单）
-- **一致性**：doc-changes 涉及的文件范围是否与需求范围匹配
+- **完整性**：DESIGN.md 各章节是否完整填写（概述、数据结构、CLI 命令、持久化、模块关系、Doc 变更清单）
+- **一致性**：DESIGN.md Doc 变更清单 章节涉及的文件范围是否与需求范围匹配
 
 ### Review 不包含
 
@@ -873,7 +869,7 @@ Designer subagent 返回设计结果后，PM 进行初步 review：
 ### Review 通过后
 
 PM 将设计提交用户终审：
-- 展示 DESIGN.md 概要和 doc-changes/*.diff
+- 展示 DESIGN.md 概要和 git diff 摘要（`git diff --stat doc/`）
 - 使用 doc-review skill（如已安装）进行交互式 review
 - 用户确认后，更新 status=approved
 
