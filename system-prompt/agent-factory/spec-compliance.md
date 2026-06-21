@@ -16,7 +16,7 @@ Checks are organized into 7 groups. The dispatching controller (designer) passes
 |---|-------|-------------|---------------|
 | T1 | Agent Type 字段必填且合法 | REQUIREMENTS.md / DESIGN.md 明确 Agent Type | 值 ∈ {cli-only, http-api, http-web, mcp-server} |
 | T2 | mcp-server 时 Deploy Mode 必填 | mcp-server 形态有 Deploy Mode | 值 ∈ {stdio, sse, http, mcpb} |
-| T3 | 模块划分建议（涉及新 module 时必填） | DESIGN.md 含「模块划分建议」章节 | 列出 module + 边界 + 依赖图 |
+| T3 | 模块划分建议（涉及新 module 时必填） | DESIGN.md 含「模块划分建议」章节 | 该章节存在并完整（含 module 列表 + 边界 + 依赖图）；或所有 module 已在 `{Root}/src/<module>/` 存在（即非新 module），此时章节可省略 |
 
 ### S - doc/<module>/data-schema.md（所有形态，按 module 分别检查）
 
@@ -48,7 +48,7 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 | # | Check | Requirement | Pass Criteria |
 |---|-------|-------------|---------------|
 | C1 | 功能说明：脚本用途 | 每个命令必须描述其功能用途 | 所有命令的 `--help` 块包含功能描述文字 |
-| C2 | 功能说明：内部实现原理 | 说明命令的内部逻辑 | 非简单 CRUD 命令需说明算法/聚合/数据来源原理 |
+| C2 | 功能说明：内部实现原理 | 说明命令的内部逻辑 | 非简单 CRUD 命令（如 summary、analyze、repay-calc 等计算类命令）需说明算法/聚合/数据来源原理 |
 | C3 | 输入说明：参数和选项 | 完整列出所有 arguments 和 options | `--help` 块包含完整的 Arguments 和 Options 列表 |
 | C4 | 输入说明：结构化输入格式 | `--json-input` 命令需提供 JSON 示例 | 每个 `--json-input [required]` 的命令都附带 JSON 输入格式示例 |
 | C5 | 输出说明：成功响应结构 | 非简单命令需提供成功输出示例 | list、show、summary、analyze 等查询类命令有输出示例 |
@@ -127,6 +127,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
 
 ### Structure
 
+<!-- Example: truncated for readability. In practice, every checked file (each module's data-schema.md, data-persistence.md, plus common, plus form-specific docs) gets one entry in results[]. -->
 ```json
 {
   "agent_type": "http-web",
@@ -157,8 +158,14 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
       ]
     },
     {
+      "file": "doc/financial/data-persistence.md",
+      "summary": { "totalChecks": 4, "passed": ["P1","P2","P3","P4"], "failed": [] },
+      "violations": []
+    },
+    {
       "file": "doc/common/data-schema.md",
-      "summary": { "totalChecks": 7, "passed": ["S1","S2","S3","S4","S5","S6","S7"], "failed": [] }
+      "summary": { "totalChecks": 7, "passed": ["S1","S2","S3","S4","S5","S6","S7"], "failed": [] },
+      "violations": []
     },
     {
       "file": "doc/backend.md",
