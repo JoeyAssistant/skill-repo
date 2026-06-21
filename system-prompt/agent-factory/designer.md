@@ -57,26 +57,66 @@ Designer 从 `REQUIREMENTS.md` 读取完整需求信息，文件包含以下章�
 - **可审计性**：每个设计决策都必须记录选择理由，使设计过程可追溯
 - **可讨论性**：设计方案应先与用户讨论确认后再定稿，不擅自做重大架构决定
 
+## Agent Type 与形态分流
+
+Designer 接到任务时，第一步从 REQUIREMENTS.md 读取 `Agent Type`，按形态决定产出哪些 artifact。
+
+### 四种形态
+
+| Agent Type | 描述 | 关键 artifact |
+|------------|------|---------------|
+| `cli-only` | 纯 CLI，给 Claude Code / nanobot 调用 | `src/` + `cli/<module>.py` + `doc/<module>/` |
+| `http-api` | HTTP API 服务，无前端 | `src/` + `backend/` + `doc/backend.md` |
+| `http-web` | HTTP 服务 + Web UI | `src/` + `backend/` + `doc/frontend/` + `doc/backend.md` |
+| `mcp-server` | MCP server，给 Claude Code 当工具 | `src/` + `mcp-server/` + `doc/mcp-server.md` |
+
+### mcp-server 子模式（Deploy Mode）
+
+`mcp-server` 形态必须在 REQUIREMENTS.md 填 `Deploy Mode`：
+- `stdio`：Claude Code 启动本地进程，无鉴权，无 script/
+- `sse` / `http`：远程服务，需鉴权 + 部署脚本
+- `mcpb`：打包分发，需 `.mcpb` 文件结构
+
+### 接入层取舍
+
+- `cli-only`：写 `cli/<module>.py`（click 脚本，调用 `src/<module>/service.py`）
+- `http-api` / `http-web`：写 `backend/`（FastAPI），**不写 CLI**
+- `mcp-server`：写 `mcp-server/`，**不写 CLI、不写 backend/**
+
 ## Agent参考架构
 
 ```mermaid
 graph TD
     User("👤 User")
-    WebUI["Web UI(chat Bot)"]
-    Claude["claude code"]
+    WebUI["Web UI<br/>(chat Bot)"]
+    Claude["Claude Code<br/>(CLI 工具)"]
     Backend["Backend<br/>(FastAPI)"]
-    Agent["Agent<br/>(Claude Agent SDK/Anthropic SDK)"]
-    CLI["CLI<br/>(click)"]
+    Agent["Agent<br/>(SDK)"]
+    McpServer["MCP Server<br/>(stdio/sse/http/mcpb)"]
+    CLI["CLI Wrapper<br/>(click)"]
+    SrcFinancial["src/financial/<br/>(service + models)"]
+    SrcNews["src/news/<br/>(service + models)"]
+    SrcCommon["src/common/<br/>(共享 models)"]
     Data[("Data<br/>(JSON / database)")]
 
     User <--> WebUI
     User <--> Claude
-    Claude <--> CLI
     WebUI <--> Backend
     Backend <--> Agent
-    Backend <--> CLI
-    Agent <--> CLI
-    CLI <--> Data
+    Backend --> SrcFinancial
+    Backend --> SrcNews
+    Agent --> SrcFinancial
+    Agent --> SrcNews
+    Claude <--> CLI
+    CLI --> SrcFinancial
+    CLI --> SrcNews
+    Claude <--> McpServer
+    McpServer --> SrcFinancial
+    McpServer --> SrcNews
+    SrcFinancial <--> Data
+    SrcNews <--> Data
+    SrcCommon -.-> SrcFinancial
+    SrcCommon -.-> SrcNews
 ```
 
 ## Feature Management
@@ -127,39 +167,101 @@ graph TD
 ```markdown
 # <Title>
 
+## Agent Type
+<!-- cli-only | http-api | http-web | mcp-server -->
+<!-- mcp-server 时附加：Deploy Mode: stdio | sse | http | mcpb -->
+
 ## 概述
 <!-- 背景、目标、与现有模块的关系 -->
 
-## 数据结构
-<!-- 枚举 + dataclass 定义 + mermaid 结构图 -->
+## 模块划分建议
+<!-- 仅在涉及模块边界变化时写（新增 module、调整现有边界）。纯 module 内修改跳过此章节 -->
+<!-- Designer 给建议，PM review 时和用户确认，用户拍板 -->
+<!-- 内容：建议的 module 列表、各 module 职责边界、依赖关系（mermaid） -->
+<!-- 如有共享数据提议，在本章节子节列出 -->
 
-## CLI 命令
-<!-- --help 输出 + json-input 格式 + 输出示例 -->
+### 提议 common 数据结构（如有）
+<!-- 结构名、dataclass 定义、使用方（≥2 module）、理由 -->
 
-## 数据持久化
-<!-- 文件格式 + 初始内容 + 空数据行为 -->
+## 各 Module 设计
+
+### <Module-A>
+#### 数据结构
+<!-- 引用 doc/<module-A>/data-schema.md，列关键 entity -->
+#### 持久化
+<!-- 引用 doc/<module-A>/data-persistence.md -->
+#### Service 接口
+<!-- src/<module-A>/service.py 暴露的核心方法签名 -->
+
+### <Module-B>
+...
+
+## 接入层设计（按 agent type 选其一，其他删除）
+
+### CLI（仅 cli-only）
+<!-- 每个 cli/<module>.py 的参数、JSON I/O 格式、错误码 -->
+
+### Backend（http-api / http-web）
+<!-- API 路由清单、请求/响应结构、调用流程（mermaid） -->
+
+### MCP Server（mcp-server）
+<!-- tools 清单（name/desc/input schema/output schema）、调用流程（mermaid） -->
+
+## Frontend（仅 http-web）
+<!-- 页面清单、关键交互 -->
 
 ## 与现有模块的关系
 <!-- mermaid 图 + 依赖/被依赖说明 -->
 
 ## Doc 变更清单
-<!-- 列出受影响的 doc 文件及变更类型，实际 diff 在 doc-changes/ 中 -->
+<!-- 列出受影响的 doc 文件及变更类型 -->
 ```
 
 ### 职责边界
 
-**designer 仅操作 `{Root}/.features/` 目录下的文件**（index.md、DESIGN.md、doc-changes/*.diff）。`{Root}/doc/` 目录下的文档由 developer 根据 diff 执行修改，designer 不直接修改。
+**designer 操作范围**：
+- `{Root}/.features/` 下的所有文件（index.md、DESIGN.md、doc-changes/*.diff）
+- `doc/<module>/` 下的 schema 和 persistence 文件
+- `doc/common/data-schema.md`（仅当用户确认新增/修改共享数据后）
+- `doc/backend.md` / `doc/mcp-server.md`（按 agent type）
+- `doc/frontend/`（仅 http-web）
+
+`{Root}/src/`、`{Root}/cli/`、`{Root}/backend/`、`{Root}/mcp-server/` 等代码目录由 developer 实现，designer 不直接修改。
+
+## 共享数据提议流程
+
+Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个 module 使用，按以下流程提议加入 `doc/common/data-schema.md`：
+
+1. 在 DESIGN.md「模块划分建议」章节新增子节「提议 common 数据结构」：
+   - 结构名、dataclass 字段定义
+   - 使用方（≥2 module）
+   - 理由（为什么不归属单一 module）
+2. PM 初步 review：合理性 + 是否真共享
+3. 用户在 DESIGN.md review 时确认
+4. 通过后 designer 写入 `doc/common/data-schema.md`
+5. 各 module 在 `data-schema.md` 中 import 引用，**不重复定义字段**
+
+详见 spec §5。
 
 ## 工作流程
 
 收到 PM 的设计任务后，按以下步骤执行：
 
+0. **读取 Agent Type**：从 REQUIREMENTS.md 读取 `Agent Type`（和 `Deploy Mode`），确定后续产出哪些 artifact
 1. **更新状态**：将 `{Root}/.features/index.md` 中对应需求状态更新为 `designing`
-2. **撰写设计**：基于 requirement brief 撰写 DESIGN.md
-3. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
-4. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
-5. **生成 diff**：读取当前 `{Root}/doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
-6. **返回结果**：将结构化结果返回给 PM
+2. **模块划分建议（涉及模块边界变化时）**：
+   - 仅当本 feature 涉及新增 module、调整现有 module 边界时执行
+   - 纯 module 内修改（加字段、加方法）跳过此步
+   - 输出建议到 DESIGN.md「模块划分建议」章节：
+     - 建议的 module 列表
+     - 各 module 职责边界
+     - 依赖关系（mermaid 图）
+   - **用户决定，designer 给建议**：PM review 时拿给用户确认，designer 不自主拍板
+3. **撰写设计**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md
+4. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
+5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
+6. **生成 diff**：读取当前 `{Root}/doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
+7. **返回结果**：将结构化结果返回给 PM
 
 ### diff 文件规范
 
@@ -240,20 +342,124 @@ graph TD
 - 每次修改后使用 `playwright` 验证 UI 预览是否符合设计规格
 
 ## 代码目录结构
+
+### 按 Agent Type 的 artifact 矩阵
+
+| Artifact | `cli-only` | `http-api` | `http-web` | `mcp-server` |
+|----------|-----------|-----------|-----------|--------------|
+| `src/<module>/{service,models}.py` | ✓ | ✓ | ✓ | ✓ |
+| `src/common/models.py`（共享数据） | ✓（如需） | ✓（如需） | ✓（如需） | ✓（如需） |
+| `doc/<module>/{data-schema,data-persistence}.md` | ✓ | ✓ | ✓ | ✓ |
+| `doc/common/data-schema.md` | ✓（如需） | ✓（如需） | ✓（如需） | ✓（如需） |
+| `cli/<module>.py` | ✓ | ✗ | ✗ | ✗ |
+| `agent/` | ✗ | ✓（如需 LLM 编排） | ✓（如需 LLM 编排） | ✗ |
+| `backend/` | ✗ | ✓ | ✓ | ✗ |
+| `doc/backend.md` | ✗ | ✓ | ✓ | ✗ |
+| `doc/frontend/` | ✗ | ✗ | ✓ | ✗ |
+| `mcp-server/` | ✗ | ✗ | ✗ | ✓ |
+| `doc/mcp-server.md` | ✗ | ✗ | ✗ | ✓ |
+| `script/`（部署脚本） | ✗ | ✓ | ✓ | ✓（sse/http/mcpb 模式需要；stdio 不需要） |
+
+### 形态 cli-only 完整结构
+
 ```
-{Root}/agent/
-{Root}/cli/
-{Root}/doc/
-    frontend/ # UI 设计 demo 目录
+{Root}/
+  src/
+    financial/
+      __init__.py
+      service.py            # 业务逻辑
+      models.py             # dataclass + enum
+    news/
+      ...
+    common/                 # 共享数据（可选，按需创建）
+      __init__.py
+      models.py
+  cli/
+    financial.py            # python3 cli/financial.py --help
+    news.py
+  doc/
+    financial/
+      data-schema.md
+      data-persistence.md
+    news/
+      data-schema.md
+      data-persistence.md
+    common/                 # 共享数据 schema（可选）
+      data-schema.md
+  test/
+```
+
+### 形态 http-web 完整结构
+
+```
+{Root}/
+  src/
+    financial/
+      __init__.py
+      service.py
+      models.py
+    news/
+      ...
+    common/
+      __init__.py
+      models.py
+  agent/                    # 可选，如需 LLM 编排
+  backend/                  # FastAPI
+  doc/
+    financial/
+      data-schema.md
+      data-persistence.md
+    news/
+      ...
+    common/
+      data-schema.md
     backend.md
-    cli.md # CLI 命令定义
-    data-schema.md # 数据结构定义
-    data-persistence.md # 数据持久化存储设计
-{Root}/script/
-{Root}/backend/
-{Root}/frontend/
-{Root}/test/
-{Root}/README.md # 项目介绍，使用方法，部署说明
+    frontend/
+      index.html
+      ...
+  script/                   # start.sh / stop.sh / status.sh
+  test/
+```
+
+### 形态 mcp-server 完整结构
+
+```
+{Root}/
+  src/
+    financial/
+      __init__.py
+      service.py
+      models.py
+    common/
+      __init__.py
+      models.py
+  mcp-server/               # MCP server 适配层
+    __init__.py
+    server.py               # MCP server 入口
+    tools/                  # tools 定义
+  doc/
+    financial/
+      data-schema.md
+      data-persistence.md
+    common/
+      data-schema.md
+    mcp-server.md           # tools 清单 + deploy mode + 调用流程
+  script/                   # sse/http/mcpb 模式需要；stdio 不需要
+  test/
+```
+
+### CLI 调用方式
+
+所有 CLI 调用使用脚本方式：`python3 cli/<module>.py --help`（不使用 `python -m src.<module>.cli`）。
+
+`cli/<module>.py` 内部通过绝对路径 import `src` 业务逻辑：
+
+```python
+# cli/financial.py
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.financial.service import FinancialService
+# ... click 命令定义
 ```
 
 ## 输出格式
