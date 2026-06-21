@@ -100,13 +100,17 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 在开始编码之前，必须完成以下步骤：
 
 1. **阅读设计文档**：按以下顺序阅读设计文档
-   - `{Root}/.features/<NNN>-<name>/DESIGN.md` → 理解需求设计（先读这个）
+   - `{Root}/.features/<NNN>-<name>/DESIGN.md` → 理解需求设计（先读这个，特别是 Agent Type）
    - `{Root}/.features/<NNN>-<name>/doc-changes/*.diff` → 理解 doc 文件需要做哪些变更
-   - `{Root}/doc/data-schema.md` → 理解数据模型
-   - `{Root}/doc/data-persistence.md` → 理解存储方案
-   - `{Root}/doc/cli.md` → 理解 CLI 命令设计
-   - `{Root}/doc/backend.md` → 理解后端 API 设计
-   - `{Root}/doc/frontend/` → 理解 UI 设计规格
+   - **各 module 设计文档**（从 DESIGN.md「各 Module 设计」章节确定涉及哪些 module）：
+     - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
+     - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案
+   - `{Root}/doc/common/data-schema.md` → 跨 module 共享数据结构（如存在）
+   - **按 Agent Type 选读接入层文档**：
+     - `cli-only`：执行 `python3 cli/<module>.py --help` 查看 CLI 接口（无静态 cli.md 文件）
+     - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
+     - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
+   - `{Root}/doc/frontend/` → UI 设计规格（仅 http-web 形态）
 2. **应用 doc 变更**：将 `{Root}/.features/<NNN>-<name>/doc-changes/*.diff` 逐个应用到对应的 `{Root}/doc/` 文件。这是编码前的必要步骤，确保 `{Root}/doc/` 文档与设计一致后再开始编码
 3. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
 4. **遵循设计**：严格按照设计文档（含已更新的 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
