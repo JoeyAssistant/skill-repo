@@ -48,7 +48,7 @@ Root: <project-root-path>
 
 ## Instructions
 1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
-2. Verify design compliance (data schema, API, CLI, UI)
+2. Verify design compliance per Agent Type (see 阶段 1 矩阵)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
 5. For confirmed issues: search for similar patterns
@@ -197,11 +197,15 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 | 1 | <场景名> | PASS | ... |
 
 ## Design Compliance
-| Item | Result | Notes |
-|------|--------|-------|
-| Data Schema | PASS | ... |
-| API | PASS | ... |
-| CLI | PASS | ... |
+| Item | Applicable (per Agent Type) | Result | Notes |
+|------|------------------------------|--------|-------|
+| Data Schema | All forms | PASS/FAIL | ... |
+| Data Persistence | All forms | PASS/FAIL | ... |
+| Common Schema | If shared used | PASS/FAIL/N/A | ... |
+| CLI Interface | cli-only | PASS/FAIL/N/A | ... |
+| Backend API | http-api / http-web | PASS/FAIL/N/A | ... |
+| Frontend UI | http-web | PASS/FAIL/N/A | ... |
+| MCP Tools | mcp-server | PASS/FAIL/N/A | ... |
 
 ## Issues Found
 ### QA-001: <title>
@@ -253,6 +257,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 {
   "status": "pass",
   "feature_number": "<NNN>",
+  "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "scenarios_tested": 5,
   "scenarios_passed": 5,
   "issues_found": [],
@@ -267,6 +272,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 {
   "status": "fail",
   "feature_number": "<NNN>",
+  "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "scenarios_tested": 5,
   "scenarios_passed": 3,
   "issues_found": [
@@ -293,6 +299,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 {
   "status": "diagnosed",
   "issue_number": "<NNN>",
+  "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "root_cause": "<根因描述>",
   "reproduction_confirmed": true,
   "fix_suggestion": "<最小修复范围>",

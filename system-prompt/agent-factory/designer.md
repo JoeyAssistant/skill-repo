@@ -223,7 +223,7 @@ graph TD
 - `{Root}/.features/` 下的所有文件（index.md、DESIGN.md、doc-changes/*.diff）
 - `doc/<module>/` 下的 schema 和 persistence 文件
 - `doc/common/data-schema.md`（仅当用户确认新增/修改共享数据后）
-- `doc/backend.md` / `doc/mcp-server.md`（按 agent type）
+- `doc/backend.md` / `doc/mcp-server.md`（按 Agent Type）
 - `doc/frontend/`（仅 http-web）
 
 `{Root}/src/`、`{Root}/cli/`、`{Root}/backend/`、`{Root}/mcp-server/` 等代码目录由 developer 实现，designer 不直接修改。
