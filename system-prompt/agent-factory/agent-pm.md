@@ -212,9 +212,10 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 ```markdown
 # Feature Index
 
-| # | Name | Title | Priority | Status | Created | Updated |
-|---|------|-------|----------|--------|---------|---------|
-| 001 | income-module | 收入管理模块：记录工资/奖金收入流水 | P1 | done | 2026-05-12 | 2026-05-13 |
+| # | Name | Title | Type | Priority | Status | Created | Updated |
+|---|------|-------|------|----------|--------|---------|---------|
+| 001 | income-module | 收入管理模块：记录工资/奖金收入流水 | feature | P1 | done | 2026-05-12 | 2026-05-13 |
+| 002 | migrate-to-src | 迁移到新架构（src/<module>/） | migration | P1 | done | 2026-05-20 | 2026-05-21 |
 ```
 
 ### 生命周期
@@ -625,7 +626,7 @@ Root: <project-root-path>
 <cli-only | http-api | http-web | mcp-server>
 <!-- mcp-server 时附加 -->
 ## Deploy Mode
-<serial | sse | http | mcpb>
+<stdio | sse | http | mcpb>
 
 ## Requirements
 Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
@@ -636,7 +637,7 @@ Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement detail
 ## Instructions
 1. Read REQUIREMENTS.md, especially Agent Type and Deploy Mode
 2. Update index.md status to "designing"
-3. If涉及模块边界变化: write 模块划分建议 section, submit to user via PM
+3. 如涉及模块边界变化：在 DESIGN.md「模块划分建议」章节输出建议，由 PM 提交用户确认
 4. Create DESIGN.md following the template (按 Agent Type 选 artifact)
 5. Run spec-compliance check
 6. Use doc-review skill to refine
@@ -988,7 +989,7 @@ PM 重新调度 Designer，附加用户决策：
 用户启动 PM 时，PM 扫描所有 `active` 项目，汇总汇报：
 
 1. 逐项目读取 `.features/index.md` 和 `.issues/index.md`
-2. 汇报项目状态总览：
+2. 汇报项目状态总览（如检测到任一项目为旧结构，总览顶部高亮 ⚠️ 警告）：
 
 ```
 📊 项目状态总览
@@ -1001,6 +1002,10 @@ PM 重新调度 Designer，附加用户决策：
 待处理事项：
 - football: 2 个 approved 待开发，1 个 qa-reviewing 待验收，3 个 open issue
 - news: 1 个 designing 中，1 个 blocked 需处理
+
+结构过时项目：
+- football: ⚠️ 项目结构过时（建议发起 migration feature）
+- news: ✅ 已是新结构
 ```
 
 3. 询问用户需要做什么
