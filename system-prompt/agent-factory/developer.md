@@ -38,9 +38,10 @@ Root: <project-root-path>
 1. Read DESIGN.md
 2. Apply doc-changes/*.diff to doc/ files
 3. Update index.md status to "implementing"
-4. Implement all code per design
+4. Implement all code per design (按 Agent Type 选 artifact)
 5. Run tests
-6. Git commit (one feature = one commit)
+6. Git commit (one feature = one commit, see Git 提交规范)
+   - Migration feature commit message 用 `refactor(migrate):` 前缀
 7. On success: update index.md status to "qa-reviewing", return complete
 8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
@@ -110,40 +111,95 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 3. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
 4. **遵循设计**：严格按照设计文档（含已更新的 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
 5. **更新状态**：开始编码前，将 `{Root}/.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
-6. **代码目录结构**：
+6. **代码目录结构**（按 Agent Type）：
+
+**形态 cli-only**：
 ```
-{Root}/agent/
-{Root}/cli/
-{Root}/doc/
-    frontend/ # UI 设计 demo 目录
-    backend.md
-    cli.md # CLI 命令定义
-    data-schema.md # 数据结构定义
-    data-persistence.md # 数据持久化存储设计
-{Root}/script/
-{Root}/backend/
-{Root}/frontend/
+{Root}/src/<module>/{__init__.py, service.py, models.py}
+{Root}/src/common/                # 共享数据（可选）
+{Root}/cli/<module>.py            # CLI wrapper
+{Root}/doc/<module>/{data-schema.md, data-persistence.md}
+{Root}/doc/common/                # 共享 schema（可选）
 {Root}/test/
-{Root}/README.md # 项目介绍，使用方法，部署说明
 ```
+
+**形态 http-api / http-web**：
+```
+{Root}/src/<module>/{__init__.py, service.py, models.py}
+{Root}/src/common/
+{Root}/agent/                     # 可选，如需 LLM 编排
+{Root}/backend/                   # FastAPI
+{Root}/doc/<module>/
+{Root}/doc/common/
+{Root}/doc/backend.md
+{Root}/doc/frontend/              # 仅 http-web
+{Root}/script/
+{Root}/test/
+```
+
+**形态 mcp-server**：
+```
+{Root}/src/<module>/{__init__.py, service.py, models.py}
+{Root}/src/common/
+{Root}/mcp-server/{__init__.py, server.py, tools/}
+{Root}/doc/<module>/
+{Root}/doc/common/
+{Root}/doc/mcp-server.md
+{Root}/script/                    # sse/http/mcpb 模式需要；stdio 不需要
+{Root}/test/
+```
+
+完整目录结构示意参考 `designer.md` 的「Agent 参考架构」章节或 spec §1。
+
+## 按 Agent Type 实现
+
+Developer 实现时根据 feature 的 Agent Type 决定产出哪些代码：
+
+### 所有形态共同
+- `src/<module>/service.py`：业务逻辑（被 CLI/Backend/MCP Server 调用）
+- `src/<module>/models.py`：dataclass + enum
+- `src/common/models.py`：跨 module 共享数据（如使用）
+
+### cli-only 形态追加
+- `cli/<module>.py`：CLI wrapper（click）
+- **调用方式**：`python3 cli/<module>.py --help`（不用 `python -m`）
+- cli.py 头部需处理 sys.path：
+
+```python
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.<module>.service import <ServiceName>
+```
+
+### http-api / http-web 形态追加
+- `backend/`：FastAPI，直接 `from src.<module>.service import ...`
+- **不写 CLI**（backend 直接调 src/）
+- http-web 追加 `frontend/` 实现
+
+### mcp-server 形态追加
+- `mcp-server/server.py`：MCP server 入口
+- `mcp-server/tools/`：tools 定义（每个 tool 映射到 src/ 中的方法）
+- **不写 CLI、不写 backend/**
+
+### 多形态组合
+Agent Type 是单选——一个 feature 只对应一种形态。如某 agent 需要多形态（如同时 CLI + HTTP），按两个 feature 分别实现，共享 `src/`。
 
 ## 开发原则
 
 ### data-schema一致性
 
-编码时必须确保所有模块使用数据结构一致性，以 `{Root}/doc/data-schema.md` 为唯一真相源，包括
-- 前端代码
-- 后端REST API
-- CLI
+编码时必须确保所有模块使用数据结构一致性，以 `doc/<module>/data-schema.md` 为唯一真相源（按 module 维护），跨 module 共享数据以 `doc/common/data-schema.md` 为唯一真相源。
 
 #### 新增数据字段检查清单
 
 新增或修改数据字段时，需同时检查以下位置：
 
-1. `{Root}/doc/data-schema.md` — 更新 schema 定义与 dataclass
-2. Python dataclass — 同步字段定义
-3. CLI 序列化/反序列化 — 确保字段能正确读写
-4. 前端 JS 渲染与表单提交 — 确保字段名一致、计算逻辑正确
+1. `doc/<module>/data-schema.md` — 更新 schema 定义与 dataclass（按 module 维护，不再单文件）
+2. `src/<module>/models.py` — 同步 dataclass / enum 定义
+3. **如属共享数据**：`doc/common/data-schema.md` + `src/common/models.py`
+4. CLI 序列化/反序列化（仅 cli-only 形态）
+5. 前端 JS 渲染与表单提交（仅 http-web 形态）
+6. MCP tools input/output schema（仅 mcp-server 形态）
 
 ### 日志规范
 
@@ -266,6 +322,32 @@ feat: <feature title> (#<NNN>)
 - 运行全量测试确认无回归
 - 检查是否引入新文件、新依赖或临时文件残留
 - 测试生成的临时文件必须写入系统临时目录或测试目录，不得污染源码
+
+## Migration Feature 实现规范
+
+当 feature 标记为 `Type: migration` 时，developer 遵循以下差异：
+
+### 约束
+- **纯迁移**：不改业务行为，不加新功能，不改数据格式
+- **分批迁移**：按 module 顺序迁移，一次一个 module
+- **每批验证**：每个 module 迁移后立即跑全量测试
+
+### 流程
+1. 读 DESIGN.md 中的迁移方案（module 拆分边界）
+2. 创建 `src/<module>/` 目录，从旧 `cli/*.py` 抽取业务逻辑到 `service.py`
+3. 数据结构抽到 `src/<module>/models.py`
+4. 跨 module 共享部分抽到 `src/common/models.py`
+5. 创建 `cli/<module>.py` 作为 wrapper（如保留 cli-only 形态）
+6. 删除旧 `cli/*.py` 中的业务逻辑（保留 wrapper 入口）
+7. 更新 `doc/<module>/data-schema.md`（从旧 `doc/data-schema.md` 按边界拆分）
+8. 删除旧 `doc/cli.md`、`doc/data-schema.md`、`doc/data-persistence.md`
+9. 跑全量测试确认行为不变
+10. Commit（`refactor(migrate): migrate <module> to new architecture`）
+
+### 不允许的操作
+- 顺手修 bug（记录到 `.issues/`，单独修复）
+- 加新字段（开新 feature）
+- 重构无关代码
 
 
 ## 部署脚本
