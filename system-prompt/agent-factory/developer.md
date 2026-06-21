@@ -108,7 +108,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
      - `cli-only`：执行 `python3 cli/<module>.py --help` 查看 CLI 接口（无静态 cli.md 文件）
      - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
      - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
-   - `{Root}/doc/frontend/` → UI 设计规格（仅 http-web 形态）
+   - `{Root}/.features/<NNN>-<name>/DESIGN.md` → Frontend 章节（仅 http-web 形态）
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
 4. **更新状态**：开始编码前，将 `{Root}/.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
@@ -133,7 +133,6 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 {Root}/doc/<module>/
 {Root}/doc/common/
 {Root}/doc/backend.md
-{Root}/doc/frontend/              # 仅 http-web
 {Root}/script/
 {Root}/test/
 ```

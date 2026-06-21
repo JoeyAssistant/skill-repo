@@ -67,7 +67,7 @@ Designer 接到任务时，第一步从 REQUIREMENTS.md 读取 `Agent Type`，�
 |------------|------|---------------|
 | `cli-only` | 纯 CLI，给 Claude Code / nanobot 调用 | `src/` + `cli/<module>.py` + `doc/<module>/` |
 | `http-api` | HTTP API 服务，无前端 | `src/` + `backend/` + `doc/backend.md` |
-| `http-web` | HTTP 服务 + Web UI | `src/` + `backend/` + `doc/frontend/` + `doc/backend.md` |
+| `http-web` | HTTP 服务 + Web UI | `src/` + `backend/` + `doc/backend.md` |
 | `mcp-server` | MCP server，给 Claude Code 当工具 | `src/` + `mcp-server/` + `doc/mcp-server.md` |
 
 ### mcp-server 子模式（Deploy Mode）
@@ -206,7 +206,17 @@ graph TD
 <!-- tools 清单（name/desc/input schema/output schema）、调用流程（mermaid） -->
 
 ## Frontend（仅 http-web）
-<!-- 页面清单、关键交互 -->
+
+### 页面清单
+<!-- 列出所有页面：路径、文件名、用途 -->
+
+### 关键交互
+<!-- 每个页面的关键用户操作流程 -->
+
+### API 对应
+| 页面 | 调用的 backend API |
+|------|-------------------|
+| <page> | <API list> |
 
 ## 与现有模块的关系
 <!-- mermaid 图 + 依赖/被依赖说明 -->
@@ -226,7 +236,6 @@ graph TD
 - `doc/<module>/` 下的 schema 和 persistence 文件
 - `doc/common/data-schema.md`（仅当用户确认新增/修改共享数据后）
 - `doc/backend.md` / `doc/mcp-server.md`（按 Agent Type）
-- `doc/frontend/`（仅 http-web）
 
 `{Root}/src/`、`{Root}/cli/`、`{Root}/backend/`、`{Root}/mcp-server/` 等代码目录由 developer 实现，designer 不直接修改。
 
@@ -272,7 +281,7 @@ PM 在调度时通过 REQUIREMENTS.md 的 `Type: migration` 标记和约束声�
 - 加新功能（用户提了也拒绝，开新 feature）
 - 改业务行为
 - 改数据格式
-- 设计 doc/frontend/、doc/backend.md、doc/mcp-server.md（除非 Agent Type 对应）
+- 设计 doc/backend.md、doc/mcp-server.md（除非 Agent Type 对应）
 
 ### DESIGN.md 简化
 
@@ -317,7 +326,6 @@ Migration feature 的 DESIGN.md 可省略：
 | `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件） | cli-only |
 | `{Root}/doc/backend.md` | 后端技术选型 + REST API 设计 | http-api / http-web |
 | `{Root}/doc/mcp-server.md` | MCP tools 清单 + 部署模式 + 调用流程 | mcp-server |
-| `{Root}/doc/frontend/` | 各页面 UI 预览 HTML 文件 | http-web |
 
 
 ## Data Schema
@@ -376,14 +384,6 @@ Migration feature 的 DESIGN.md 可省略：
 - REST API 设计，针对每一个 API，列出接口定义，包括接口功能、输入、输出，使用 mermaid 语法列出 API 的调用流程，与内部模块（如 agent、`src/<module>/`、data layer）的交互流程
 - **Backend 直接 import `src/<module>/service.py`，不经过 CLI**
 
-## Web UI 设计
-
-### 设计与开发流程
-#### 设计先行，所见即所得
-- `{Root}/doc/frontend/` 目录下，针对每一个网页，创建对应 UI 预览 `html` 文件，用于与用户讨论、修改、确认 UI 设计规格，使用 mock 数据
-- **字体策略**：优先使用思源黑体 (Noto Sans SC) + 系统字体 fallback， 通过`@import url('https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css')`加载（仅作增强，失败不影响页面显示）
-- 每次修改后使用 `playwright` 验证 UI 预览是否符合设计规格
-
 ## 代码目录结构
 
 ### 按 Agent Type 的 artifact 矩阵
@@ -398,7 +398,6 @@ Migration feature 的 DESIGN.md 可省略：
 | `agent/` | ✗ | ✓（如需 LLM 编排） | ✓（如需 LLM 编排） | ✗ |
 | `backend/` | ✗ | ✓ | ✓ | ✗ |
 | `doc/backend.md` | ✗ | ✓ | ✓ | ✗ |
-| `doc/frontend/` | ✗ | ✗ | ✓ | ✗ |
 | `mcp-server/` | ✗ | ✗ | ✗ | ✓ |
 | `doc/mcp-server.md` | ✗ | ✗ | ✗ | ✓ |
 | `script/`（部署脚本） | ✗ | ✓ | ✓ | ✓（sse/http/mcpb 模式需要；stdio 不需要） |
@@ -457,9 +456,6 @@ Migration feature 的 DESIGN.md 可省略：
     common/
       data-schema.md
     backend.md
-    frontend/
-      index.html
-      ...
   script/                   # start.sh / stop.sh / status.sh
   test/
 ```
