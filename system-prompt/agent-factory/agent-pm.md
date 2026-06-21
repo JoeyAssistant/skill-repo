@@ -670,9 +670,9 @@ Root: <project-root-path>
 1. Read DESIGN.md
 2. Apply doc-changes/*.diff to doc/ files
 3. Update index.md status to "implementing"
-4. Implement all code per design
+4. Implement all code per design (按 Agent Type 选 artifact)
 5. Run tests
-6. Git commit (one feature = one commit, see developer.md Git 提交规范)
+6. Git commit (one feature = one commit; migration feature 用 refactor(migrate): 前缀)
 7. On success: update index.md status to "qa-reviewing", return complete
 8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
@@ -721,7 +721,7 @@ Root: <project-root-path>
 
 ## Instructions
 1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
-2. Verify design compliance (data schema, API, CLI, UI)
+2. Verify design compliance per Agent Type (see 阶段 1 矩阵 in qa.md for which checks apply)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
 5. For confirmed issues: search for similar patterns
