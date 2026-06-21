@@ -196,7 +196,7 @@ graph TD
 ### <Module-B>
 ...
 
-## 接入层设计（按 agent type 选其一，其他删除）
+## 接入层设计（按 Agent Type 选其一，其他删除）
 
 ### CLI（仅 cli-only）
 <!-- 每个 cli/<module>.py 的参数、JSON I/O 格式、错误码 -->
@@ -260,7 +260,7 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 3. **撰写设计**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md
 4. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
 5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
-6. **生成 diff**：读取当前 `{Root}/doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
+6. **生成 diff**：读取当前 `{Root}/doc/` 下所有 `.md` 文件（不含 `doc/frontend/` 目录），基于 DESIGN.md 内容为涉及变更的文件生成 `doc-changes/*.diff`（unified diff 格式）
 7. **返回结果**：将结构化结果返回给 PM
 
 ### diff 文件规范
@@ -269,7 +269,7 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 - 基于 doc 文件当前内容生成，确保上下文行准确
 - 每个 doc 文件一个 `.diff` 文件，放在 `doc-changes/` 目录下
 - diff 只包含变更部分，不包含无关行
-- 覆盖范围：`{Root}/doc/` 下所有 `.md` 文件（不含 `frontend/*.html`），仅对本次需求涉及变更的文件生成 diff
+- 覆盖范围：`{Root}/doc/` 下所有 `.md` 文件（不含 `doc/frontend/` 目录），仅对本次需求涉及变更的文件生成 diff
 
 ## 设计文档输出规范
 
@@ -327,15 +327,20 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 ## Agent Layer
 
 - 使用 Claude SDK (Anthropic SDK) 或 Claude Agent SDK 构建 Agent
-- Agent 职责边界：Agent 负责理解用户意图、编排任务流程、调用工具（如 CLI 命令）；具体的业务逻辑执行由 CLI 层完成，数据操作由 Data Layer 完成
-- Agent 与其他层的交互：Agent 通过 Backend 或直接调用 CLI 来执行任务，不直接操作数据库
+- **Agent 职责边界**：Agent 负责理解用户意图、编排任务流程、调用工具（执行实际业务逻辑的工具）
+- **Agent 与其他层的交互（按 Agent Type）**：
+  - `cli-only`：Agent 通过 CLI wrapper（`cli/<module>.py`）调用 `src/<module>/service.py`
+  - `http-api` / `http-web`：Agent（在 Backend 内）直接调用 `src/<module>/service.py`，**不经过 CLI**
+  - `mcp-server`：MCP tools 直接调用 `src/<module>/service.py`，**不经过 CLI、不经过 Backend**
+- Agent 不直接操作数据库，数据操作通过 `src/<module>/service.py` 完成
 - 定义目标 Agent 的 system prompt，可通过 Claude Code 的 append-system-prompt 使用，也可通过 Anthropic SDK 或 Claude Agent SDK 使用，根据实际需求决定
 - 实现时可参考 `/claude-api` skill
 
 ## Backend Layer
-设计文档 `{Root}/doc/backend.md` 内容：
+设计文档 `{Root}/doc/backend.md` 内容（仅 `http-api` / `http-web` 形态）：
 - backend 技术选型
-- REST API 设计，针对每一个 API，列出接口定义，包括接口功能、输入、输出，使用 mermaid 语法列出 API 的调用流程，与内部模块（如 agent、cli、data layer）的交互流程
+- REST API 设计，针对每一个 API，列出接口定义，包括接口功能、输入、输出，使用 mermaid 语法列出 API 的调用流程，与内部模块（如 agent、`src/<module>/`、data layer）的交互流程
+- **Backend 直接 import `src/<module>/service.py`，不经过 CLI**
 
 ## Web UI 设计
 
