@@ -275,17 +275,19 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 
 设计完成后，按以下结构输出文档到 `{Root}/doc/` 目录：
 
-| 文件 | 内容 |
-|------|------|
-| `{Root}/doc/data-schema.md` | agent业务数据结构定义（dataclass + 文字描述） |
-| `{Root}/doc/data-persistence.md` | 数据持久化方案 |
-| `{Root}/doc/cli.md` | CLI 命令定义（`--help` 设计） |
-| `{Root}/doc/backend.md` | 后端技术选型 + REST API 设计 |
-| `{Root}/doc/frontend/` | 各页面 UI 预览 HTML 文件 |
+| 文件 | 内容 | 适用形态 |
+|------|------|----------|
+| `{Root}/doc/<module>/data-schema.md` | 该 module 业务数据结构定义（dataclass + 文字描述） | 所有形态 |
+| `{Root}/doc/<module>/data-persistence.md` | 该 module 数据持久化方案 | 所有形态 |
+| `{Root}/doc/common/data-schema.md` | 跨 module 共享数据结构（User/AuditLog/Pagination 等） | 所有形态（如需） |
+| `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件） | cli-only |
+| `{Root}/doc/backend.md` | 后端技术选型 + REST API 设计 | http-api / http-web |
+| `{Root}/doc/mcp-server.md` | MCP tools 清单 + 部署模式 + 调用流程 | mcp-server |
+| `{Root}/doc/frontend/` | 各页面 UI 预览 HTML 文件 | http-web |
 
 
 ## Data Schema
-### 设计文档`{Root}/doc/data-schema.md`
+### 设计文档`{Root}/doc/<module>/data-schema.md`（按 module 拆分，跨 module 共享部分写在 `{Root}/doc/common/data-schema.md`）
 **文件内容**
 - 结合业务场景、功能，使用合理数据类型，定义简洁、清晰的数据结构
 - 每个数据结构使用 `python dataclass` 定义，以及class与每个field相应文字描述
@@ -299,17 +301,19 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 - 文档仅承载数据结构定义，不体现业务使用代码或持久化等其他内容
 
 ### 关键原则
-**该`data-schema`作为整个agent设计使用数据结构唯一真值，必须保证跨文档一致性，如需要修改，请与用户讨论**
+- **每个 module 的 `data-schema.md` 作为该 module 数据结构的唯一真值，必须保证跨文档一致性**
+- **跨 module 共享数据结构以 `{Root}/doc/common/data-schema.md` 为唯一真值**
+- 任何 data-schema 修改需先与用户讨论
 
 ## Data Persistence
-- 统一在 `{Root}/doc/data-persistence.md` 中定义数据持久化策略，包括文件存储、数据库存储等
+- 每个 module 在 `{Root}/doc/<module>/data-persistence.md` 中定义该 module 的数据持久化策略（包括文件存储、数据库存储等）
 - 持久化方案优先使用 json、yaml 等简单持久化存储，对于较复杂场景，使用数据库方案存储
-- `{Root}/doc/data-persistence.md` 仅定义存储方案，不涉及 CLI 内容
+- `{Root}/doc/<module>/data-persistence.md` 仅定义存储方案，不涉及 CLI 内容
 
 ## CLI Layer
 
 ### CLI 设计原则
-- **`--help as doc`**：`{Root}/doc/cli.md` 直接展示每个脚本的 `--help` 输出内容，包含：
+- **`--help as doc`**：CLI 命令文档通过 `python3 {Root}/cli/<module>.py --help` 运行时输出获得（**不写静态 CLI 文档文件**），包含：
     - **功能说明**：脚本用途、内部实现原理
     - **输入说明**：参数、选项、结构化输入格式
     - **输出说明**：成功/失败响应结构、错误码定义
