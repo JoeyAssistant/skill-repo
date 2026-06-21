@@ -186,6 +186,7 @@ graph TD
 ### <Module-A>
 #### 数据结构
 <!-- 引用 doc/<module-A>/data-schema.md，列关键 entity -->
+<!-- 每个 dataclass 附消费方清单（被哪些 CLI/API/UI/日志使用） -->
 #### 持久化
 <!-- 引用 doc/<module-A>/data-persistence.md -->
 #### Service 接口
@@ -329,20 +330,37 @@ Migration feature 的 DESIGN.md 可省略：
 
 
 ## Data Schema
-### 设计文档`{Root}/doc/<module>/data-schema.md`（按 module 拆分，跨 module 共享部分写在 `{Root}/doc/common/data-schema.md`）
-**文件内容**
+
+设计文档 `{Root}/doc/<module>/data-schema.md`（按 module 拆分，跨 module 共享部分写在 `{Root}/doc/common/data-schema.md`）
+
+### 文件内容
+
 - 结合业务场景、功能，使用合理数据类型，定义简洁、清晰的数据结构
-- 每个数据结构使用 `python dataclass` 定义，以及class与每个field相应文字描述
+- 每个数据结构使用 `python dataclass` 定义，class 与每个 field 配文字描述
+
+### 字段必要性原则（核心）
+
+每个字段必须能回答"谁在什么时候读取这个字段？"。设计 dataclass 前先做两件事：
+
+1. **列出消费方清单**：该数据结构被哪些场景使用？
+   - CLI 命令 / API 端点 / UI 元素 / 日志读取 / 持久化反序列化
+2. **逐字段归因**：每个字段属于哪个消费方？没有明确消费方的不写入 schema
+
+**判断标准（写入字段前自查）**：
+
+| 场景 | 处理 |
+|------|------|
+| 字段有明确消费方（CLI/API/UI/日志读取它） | 保留 |
+| 字段"将来可能用到"或"看起来应该有" | 不保留（YAGNI） |
 
 **dos**
+
 - 字段值存在有限集合时，优先使用枚举（Python `enum`）而非字符串常量或整数魔法值
 - 数据结构命名清晰、合理，保证一致性
-
-**don'ts**
-- 避免过度设计，定义agent功能非必要的数据结构以及字段，如不确定请于用户确认
 - 文档仅承载数据结构定义，不体现业务使用代码或持久化等其他内容
 
 ### 关键原则
+
 - **每个 module 的 `data-schema.md` 作为该 module 数据结构的唯一真值，必须保证跨文档一致性**
 - **跨 module 共享数据结构以 `{Root}/doc/common/data-schema.md` 为唯一真值**
 - 任何 data-schema 修改需先与用户讨论

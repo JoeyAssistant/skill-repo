@@ -28,9 +28,11 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S2 | 字段描述 | class 和每个 field 都有文字描述 | dataclass 上方有类描述，每个字段有 inline 注释描述 |
 | S3 | 枚举使用 | 有限集合值使用 Python enum | 字段值存在有限集合时（如类型、状态），使用 enum 而非字符串常量 |
 | S4 | 命名一致性 | 数据结构命名清晰、一致 | 跨 module 同类命名风格一致 |
-| S5 | 无过度设计 | 不包含非必要的字段和结构 | 每个字段都能对应到实际功能需求 |
+| S5 | 无过度设计 | 不包含非必要的字段和结构 | 每个字段都能对应到明确的消费方（CLI/API/UI/日志/持久化反序列化）；与 S8/S9 协同检查 |
 | S6 | 纯数据结构 | 不包含业务逻辑代码或持久化内容 | 仅定义数据结构，不包含函数、方法、存储逻辑 |
 | S7 | 唯一真值声明 | 文档说明其作为数据结构唯一真值的地位 | 文档中声明跨文档一致性要求 |
+| S8 | 字段消费方标注 | DESIGN.md 中每个 dataclass 附消费方清单 | DESIGN.md「各 Module 设计 > 数据结构」章节中，每个 dataclass 列出消费方（CLI/API/UI/日志） |
+| S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
 
@@ -147,7 +149,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
     },
     {
       "file": "doc/financial/data-schema.md",
-      "summary": { "totalChecks": 7, "passed": ["S1","S2","S4","S5","S6","S7"], "failed": ["S3"] },
+      "summary": { "totalChecks": 9, "passed": ["S1","S2","S4","S5","S6","S7","S8"], "failed": ["S3","S9"] },
       "violations": [
         {
           "checkId": "S3",
@@ -164,7 +166,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
     },
     {
       "file": "doc/common/data-schema.md",
-      "summary": { "totalChecks": 7, "passed": ["S1","S2","S3","S4","S5","S6","S7"], "failed": [] },
+      "summary": { "totalChecks": 9, "passed": ["S1","S2","S3","S4","S5","S6","S7","S8","S9"], "failed": [] },
       "violations": []
     },
     {
