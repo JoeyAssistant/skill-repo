@@ -869,7 +869,7 @@ Designer subagent 返回设计结果后，PM 进行初步 review：
 ### Review 通过后
 
 PM 将设计提交用户终审：
-- 展示 DESIGN.md 概要和 git diff 摘要（`git diff --stat doc/`）
+- 展示 DESIGN.md 概要和 doc 变更摘要（`git status --short -- doc/` 显示新增/修改/删除的文件，包含未跟踪的新文件）
 - 使用 doc-review skill（如已安装）进行交互式 review
 - 用户确认后，更新 status=approved
 

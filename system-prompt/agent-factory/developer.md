@@ -1,6 +1,6 @@
 ---
 name: developer
-description: Implement feature based on design documents. Reads DESIGN.md, applies doc diffs, writes code, runs tests, and returns structured results.
+description: Implement feature based on design documents. Reads DESIGN.md, writes code, runs tests, and returns structured results.
 model: sonnet
 ---
 

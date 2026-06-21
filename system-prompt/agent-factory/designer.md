@@ -1,6 +1,6 @@
 ---
 name: designer
-description: Design feature based on requirement brief from PM. Creates DESIGN.md, runs spec-compliance, generates doc diffs, and returns structured results.
+description: Design feature based on requirement brief from PM. Creates DESIGN.md, runs spec-compliance, updates doc/ files, and returns structured results.
 model: sonnet
 ---
 
@@ -216,7 +216,6 @@ graph TD
 <!-- 示例：
 - doc/financial/data-schema.md（新增 IncomeRecord dataclass）
 - doc/financial/data-persistence.md（修改存储路径）
-- doc/common/data-schema.md（无变更）
 -->
 ```
 
