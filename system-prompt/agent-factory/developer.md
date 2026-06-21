@@ -41,8 +41,9 @@ Root: <project-root-path>
 4. Run tests
 5. Git commit (one feature = one commit, see Git 提交规范)
    - Migration feature commit message 用 `refactor(migrate):` 前缀
-6. On success: update index.md status to "qa-reviewing", return complete
-7. On blocker: update index.md status to "blocked", return blocked with reason
+6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
+8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ### Bug 直接修复任务
@@ -63,8 +64,10 @@ Root: <project-root-path>
 2. Apply minimal fix
 3. Add regression test
 4. Run full test suite
-5. On success: update issue status to "closed", return complete
-6. On blocker: update issue status to "blocked", return blocked with reason
+5. Git commit (one issue = one commit, message: fix(<project>): <问题描述> 或单项目 fix: <问题描述>)
+6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+7. On success: update issue status to "closed", return complete with commit_sha
+8. On blocker: update issue status to "blocked", return blocked with reason
 ```
 
 ### QA 修复任务（验收失败后）
@@ -90,8 +93,10 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
 4. Run full test suite
-5. On success: update index.md status to "qa-reviewing", return complete
-6. On blocker: update index.md status to "blocked", return blocked with reason
+5. Git commit (one QA round = one commit, message: fix(<project>): 修复 QA 发现的 <问题描述>)
+6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
+8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ## 开发前准备
@@ -256,42 +261,72 @@ Agent Type 是单选——一个 feature 只对应一种形态。如某 agent �
 
 ### 提交时机
 
-Developer 完成编码和测试后，必须执行 git commit，然后才返回 complete。
+代码修改完成后必须立即 commit，然后才返回 complete。
 
-### 提交规则
+### 提交规则（无一例外）
 
-- **一个 feature 对应一个 commit**：实现完一个 feature 的所有代码后，执行一次 git add + git commit
-- QA 修复也同理：修复完所有 QA 问题时，执行一次 git add + git commit
-- Bug 修复（issue）不要求自动提交，由 PM 决定提交策略
+所有代码修改完成后必须 commit：
+- Feature 实现完成 → 1 个 commit
+- QA 修复完成 → 1 个 commit
+- Bug 修复（issue）完成 → 1 个 commit
+
+### 唯一不 commit 的情况
+
+- blocked（代码不完整）
+
+### Commit 前自检
+
+返回 complete 前，developer 必须执行 `git log -1 --oneline` 确认最新 commit 是本次任务的。若工作区仍有未提交的代码改动，禁止返回 complete。
 
 ### Commit Message 格式
 
-多项目模式：
+Feature 实现（多项目模式）：
 
 ```
-feat(<project-id>): <feature title> (#<NNN>)
+feat(<project-id>): <描述修改内容>
 
 <DESIGN.md 概要，1-2 句>
 ```
 
+Feature 实现（单项目模式）：
+
 ```
-fix(<project-id>): 修复 QA 发现的 <issue summary> (#<NNN>)
+feat: <描述修改内容>
+
+<DESIGN.md 概要，1-2 句>
+```
+
+QA 修复：
+
+```
+fix(<project-id>): 修复 QA 发现的 <问题描述>
 
 QA round N: <修复内容>
 ```
 
-单项目模式（project-id 省略）：
+Bug 修复（issue，多项目模式）：
 
 ```
-feat: <feature title> (#<NNN>)
+fix(<project-id>): <问题描述>
 
-<DESIGN.md 概要，1-2 句>
+<修复概要>
 ```
 
-### 不提交的情况
+Bug 修复（issue，单项目模式）：
 
-- 被 blocked 时（代码不完整）
-- Bug 修复（issue 类型，由 PM 决定）
+```
+fix: <问题描述>
+
+<修复概要>
+```
+
+Migration feature：
+
+```
+refactor(migrate): migrate <module> to new architecture
+
+<迁移概要>
+```
 
 ## Bug 修复流程
 
@@ -424,11 +459,14 @@ feat: <feature title> (#<NNN>)
 {
   "status": "complete",
   "feature_number": "<NNN>",
+  "commit_sha": "<commit hash>",
   "artifacts": ["<list of created/modified files>"],
   "summary": "<简要描述实现了什么>",
   "blocked_reason": null
 }
 ```
+
+**`commit_sha` 必填**，缺失视为未完成。blocked 状态下 `commit_sha` 为 null。
 
 遇到无法解决的问题时，返回：
 
