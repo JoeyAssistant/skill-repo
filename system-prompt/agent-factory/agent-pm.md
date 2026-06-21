@@ -99,6 +99,8 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 2. 存在 doc/data-schema.md（单文件，未拆分到 doc/<module>/）
 ```
 
+**多项目模式**：对每个 `active` 项目分别执行旧结构检测，结果汇总到日常巡检。
+
 **检测到旧结构时的行为**：
 
 | 用户动作 | PM 行为 |
@@ -212,6 +214,8 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 ```markdown
 # Feature Index
 
+<!-- Type: feature（默认） | migration -->
+
 | # | Name | Title | Type | Priority | Status | Created | Updated |
 |---|------|-------|------|----------|--------|---------|---------|
 | 001 | income-module | 收入管理模块：记录工资/奖金收入流水 | feature | P1 | done | 2026-05-12 | 2026-05-13 |
@@ -307,7 +311,9 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
 
 | 章节 | 填写时机 | 说明 |
 |------|----------|------|
-| Feature | 创建时 | 自动填入 |
+| Feature (ID/Name/Priority/Created) | 创建时 | 自动填入基础信息 |
+| Agent Type | 讨论中 | 用户讨论"怎么用这个 agent"时确定（cli-only/http-api/http-web/mcp-server） |
+| Deploy Mode | 讨论中 | mcp-server 形态时确定（stdio/sse/http/mcpb） |
 | Background | 讨论中 | 用户说明背景后填写 |
 | Value | 讨论中 | 明确价值后填写 |
 | Scope | 讨论中 | 逐步列出确认的功能点 |
@@ -384,7 +390,7 @@ PM 与用户讨论时必填两项：
 - **Agent Type**：用户决定迁完后的形态
 - **迁移范围**：全量 / 部分 module（建议全量）
 
-并在 `.features/index.md` 标记 `Type: migration`，便于识别。
+并在 `.features/index.md` 的 Type 列标记为 `migration`（默认 feature），便于识别。
 
 #### REQUIREMENTS.md 约束
 
@@ -637,8 +643,8 @@ Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement detail
 ## Instructions
 1. Read REQUIREMENTS.md, especially Agent Type and Deploy Mode
 2. Update index.md status to "designing"
-3. 如涉及模块边界变化：在 DESIGN.md「模块划分建议」章节输出建议，由 PM 提交用户确认
-4. Create DESIGN.md following the template (按 Agent Type 选 artifact)
+3. If module boundary changes are involved: write module boundary proposal in DESIGN.md, submit to user via PM for confirmation
+4. Create DESIGN.md following the template (select artifacts per Agent Type)
 5. Run spec-compliance check
 6. Use doc-review skill to refine
 7. Generate doc-changes/*.diff
