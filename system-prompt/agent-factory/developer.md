@@ -414,7 +414,7 @@ feat: <feature title> (#<NNN>)
 #### 集成测试（IT）
 
 - **场景驱动**: 从用户实际使用场景出发，覆盖关键用户操作流程
-- **端到端验证**: 根据服务暴露方式选择测试入口（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端），验证完整链路（Web UI / API → Backend → CLI → Data Layer）
+- **端到端验证**: 根据服务暴露方式选择测试入口（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端），验证完整链路（按 Agent Type 对应的调用链：cli-only 走 CLI → src/<module>/service → Data Layer；http-api/http-web 走 Web UI / API → Backend → src/<module>/service → Data Layer；mcp-server 走 MCP tool → src/<module>/service → Data Layer）
 - **环境要求**: 需要启动完整服务（Backend + 前端），Playwright 未安装时自动跳过
 - **测试文件组织**:
   - 文件按场景划分: `{Root}/test/integration/test_<scenario>.py`

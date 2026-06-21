@@ -243,6 +243,47 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 
 详见 spec §5。
 
+## Migration Feature 设计规范
+
+当 feature 在 `.features/index.md` 中标记为 `Type: migration` 时，designer 遵循以下差异：
+
+### 输入识别
+
+PM 在调度时通过 REQUIREMENTS.md 的 `Type: migration` 标记和约束声明（纯迁移，不改行为，不加功能）传达 migration feature 身份。
+
+### 设计目标
+
+**不是设计新功能，而是设计模块拆分方案**：把现有的 `cli/*.py` 平铺代码按业务边界拆分到 `src/<module>/` 中。
+
+### 工作流程
+
+1. **扫描现有结构**：读取 `{Root}/cli/*.py`、`{Root}/doc/cli.md`（旧单文件）、`{Root}/doc/data-schema.md`（旧单文件）、`{Root}/doc/data-persistence.md`（旧单文件）
+2. **推断 module 边界**：按业务领域（如 financial、news、user）拆分，输出到 DESIGN.md「模块划分建议」章节
+3. **设计 src/ 拆分方案**：每个 module 的 `service.py`（业务逻辑）+ `models.py`（数据结构）
+4. **设计 doc/ 拆分方案**：从旧 `doc/data-schema.md` 按边界拆分到 `doc/<module>/data-schema.md`；同 persistence
+5. **列出 doc/common/ 候选**：跨 module 共享的数据结构（如 User、AuditLog）
+6. **明确 Agent Type**：迁完后的形态由用户在 REQUIREMENTS.md 决定（可能是 cli-only / http-api / http-web / mcp-server 之一）
+7. **用户确认方案**：PM 提交用户 review，确认后才进入开发
+
+### 不允许的操作
+
+- 加新功能（用户提了也拒绝，开新 feature）
+- 改业务行为
+- 改数据格式
+- 设计 doc/frontend/、doc/backend.md、doc/mcp-server.md（除非 Agent Type 对应）
+
+### DESIGN.md 简化
+
+Migration feature 的 DESIGN.md 可省略：
+- 「各 Module 设计 > Service 接口」章节（迁移保持 service 接口不变）
+- 「接入层设计」章节（按 Agent Type 由 developer 在迁移过程中按现有结构实现）
+
+保留必填：
+- Agent Type
+- 概述（说明是 migration feature）
+- 模块划分建议（核心章节）
+- Doc 变更清单（哪些旧文件删除、哪些新文件创建）
+
 ## 工作流程
 
 收到 PM 的设计任务后，按以下步骤执行：

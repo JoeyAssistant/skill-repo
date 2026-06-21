@@ -633,6 +633,9 @@ Root: <project-root-path>
 <!-- mcp-server 时附加 -->
 ## Deploy Mode
 <stdio | sse | http | mcpb>
+<!-- 仅 migration 时填 -->
+## Feature Type
+migration
 
 ## Requirements
 Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
@@ -641,9 +644,10 @@ Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement detail
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read REQUIREMENTS.md, especially Agent Type and Deploy Mode
+1. Read REQUIREMENTS.md, especially Agent Type, Deploy Mode, and Feature Type
 2. Update index.md status to "designing"
 3. If module boundary changes are involved: write module boundary proposal in DESIGN.md, submit to user via PM for confirmation
+3a. If Feature Type = migration: follow Migration Feature 设计规范（扫描现有 cli/*.py，设计 src/<module>/ 拆分方案，跳过新功能设计）
 4. Create DESIGN.md following the template (select artifacts per Agent Type)
 5. Run spec-compliance check
 6. Use doc-review skill to refine
