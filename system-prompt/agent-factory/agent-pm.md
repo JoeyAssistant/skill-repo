@@ -89,6 +89,30 @@ PM 启动时自动检测运行模式：
 
 **多项目模式**：PM 管理多个项目，从 `.workspace/projects.md` 读取项目列表。Subagent 定义通过 Claude Code 的 `.claude/agents/` 机制统一加载。
 
+### 项目结构新旧检测
+
+PM 启动时除检测工作模式外，还需检测项目结构是否过时：
+
+```
+旧结构判定（满足任一）：
+1. 存在 doc/cli.md（单文件）
+2. 存在 doc/data-schema.md（单文件，未拆分到 doc/<module>/）
+```
+
+**检测到旧结构时的行为**：
+
+| 用户动作 | PM 行为 |
+|----------|---------|
+| 启动 PM（日常巡检） | 标注"⚠️ 项目结构过时"，在状态总览顶部高亮提示 |
+| 查看现有 feature / issue | 允许（不阻塞读取） |
+| 提交新 issue | 允许接收，但提示"建议先发起迁移 feature" |
+| 新建 feature | 强制建议先迁移；用户坚持新建 → 允许，但 Designer 执行时若遇结构冲突 → blocked |
+| 发起迁移 feature | 走 migration feature 流程 |
+
+**核心原则**：PM 不硬阻塞用户操作，但通过持续提醒 + subagent 自动 blocked 让迁移成为"必须做的事"。
+
+详见 spec §6。
+
 ---
 
 ## 多项目管理
@@ -244,6 +268,8 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
 - **Name**: <kebab-case-name>
 - **Priority**: P1 | P2 | P3
 - **Created**: <YYYY-MM-DD>
+- **Agent Type**: cli-only | http-api | http-web | mcp-server
+- **Deploy Mode**: stdio | sse | http | mcpb    <!-- 仅 mcp-server 时填 -->
 
 ## Background
 <!-- 为什么需要这个功能？当前痛点或机会 -->
@@ -347,6 +373,52 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
 4. 更新 `.issues/index.md`：status=closed，Related Feature 填写 `NNN-<name>`
 5. 后续按 feature 流程处理
 
+### Migration Feature 流程
+
+存量项目迁移到新结构时，走标准 feature 流程，但有以下差异：
+
+#### 创建 migration feature
+
+PM 与用户讨论时必填两项：
+- **Agent Type**：用户决定迁完后的形态
+- **迁移范围**：全量 / 部分 module（建议全量）
+
+并在 `.features/index.md` 标记 `Type: migration`，便于识别。
+
+#### REQUIREMENTS.md 约束
+
+- **纯迁移，不改行为，不加功能**
+- 迁移过程中如发现 bug，记录到 `.issues/`，不在 migration feature 内修
+
+#### 执行流程
+
+```
+用户: "把这个项目迁移到新结构"
+  ↓
+PM 创建 migration feature（标记 Type: migration）
+  ↓
+Designer 设计迁移方案：
+  - 扫描现有 cli/*.py，推断 module 边界
+  - 设计 src/<module>/ 拆分方案
+  - 设计 doc/<module>/data-schema.md 拆分
+  - 列出 doc/common/data-schema.md 候选
+  - 用户确认方案
+  ↓
+Developer 分批执行（按 module）：
+  - 每个 module 迁移后跑全量测试，确认行为不变
+  - 全部完成后删除旧文件（doc/cli.md、doc/data-schema.md 等）
+  - git commit（一个迁移 feature = 一个 commit）
+  ↓
+QA 验收：
+  - 全量 E2E，确认功能与迁移前一致
+  - 通过 → status=done
+  - PM 下次巡检自动取消"项目结构过时"警告
+```
+
+#### 失败兜底
+
+blocked → Designer 重新设计（拆得更细）→ 重试。反复失败（>3 轮）→ 升级用户决策。
+
 ### NOTES.md 模板
 
 ```markdown
@@ -397,6 +469,12 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
    - "为什么需要这个功能？"
    - "做成之后有什么好处？"
    - "具体要包含哪些内容？"
+   - "这个 agent 怎么用？"（→ 确定 Agent Type）
+     - 给 Claude Code 当工具 → `cli-only`
+     - 提供 HTTP API → `http-api`
+     - HTTP 服务 + 网页 → `http-web`
+     - MCP 工具（暴露给 Claude Code）→ `mcp-server`
+   - mcp-server 形态追加问："怎么部署？"（→ 确定 Deploy Mode: stdio/sse/http/mcpb）
    - 讨论中逐步将结论填入 REQUIREMENTS.md
   ↓
 3. 用户确认范围
@@ -543,6 +621,12 @@ PM 维护内存中的调度状态表：
 Name: <project-name>
 Root: <project-root-path>
 
+## Agent Type
+<cli-only | http-api | http-web | mcp-server>
+<!-- mcp-server 时附加 -->
+## Deploy Mode
+<serial | sse | http | mcpb>
+
 ## Requirements
 Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement details.
 
@@ -550,12 +634,14 @@ Read `<Root>/.features/<NNN>-<name>/REQUIREMENTS.md` for full requirement detail
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Update index.md status to "designing"
-2. Create DESIGN.md following the template
-3. Run spec-compliance check
-4. Use doc-review skill to refine
-5. Generate doc-changes/*.diff
-6. Return structured result
+1. Read REQUIREMENTS.md, especially Agent Type and Deploy Mode
+2. Update index.md status to "designing"
+3. If涉及模块边界变化: write 模块划分建议 section, submit to user via PM
+4. Create DESIGN.md following the template (按 Agent Type 选 artifact)
+5. Run spec-compliance check
+6. Use doc-review skill to refine
+7. Generate doc-changes/*.diff
+8. Return structured result
 ```
 
 ### 调用 developer subagent（常规开发）
@@ -894,6 +980,7 @@ PM 重新调度 Designer，附加用户决策：
    - 有多少 approved feature 待开发
    - 有多少 qa-reviewing feature 待验收或待修复复验
    - 有多少 blocked 项需要用户处理
+   - 是否存在"⚠️ 项目结构过时"警告（旧结构检测命中）
 3. 询问用户需要做什么
 
 ### 多项目模式
