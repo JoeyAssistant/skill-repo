@@ -64,13 +64,13 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 | B3 | API 输入输出 | 每个 API 定义输入和输出 | 请求参数/请求体、响应体结构 |
 | B4 | 调用流程图 | 使用 mermaid 语法展示调用流程 | API 与内部模块（如 agent、src/<module>/、data layer）的交互流程 |
 
-### F - doc/frontend/（仅 http-web，新增）
+### F - DESIGN.md Frontend 章节（仅 http-web）
 
 | # | Check | Requirement | Pass Criteria |
 |---|-------|-------------|---------------|
-| F1 | 页面清单 | 列出所有页面 html 文件 | `doc/frontend/` 下每个 .html 都列入清单 |
-| F2 | 关键交互描述 | 每个页面的关键交互流程 | 每个页面有交互流程说明 |
-| F3 | API 对应关系 | 每个页面映射到 backend 的哪些 API | 页面与 API 调用关系清晰 |
+| F1 | 页面清单 | DESIGN.md `## Frontend > ### 页面清单` 列出所有页面 | 每个页面有路径、文件名、用途 |
+| F2 | 关键交互描述 | `### 关键交互` 章节描述每个页面的关键操作流程 | 每个页面有交互流程说明 |
+| F3 | API 对应关系 | `### API 对应` 表格映射每个页面到 backend API | 页面与 API 调用关系清晰 |
 
 ### M - doc/mcp-server.md（仅 mcp-server，新增）
 
@@ -180,14 +180,14 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
       ]
     },
     {
-      "file": "doc/frontend/",
+      "file": "DESIGN.md (Frontend section)",
       "summary": { "totalChecks": 3, "passed": ["F1","F3"], "failed": ["F2"] },
       "violations": [
         {
           "checkId": "F2",
           "check": "关键交互描述",
           "lineRange": null,
-          "detail": "index.html 缺少关键交互流程描述"
+          "detail": "DESIGN.md Frontend 章节缺少 ### 关键交互 子节"
         }
       ]
     }
