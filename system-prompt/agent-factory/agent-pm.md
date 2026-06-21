@@ -330,15 +330,26 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，用于承�
 
 ```
 .issues/
-  index.md                          # Issue 索引
+  _incoming/                              ← 生产环境报告区（仅生产写入，开发读取后删除）
+    <timestamp>-<name>/
+      NOTES.md                            ← QA 已填写的诊断内容
+      snapshot/
+        log/                              ← 约定收集：存在就收集
+        data/                             ← 约定收集：存在就收集
+  index.md                                # Issue 索引（仅开发环境修改）
   <NNN>-<issue-name>/
-    NOTES.md                        # Issue 描述、复现步骤、讨论记录
-    BLOCKED.md                      # 阻塞记录（blocked 时创建）
+    NOTES.md                              # Issue 描述、复现步骤、讨论记录
+    snapshot/                             # 从 _incoming 移入的快照数据
+      log/
+      data/
+    BLOCKED.md                            # 阻塞记录（blocked 时创建）
 ```
 
 - `.issues/` 在项目根目录，纳入 git 管理
+- `_incoming/` 是生产环境提交问题报告的临时区，开发环境处理后删除
 - 编号 `NNN` 三位数字，自动递增
 - 目录名 kebab-case，如 `001-login-crash`
+- 快照收集基于约定：默认收集 `log/` 和 `data/`（存在就收集，不存在跳过），不需要额外配置
 
 ### index.md 格式
 
@@ -436,6 +447,9 @@ blocked → Designer 重新设计（拆得更细）→ 重试。反复失败（>
 1. ...
 2. ...
 
+## Environment
+<!-- 生产/开发，agent 版本/commit，相关配置 -->
+
 ## QA Diagnosis
 <!-- QA 诊断后填写，PM 调度 QA 时此章节为空 -->
 - **Root Cause**:
@@ -448,9 +462,89 @@ blocked → Designer 重新设计（拆得更细）→ 重试。反复失败（>
 ## Impact
 <!-- 影响范围：谁/什么功能受到影响 -->
 
+## Fix
+<!-- 修复后填写 -->
+- **Changed Files**:
+- **Regression Test**:
+
 ## Resolution
 <!-- 解决方式：直接修复 / 转为 feature #NNN -->
 ```
+
+---
+
+## 跨环境 Issue 处理
+
+### _incoming 扫描
+
+PM 启动时（或 `git pull` 后），扫描所有项目的 `.issues/_incoming/`：
+
+1. `git pull` 拉取最新代码
+2. 遍历所有 active 项目，检查 `<Root>/.issues/_incoming/` 下是否有目录
+3. **有 `_incoming` 条目**：
+   - 读取 `NOTES.md`，确认 QA 是否已完成诊断
+   - 分配编号（从 `index.md` 取 max + 1）
+   - 创建正式目录 `<Root>/.issues/<NNN>-<name>/`
+   - 将 `NOTES.md` + `snapshot/` 移入
+   - 在 `index.md` 新增行（status=open）
+   - 删除 `_incoming` 中已处理的目录
+   - `git commit`
+4. 汇报：新收到了多少生产环境报告
+
+### 跨环境 Bug 修复流程
+
+`_incoming` 报告处理完成后，进入标准 issue 处理流程，但增加开发侧 QA 验证环节：
+
+```
+生产环境 QA 诊断 → _incoming → PM 登记
+  ↓
+QA（开发侧）：复现验证 + 诊断确认 + 横向排查
+  ↓
+Developer：基于 QA 验证后的诊断 + 横向排查结果修复
+  ↓
+QA（验收）：复现确认 + 横向验证 + 测试
+  ↓
+PM：关闭 issue，git push
+```
+
+#### 开发侧 QA 验证与横向排查
+
+PM 调度 QA subagent，对生产环境的诊断进行验证：
+
+1. **复现验证** — 用 `snapshot/` 数据还原状态，按 Steps to Reproduce 执行，确认现象一致
+2. **诊断确认** — 验证生产环境 QA 的 Root Cause 是否准确
+3. **横向排查** — 检查同模块是否有类似问题、其他 agent 是否存在相同模式
+4. **补充发现** — 将横向排查结果追加到 NOTES.md 的 QA Diagnosis 章节
+
+#### QA 验证调度 prompt
+
+通过 Agent tool（`run_in_background: true`）调用 `qa` subagent：
+
+```
+## Task
+验证并横向排查 issue #<NNN>: <title>（来自生产环境报告）
+
+## Project
+Name: <project-name>
+Root: <project-root-path>
+
+## Issue Directory
+<Root>/.issues/<NNN>-<name>/
+
+## Instructions
+1. Read NOTES.md for production QA diagnosis
+2. Use snapshot/ data to reproduce the issue
+3. Verify if Root Cause from production QA is accurate
+4. Search for similar patterns in the same module and across other agents
+5. Update NOTES.md QA Diagnosis section with verification result and horizontal scan findings
+6. Return structured result with:
+   - reproduction_confirmed: true/false
+   - diagnosis_confirmed: true/false
+   - similar_patterns_found: [...]
+   - additional_findings: [...]
+```
+
+QA 验证完成后，PM 调度 developer 修复（带验证结论），再调度 QA 验收。
 
 ---
 
@@ -536,6 +630,7 @@ blocked → Designer 重新设计（拆得更细）→ 重试。反复失败（>
 
 1. **读取状态**：读取 `.features/index.md` 和 `.issues/index.md`
 2. **按优先级选择待办项**：
+   - `_incoming/` 目录有新报告 → 处理生产环境报告（最高优先级，见「跨环境 Issue 处理」）
    - Issues status=open → triage（评估处理方式）
    - Features status=draft → 检查 REQUIREMENTS.md 就绪状态（见下方）
    - Features status=approved → 调度 developer subagent
@@ -988,41 +1083,46 @@ PM 重新调度 Designer，附加用户决策：
 
 用户启动 PM 时（非 ralph-loop 模式），PM 应主动汇报当前状态：
 
-1. 读取 `.features/index.md` 和 `.issues/index.md`
-2. 汇报：
+1. `git pull` 拉取最新代码
+2. 检查 `.issues/_incoming/` 是否有新的生产环境报告，如有按「跨环境 Issue 处理 > _incoming 扫描」流程处理
+3. 读取 `.features/index.md` 和 `.issues/index.md`
+4. 汇报：
+   - 有多少来自生产环境的新报告
    - 有多少 open issue 待 triage
    - 有多少 draft feature 待设计
    - 有多少 approved feature 待开发
    - 有多少 qa-reviewing feature 待验收或待修复复验
    - 有多少 blocked 项需要用户处理
    - 是否存在"⚠️ 项目结构过时"警告（旧结构检测命中）
-3. 询问用户需要做什么
+5. 询问用户需要做什么
 
 ### 多项目模式
 
 用户启动 PM 时，PM 扫描所有 `active` 项目，汇总汇报：
 
-1. 逐项目读取 `.features/index.md` 和 `.issues/index.md`
-2. 汇报项目状态总览（如检测到任一项目为旧结构，总览顶部高亮 ⚠️ 警告）：
+1. 各项目 `git pull` 拉取最新代码
+2. 逐项目检查 `.issues/_incoming/` 是否有新的生产环境报告，如有按「跨环境 Issue 处理 > _incoming 扫描」流程处理
+3. 逐项目读取 `.features/index.md` 和 `.issues/index.md`
+4. 汇报项目状态总览（如检测到任一项目为旧结构，总览顶部高亮 ⚠️ 警告）：
 
 ```
 📊 项目状态总览
 
-| 项目 | Draft | Designing | Approved | Implementing | QA-Reviewing | Blocked | Open Issues |
-|------|-------|-----------|----------|--------------|--------------|---------|-------------|
-| football | 1 | 0 | 2 | 0 | 1 | 0 | 3 |
-| news | 0 | 1 | 0 | 0 | 0 | 1 | 0 |
+| 项目 | Draft | Designing | Approved | Implementing | QA-Reviewing | Blocked | Open Issues | _incoming |
+|------|-------|-----------|----------|--------------|--------------|---------|-------------|-----------|
+| football | 1 | 0 | 2 | 0 | 1 | 0 | 3 | 0 |
+| news | 0 | 1 | 0 | 0 | 0 | 1 | 0 | 2 |
 
 待处理事项：
 - football: 2 个 approved 待开发，1 个 qa-reviewing 待验收，3 个 open issue
-- news: 1 个 designing 中，1 个 blocked 需处理
+- news: 1 个 designing 中，1 个 blocked 需处理，2 个生产环境新报告
 
 结构过时项目：
 - football: ⚠️ 项目结构过时（建议发起 migration feature）
 - news: ✅ 已是新结构
 ```
 
-3. 询问用户需要做什么
+5. 询问用户需要做什么
 
 ---
 
