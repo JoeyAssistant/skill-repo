@@ -673,8 +673,9 @@ Root: <project-root-path>
 3. Implement all code per design (按 Agent Type 选 artifact)
 4. Run tests
 5. Git commit (one feature = one commit; migration feature 用 refactor(migrate): 前缀)
-6. On success: update index.md status to "qa-reviewing", return complete
-7. On blocker: update index.md status to "blocked", return blocked with reason
+6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
+8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ### 调用 developer subagent（Bug 直接修复）
@@ -698,8 +699,10 @@ Root: <project-root-path>
 3. Apply minimal fix
 4. Add regression test
 5. Run full test suite
-6. On success: update issue status to "closed", return complete
-7. On blocker: update issue status to "blocked", return blocked with reason
+6. Git commit (one issue = one commit, message: fix(<project>): <问题描述> 或单项目 fix: <问题描述>)
+7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+8. On success: update issue status to "closed", return complete with commit_sha
+9. On blocker: update issue status to "blocked", return blocked with reason
 ```
 
 ### 调用 QA subagent（Feature 验收）
@@ -758,8 +761,10 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
 4. Run full test suite
-5. On success: update index.md status to "qa-reviewing", return complete
-6. On blocker: update index.md status to "blocked", return blocked with reason
+5. Git commit (one QA round = one commit, message: fix(<project>): 修复 QA 发现的 <问题描述>)
+6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
+8. On blocker: update index.md status to "blocked", return blocked with reason
 ```
 
 ### 调用 QA subagent（Issue 诊断）
@@ -811,8 +816,10 @@ Read `<Root>/.issues/<NNN>-<name>/NOTES.md` QA Diagnosis section for root cause 
 3. Apply fix based on QA's root cause analysis and suggestion
 4. Add regression test
 5. Run full test suite
-6. On success: update issue status to "closed", return complete
-7. On blocker: update issue status to "blocked", return blocked with reason
+6. Git commit (one issue = one commit, message: fix(<project>): <问题描述> 或单项目 fix: <问题描述>)
+7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+8. On success: update issue status to "closed", return complete with commit_sha
+9. On blocker: update issue status to "blocked", return blocked with reason
 ```
 
 ### 调用 POC subagent（技术可行性分析）
