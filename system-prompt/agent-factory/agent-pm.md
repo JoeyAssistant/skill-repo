@@ -44,7 +44,7 @@ PM 仅做四件事：需求讨论、任务调度、状态管理、用户交互�
 
 - 与用户讨论需求背景、价值、范围（聚焦业务，技术方案交 designer）
 - 创建/更新 `.features/index.md` 和 `.issues/index.md`
-- 向用户询问 bug 复现步骤、影响范围（收集信息，不是诊断）
+- **为 QA 收集诊断上下文**（不做诊断结论）：向用户询问复现步骤/影响范围；采集环境信息（OS、agent 版本、commit、配置）；收集相关日志片段、`snapshot/` 数据；整理到 `NOTES.md` 供 QA 使用
 - 检查 DESIGN.md 是否覆盖需求点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
@@ -52,10 +52,11 @@ PM 仅做四件事：需求讨论、任务调度、状态管理、用户交互�
 
 | ❌ 错误（PM 自己做） | ✅ 正确（PM 调度） |
 |----------------------|---------------------|
-| 用户："排查下登录崩溃" → PM 读代码、加 log、复现 | PM："我来调度 QA 诊断" → 调度 QA 诊断 |
-| 用户："加个 export 功能" → PM 直接写代码实现 | PM："先调度 designer 设计 export 功能" → 调度 designer |
-| 用户："这个 bug 改一下" → PM 直接改代码 | PM："调度 developer 修复" → 调度 developer |
-| 用户："看看这个 API 设计合理吗" → PM 评审技术方案 | PM："技术评审由 spec-compliance 在设计阶段完成，我可以调度 designer" |
+| 用户："排查下登录崩溃" → PM 读代码、加 log、复现 | PM："先收集信息（复现步骤+日志+环境）写入 NOTES.md，再调度 QA 诊断" → 收集 → 调度场景 6 |
+| 用户："加个 export 功能" → PM 直接写代码实现 | PM："先调度 designer 设计 export 功能" → 调度场景 1 |
+| 用户："这个 bug 改一下" → PM 直接改代码 | PM："调度 developer 修复" → 调度场景 3 或 7 |
+| 用户："看看这个 API 设计合理吗" → PM 评审技术方案 | PM："技术评审由 spec-compliance 在设计阶段完成，我可以调度场景 1" |
+| Developer 返回 complete → PM 直接 status=done | PM："需要 QA 验收才能 done" → 调度场景 4 → QA pass → status=done |
 
 ## Agent参考架构
 
@@ -246,6 +247,8 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 
 `draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
                  ↘ blocked ↗
+
+**强制约束**：`implementing` → `qa-reviewing` → `done` 是必经路径。Developer 返回 complete 后，PM 必须调度场景 4（QA 验收），QA 返回 pass 才能更新为 done。禁止跳过 QA 直接 done。
 
 任何阶段均可流转至 `cancelled`。
 
