@@ -192,7 +192,7 @@ graph TD
 
 ### <Module-A>
 #### 数据结构
-<!-- 引用 doc/<module-A>/data-schema.md；每个 dataclass 附消费方清单（CLI/API/UI/日志） -->
+<!-- 引用 doc/<module-A>/data-schema.md；列出本 feature 涉及的核心 dataclass，每个一句话概述业务角色（字段细节、用途、使用场景、约束看 data-schema.md 的注释） -->
 #### 持久化
 #### Service 接口
 #### 关键流程
@@ -313,32 +313,43 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 - 结合业务场景、功能，使用合理数据类型，定义简洁、清晰的数据结构
 - 每个数据结构使用 `python dataclass` 定义，class 与每个 field 配文字描述
 
-### 字段必要性原则（核心）
+### 字段设计原则（核心）
 
-每个字段必须能回答"谁在什么时候读取这个字段？"。设计 dataclass 前先做两件事：
+Agent 设计围绕结构化数据 —— 所有业务、交互、功能都用 `dataclass` 表示和承载。`data-schema.md` 是单一真值。
 
-1. **列出消费方清单**：该数据结构被哪些场景使用？
-   - CLI 命令 / API 端点 / UI 元素 / 日志读取 / 持久化反序列化
-2. **逐字段归因**：每个字段属于哪个消费方？没有明确消费方的不写入 schema
+**每个字段必须在 dataclass 代码注释中清晰说明三个维度**：
 
-**示例** — 设计 `IncomeRecord` 前先列消费方，再逐字段归因：
+1. **用途** — 字段是做什么的（语义角色）
+2. **使用场景** — 在什么场景下被使用（CLI 命令 / API / UI / 日志 / 持久化等，自然语言描述即可，不强制清单形式）
+3. **约束** — 取值范围、不变量、合法值集合、与其他字段的关系
 
-```
-消费方：cli/financial.py add-income（写入）、list-income（读取）、持久化（JSON 序列化）、审计日志
+**示例** — `IncomeRecord`：
 
-字段归因：
-  amount: float      ← CLI 输入 + 持久化 + 日志
-  category: Category ← CLI 输入 + 持久化
-  created_at: date   ← 持久化 + 日志
-  tax_rate: float    ← "将来可能用" → 删除
+```python
+@dataclass
+class IncomeRecord:
+    """一笔收入流水的记录。用于 cli/financial.py 的 add-income / list-income 命令，
+    持久化到 data/income.json，写入审计日志。"""
+    amount: float
+        # 用途：收入金额（本币）
+        # 使用场景：add-income 输入、list-income 输出、net-worth 聚合
+        # 约束：> 0；2 位小数；最大 1e9
+    category: Category
+        # 用途：收入类别
+        # 使用场景：add-income 输入、list-income 筛选
+        # 约束：必须 ∈ Category enum（salary/bonus/other）
+    created_at: date
+        # 用途：流水发生日期
+        # 使用场景：持久化、list-income 排序、审计日志
+        # 约束：自动写入当下日期；不可变
 ```
 
 **判断标准（写入字段前自查）**：
 
-| 场景 | 处理 |
-|------|------|
-| 字段有明确消费方（CLI/API/UI/日志读取它） | 保留 |
-| 字段"将来可能用到"或"看起来应该有" | 不保留（YAGNI） |
+| 字段特点 | 处理 |
+|---------|------|
+| 三维度（用途 / 使用场景 / 约束）都能清晰说明 | 保留 |
+| 任一维度说不清（"将来可能用到"/"看起来应该有"） | 删除（YAGNI） |
 
 **dos**
 
