@@ -17,6 +17,7 @@ Checks are organized into 7 groups. The dispatching controller (designer) passes
 | T1 | Agent Type 字段必填且合法 | REQUIREMENTS.md / DESIGN.md 明确 Agent Type | 值 ∈ {cli-only, http-api, http-web, mcp-server} |
 | T2 | mcp-server 时 Deploy Mode 必填 | mcp-server 形态有 Deploy Mode | 值 ∈ {stdio, sse, http, mcpb} |
 | T3 | 模块划分建议（涉及新 module 时必填） | DESIGN.md 含「模块划分建议」章节 | 该章节存在并完整（含 module 列表 + 边界 + 依赖图）；或所有 module 已在 `{Root}/src/<module>/` 存在（即非新 module），此时章节可省略 |
+| T4 | 名词概念范围控制 | DESIGN.md「名词概念」章节仅含与本次需求相关的业务概念 | `## 名词概念` 章节存在（无业务新概念时可写"无"）；表格中每个名词在 DESIGN.md 后续章节（模块划分建议 / 各 Module 设计 / 接入层设计 / Frontend）至少出现 1 次；表格行数 ≤ 10。落选名词（不在后续章节出现）逐项列入 violation |
 
 ### S - doc/<module>/data-schema.md（所有形态，按 module 分别检查）
 
@@ -137,7 +138,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
   "results": [
     {
       "file": "DESIGN.md",
-      "summary": { "totalChecks": 3, "passed": ["T1","T2"], "failed": ["T3"] },
+      "summary": { "totalChecks": 4, "passed": ["T1","T2","T4"], "failed": ["T3"] },
       "violations": [
         {
           "checkId": "T3",
