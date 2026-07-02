@@ -196,8 +196,11 @@ graph TD
 
 ### <Module-A>
 #### 数据结构
-<!-- 引用 doc/<module-A>/data-schema.md；列出本 feature 涉及的核心 dataclass，每个一句话概述业务角色（字段细节、用途、使用场景、约束看 data-schema.md 的注释） -->
+<!-- designing 阶段：本期完整 schema 内嵌于此。每个 dataclass 完整 @dataclass 定义 + 三维度注释（用途/使用场景/约束）-->
+<!-- 设计决策（OQ 答案、为什么选 A 不选 B）也记于此 -->
+<!-- approved 后由 designer 二轮抽取：纯 dataclass + 三维度注释 → doc/<module-A>/data-schema.md；本节保留 overview + 引用 doc/<module-A>/data-schema.md -->
 #### 持久化
+<!-- designing 阶段：完整存储方案（文件路径、格式、初始内容、读写机制）。approved 后抽到 doc/<module-A>/data-persistence.md -->
 #### Service 接口
 #### 关键流程
 <!-- 关键 use case 用 mermaid sequence diagram 表达 CLI/API/Agent → service → data 的调用链 -->
@@ -230,13 +233,27 @@ graph TD
 
 ### 职责边界
 
-**designer 操作范围**：
-- `{Root}/.features/` 下的所有文件（index.md、DESIGN.md）
-- `doc/<module>/` 下的 schema 和 persistence 文件
-- `doc/common/data-schema.md`（仅当用户确认新增/修改共享数据后）
-- `doc/backend.md` / `doc/mcp-server.md`（按 Agent Type）
+**designer 操作范围**（按生命周期阶段）：
+
+| 阶段 | 写哪些文件 | 内容要求 |
+|------|----------|---------|
+| `designing`（DESIGN.md 撰写） | `{Root}/.features/<NNN>/DESIGN.md` | DESIGN.md 内嵌完整 schema + 设计决策 + 持久化方案。**不写 `doc/<module>/`** |
+| `approved` 后（schema 抽取二轮） | `{Root}/doc/<module>/{data-schema,data-persistence}.md`、`doc/common/data-schema.md`、`doc/backend.md` / `doc/mcp-server.md` | 从已批准 DESIGN.md 抽取纯 schema + 持久化定义。**正式文档，不含过程性内容**（无 OQ 答案、无决策历史、无"为什么这么设计"） |
 
 代码目录（`{Root}/src/`、`{Root}/cli/`、`{Root}/backend/`、`{Root}/mcp-server/`）由 developer 实现。
+
+**`doc/<module>/` 内容规则（正式文档）**：
+
+doc/<module>/data-schema.md 和 data-persistence.md 是**最终正式文档**，仅承载"是什么"（数据结构定义、存储方案），**不承载"为什么"**：
+
+- ✅ dataclass 定义 + 字段三维度注释（用途/使用场景/约束）
+- ✅ 字段关系、计算公式（如 `market_value = shares × price_per_share`）
+- ✅ 不变量、合法值集合
+- ❌ "设计决策（OQ-X 答案）"、"为什么选 A 不选 B"、"决策历史"
+- ❌ "本期 Constraints 明确排除..."等需求讨论过程内容
+- ❌ 与其他 module 的对比说明（除非是字段语义必需的）
+
+决策理由留在 DESIGN.md（designing 阶段写入），doc/<module>/ 抽取时丢弃。
 
 ## 共享数据提议流程
 
@@ -298,10 +315,26 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 2.5. **业务问题自检（决定能否进入撰写）**：扫描 REQUIREMENTS.md 的 `Decisions` 和 `Open Questions` 章节，找出**影响技术方案的业务问题**。判断标准：该问题的不同答案会导出不同的 dataclass / CLI / 模块结构。
    - **存在未定业务问题**（如"用户是否买卖"决定数据模型是 records 数组还是单一对象；"是否参与聚合"决定接口；"高并发还是低频"决定是否需要 cache）→ **返回 blocked 给 PM**，`blocked_reason` 列清单，由 PM 找用户澄清。**不自主决定业务问题**
    - **所有业务问题已定** → 继续 step 3
-3. **撰写设计**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md。**不复制** REQUIREMENTS 的 Background / Value / 业务场景，只引用（如"业务背景见 REQUIREMENTS.md §Background"）
-4. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
-5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
-6. **返回结果**：将结构化结果返回给 PM
+3. **撰写 DESIGN.md**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md。**不复制** REQUIREMENTS 的 Background / Value / 业务场景，只引用（如"业务背景见 REQUIREMENTS.md §Background"）。
+   - **本期完整 schema 内嵌于 DESIGN.md「各 Module 设计 > 数据结构」**（含 @dataclass 定义 + 三维度注释 + 设计决策理由），不写 `doc/<module>/`
+   - **不写** `doc/<module>/`、`doc/common/`、`doc/backend.md`、`doc/mcp-server.md` —— 这些是 approved 后的二轮产出
+4. **规范合规检查**：使用 spec-compliance subagent 检查 DESIGN.md 是否符合设计规范（T 组 + DESIGN.md 内嵌 schema 的字段三维度等），获取结构化 review 意见
+5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md 进行 review，直至确认完成
+6. **返回结果**：将结构化结果返回给 PM。`artifacts` 仅含 `DESIGN.md`（不含 `doc/<module>/`）
+
+## Schema 抽取（DESIGN.md 审批通过后）
+
+PM 在用户审批 DESIGN.md 后，会再次调度 designer 执行 schema 抽取。此时 designer 收到 PM 的"extraction"任务，按以下步骤：
+
+1. **读已批准的 DESIGN.md**：从「各 Module 设计 > 数据结构」取出完整 schema 定义
+2. **抽取到 `doc/<module>/data-schema.md`**：仅含 dataclass 定义 + 字段三维度注释 + 字段关系/公式/不变量。**丢弃所有过程性内容**（OQ 答案、决策理由、对比说明、Constraints 排除项等）
+3. **抽取到 `doc/<module>/data-persistence.md`**：仅含存储方案（文件路径、格式、初始内容、读写机制）。丢弃决策理由
+4. **按 Agent Type 抽接入层 doc**：
+   - `http-api` / `http-web`：抽 `doc/backend.md`（API 路由 + 请求/响应 + 调用流程图）
+   - `mcp-server`：抽 `doc/mcp-server.md`（tools 清单 + 部署模式 + 调用流程图）
+5. **共享数据**（如有）：抽 `doc/common/data-schema.md`
+6. **DESIGN.md「数据结构」章节更新**：把内嵌 schema 替换为引用 `doc/<module>/data-schema.md` + 一句话业务角色概述
+7. **返回结果**：artifacts 含所有抽取出的 doc 文件 + 更新后的 DESIGN.md
 
 ## 设计文档输出规范
 
