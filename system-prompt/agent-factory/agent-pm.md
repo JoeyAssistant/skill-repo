@@ -306,14 +306,29 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - **Agent Type**: cli-only | http-api | http-web | mcp-server
 - **Deploy Mode**: stdio | sse | http | mcpb    <!-- 仅 mcp-server -->
 
-## Background
-<!-- 用户实际场景、痛点、业务背景。只写"为什么需要"，不写"怎么实现" -->
+## 需求背景
 
-## Value
-<!-- 业务价值：对谁、解决什么业务问题。不写技术架构价值（如"模块边界清晰"） -->
+### 为什么做这个需求？
+<!-- 痛点 / 机会 / 触发事件。1-3 句话 -->
+
+### 用户是谁？
+<!-- 角色和关键特征。单角色一句话；多角色分别列 -->
+<!-- 单角色例：已离职但仍持有华为虚拟股的前员工 -->
+<!-- 多角色例：① 数据录入者（用户本人，每年一次）；② 数据消费者（净资产报表读者）；③ Agent（生产 Agent 通过 CLI 查询） -->
+
+### 解决什么问题？
+<!-- 用户当前做不到什么 / 做得不爽，做完后能做什么。业务层面，不写技术 -->
+
+### 要做成什么样？（目标）
+<!-- 1-3 句话目标描述。不写实现方案、不写接口 -->
+<!-- 例：用户能记录每年分红，summary 自动含分红累计 -->
+
+### 使用场景（Use Cases）
+<!-- 用户怎么用，按场景列。业务行为，不含技术细节 -->
+<!-- 例：1. 每年 5-6 月分红到账后，用户跑命令记录本次分红 2. 查询时看到历史所有分红 -->
 
 ## Scope
-<!-- 功能点清单，每点一行。只列"做什么"，不写"怎么做" -->
+<!-- 业务功能点清单，每点一行。只列"做什么"，不写"怎么做" -->
 <!-- ✅ 例：- 记录年度分红 -->
 <!-- ✅ 例：- summary 时把分红纳入累计收益 -->
 <!-- ❌ 反例：- 新建 src/huawei_esop/ module 含 service.py models.py（这是 DESIGN） -->
@@ -322,17 +337,20 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - <功能点1>
 - <功能点2>
 
-## User Scenarios
-<!-- 用户怎么使用：步骤 + 期望。业务行为描述，不含技术细节 -->
-
-## Constraints    <!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
-
 ## Decisions
-<!-- 业务决策：用户已确认的业务模型选择。例如"用户已离职不买卖 → 持股数固定" -->
-<!-- 影响技术方案的业务问题必须在这里定，不能流到 DESIGN 阶段（否则 designer 会自主拍板导致返工） -->
+<!-- 已定的方案选择。按类型分组 -->
+<!-- 影响技术方案的业务/技术/接口决策必须在这里定，不能流到 DESIGN 阶段（否则 designer 自主拍板导致返工） -->
+- **业务决策**：<如"用户已离职不买卖 → 持股数固定">
+- **技术选型**：<如"用单一对象而非 records 数组">
+- **接口决策**：<如"CLI 用 huawei-esop dividend add/delete 显式子命令">
+
+## Constraints
+<!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
 
 ## Open Questions
-<!-- 业务层面未决问题。涉及技术方案的疑问必须在此先与用户澄清完，再调度 designer -->
+<!-- 仅留"实现细节由 designer 决定"类的纯技术问题 -->
+<!-- 判断标准：用户能感知的差异（reader 体验、文档结构、内容深度、写作风格）→ 用户决定；用户不感知的实现细节 → designer 决定 -->
+<!-- 禁止把问题甩给 designer：凡含"designer 决定 / designer 评估"字样，先自问"用户能不能感知这个差异"。能 → 必须先与用户讨论，删除该 Open Question -->
 ```
 
 **与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不在 prompt 内联内容。
@@ -343,6 +361,7 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - 目录结构 / 文件路径
 - 迁移脚本 / 测试改动清单
 - 应在 Decisions 而漏掉的业务决策（导致 designer 无法独立完成设计）
+- Open Questions 里"designer 决定 / designer 评估"字样且问题本质用户可感知 → 当场问用户，删除该 Open Question
 
 ---
 
@@ -567,36 +586,51 @@ QA 验证完成后，PM 调度 developer 修复（带验证结论），再调度
 ```
 用户: "我想做一个财务日报功能"
   ↓
+0. PM 先读项目文档建立项目认知（讨论前必做）：
+   - CLAUDE.md / AGENTS.md（项目概述、模块清单、约定）
+   - doc/<module>/data-schema.md（已有数据结构，避免重复设计）
+   - 最近 3 个 feature 的 REQUIREMENTS.md（理解项目演进、复用决策模式）
+   - .features/index.md（避免重复立项、识别依赖）
+  ↓
 1. PM 创建 feature：
    - index.md 新增行，status=draft
    - 创建 feature 目录
    - 创建 REQUIREMENTS.md（填入 Feature 信息，其余章节留占位）
   ↓
-2. PM 引导讨论（聚焦背景、价值、范围；技术细节交 designer）：
-   - "为什么需要这个功能？"
-   - "做成之后有什么好处？"
-   - "具体要包含哪些内容？"
-   - "这个 agent 怎么用？"（→ 确定 Agent Type）
+2. PM 按需求背景 5 个子节逐一与用户讨论：
+   每节 PM 先给基于项目认知的建议（"我看到项目里已有 X / #008 做过 Y，这个需求是否..."），用户确认或修正，PM 写入对应子节。逐节推进，不跳跃。
+   - 「为什么做这个需求」：触发事件 / 痛点
+   - 「用户是谁」：角色 + 关键特征
+   - 「解决什么问题」：当前做不到什么 / 做完能做到什么
+   - 「要做成什么样」：1-3 句话目标（不写实现）
+   - 「使用场景」：业务行为 use cases
+   - 同时确定 Agent Type（这个 agent 怎么用 → cli-only/http-api/http-web/mcp-server）
      - 给 Claude Code 当工具 → `cli-only`
      - 提供 HTTP API → `http-api`
      - HTTP 服务 + 网页 → `http-web`
      - MCP 工具（暴露给 Claude Code）→ `mcp-server`
-   - mcp-server 形态追加问："怎么部署？"（→ 确定 Deploy Mode: stdio/sse/http/mcpb）
-   - 讨论中逐步将结论填入 REQUIREMENTS.md
+   - mcp-server 形态追加问 Deploy Mode: stdio/sse/http/mcpb
   ↓
-3. 用户确认范围
+3. PM 列出 Decisions 候选（基于项目经验给业务/技术/接口决策选项），用户拍板
   ↓
-4. PM 询问 "要开始设计吗？"
+4. PM 列出 Scope 功能点，用户确认
+  ↓
+5. PM 自检（见 §REQUIREMENTS.md 模板 > PM 自检）：
+   - 无越界内容（dataclass/CLI/目录结构等）
+   - 无"designer 决定/评估"甩锅式 Open Question
+   - 业务问题都已定，不影响 designer 独立完成
+  ↓
+6. PM 询问 "要开始设计吗？"
    - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 REQUIREMENTS.md
    - 用户确认设计 → 继续
   ↓
-5. PM 调度 designer subagent
+7. PM 调度 designer subagent
   ↓
-6. Designer 返回结果 → PM 做初步 review（覆盖率检查）
+8. Designer 返回结果 → PM 做初步 review（覆盖率检查）
   ↓
-7. PM 将设计提交用户终审（使用 doc-review skill 或直接展示 diff）
+9. PM 将设计提交用户终审（使用 doc-review skill 或直接展示 diff）
   ↓
-8. 用户审阅通过 → PM 更新 status=approved
+10. 用户审阅通过 → PM 更新 status=approved
 ```
 
 #### Issue 讨论流程
