@@ -267,7 +267,9 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 `draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
                  ↘ blocked ↗
 
-**强制约束**：`implementing` → `qa-reviewing` → `done` 是必经路径。Developer 返回 complete 后，PM 必须调度场景 4（QA 验收），QA 返回 pass 才能更新为 done。禁止跳过 QA 直接 done。
+**强制约束**：
+- `implementing` → `qa-reviewing` → `done` 是必经路径。Developer 返回 complete 后，PM 必须调度场景 4（QA 验收），QA 返回 pass 才能更新为 done。禁止跳过 QA 直接 done
+- `designing` 阶段 designer 只写 DESIGN.md（schema 内嵌），**不写 `doc/<module>/`**。用户审批 DESIGN.md 后，PM 调度场景 9（designer 二轮 schema 抽取）产出 `doc/<module>/` 等正式 doc，再进入 `implementing`
 
 任何阶段均可流转至 `cancelled`。
 
@@ -276,11 +278,28 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 | draft | 需求提出，待讨论 | 用户提出新需求 |
 | designing | 设计进行中，已调度 designer subagent | PM 调度设计 |
 | **blocked** | **需要用户介入，等待外部输入** | designer/developer 无法独立完成 |
-| approved | 设计通过 review，待开发 | 用户终审通过 |
-| implementing | 开发中，已调度 developer subagent | PM 调度开发 |
+| approved | DESIGN.md 通过 review；schema 抽取前 | 用户终审 DESIGN.md 通过 |
+| implementing | 开发中，已调度 developer subagent | schema 抽取完成，PM 调度开发 |
 | qa-reviewing | QA 验收中，已调度 QA subagent | Developer 返回 complete 后 PM 调度 QA |
 | done | 验收通过，功能完成 | QA 返回 pass |
 | cancelled | 需求取消/废弃，不再继续 | 任何阶段用户决定取消 |
+
+**approved → implementing 流转**（含 schema 抽取）：
+
+```
+user approves DESIGN.md
+  ↓
+status=approved
+  ↓
+PM 调度场景 9：designer 二轮 schema 抽取
+  - 从 DESIGN.md「各 Module 设计 > 数据结构」抽纯 schema → doc/<module>/data-schema.md
+  - 抽持久化方案 → doc/<module>/data-persistence.md
+  - 按 Agent Type 抽 backend.md / mcp-server.md
+  - 共享数据 → doc/common/data-schema.md
+  - DESIGN.md 数据结构章节更新为引用 doc/<module>/
+  ↓
+抽取完成 → status=implementing → PM 调度场景 2（developer 实现）
+```
 
 ### BLOCKED.md 格式
 
@@ -791,6 +810,7 @@ Root: <project-root-path>
 | 6 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
 | 7 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
 | 8 | POC（技术可行性） | tech-feasibility blocked | `技术可行性分析：feature #<NNN>: <title>` |
+| 9 | designer（schema 抽取二轮） | DESIGN.md approved 后，implementing 前 | `抽取 schema 到 doc/<module>/：feature #<NNN>: <title>` |
 
 跨环境 Issue 验证调度 prompt 见 §跨环境 Issue 处理。
 
@@ -949,9 +969,35 @@ QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
 ```
 
 POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 将决策结果附加到 Designer 的恢复指令中继续设计（见 §Blocked 处理）。
----
 
-## PM 初步 Review
+#### 场景 9: designer（schema 抽取二轮）
+
+**调度时机**：用户审批通过 DESIGN.md（status=approved）后、调度 developer（场景 2）之前。把已批准 DESIGN.md 内嵌的 schema 抽取为正式 doc 文件。
+
+**Task**: `抽取 schema 到 doc/<module>/：feature #<NNN>: <title>`
+
+**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
+
+**Instructions**：
+```
+1. 读取已批准的 DESIGN.md「各 Module 设计」章节，定位每个 module 的完整 schema 定义（@dataclass + 三维度注释 + 设计决策理由）
+2. 为每个 module 创建/更新 doc/<module>/data-schema.md：
+   - 仅含 dataclass 定义 + 字段三维度注释（用途/使用场景/约束）+ 字段关系/公式/不变量
+   - 丢弃所有过程性内容：OQ 答案、决策理由、对比说明、Constraints 排除项、"为什么这么设计"
+3. 为每个 module 创建/更新 doc/<module>/data-persistence.md：
+   - 仅含存储方案（文件路径、格式、初始内容、读写机制）
+   - 丢弃决策理由
+4. 按 Agent Type 抽接入层 doc：
+   - http-api / http-web：doc/backend.md（API 路由 + 请求/响应 + 调用流程图）
+   - mcp-server：doc/mcp-server.md（tools 清单 + 部署模式 + 调用流程图）
+5. 如有共享数据（doc/common/data-schema.md）：抽取 cross-module 共享 dataclass
+6. 更新 DESIGN.md「各 Module 设计 > 数据结构」章节：把内嵌 schema 替换为引用 doc/<module>/data-schema.md + 一句话业务角色概述
+7. 返回 complete，artifacts 含所有抽取出的 doc 文件 + 更新后的 DESIGN.md
+```
+
+抽取完成后，PM 更新 status=implementing，调度场景 2（developer 实现）。
+
+---
 
 Designer subagent 返回设计结果后，PM 进行初步 review：
 

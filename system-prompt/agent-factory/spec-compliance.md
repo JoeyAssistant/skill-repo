@@ -92,6 +92,19 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 4. For cli-only form, actually run `python3 cli/<module>.py --help` and inspect the output for C-group checks
 5. Aggregate all violations across files, output structured JSON (see Output Format)
 
+### 执行时机（重要）
+
+agent-factory 工作流（2026-07-03 重构后）按 feature 生命周期分两次执行：
+
+| 阶段 | 检查对象 | 启用的检查组 |
+|------|---------|-------------|
+| `designing`（DESIGN.md 撰写中） | DESIGN.md（schema 内嵌于「各 Module 设计」章节） | **仅 T 组**。S/P/B/F/M 组此时无目标文件（doc/<module>/ 尚未抽取） |
+| `approved` 后（designer schema 抽取后，developer 实现前） | doc/<module>/ + doc/common/ + doc/backend.md / mcp-server.md | **S/P/B/M 组**。T 组可重跑确认 DESIGN.md 引用更新无误 |
+
+C 组（CLI 运行时检查）仍在 `qa-reviewing` 阶段由 QA 触发，spec-compliance 不直接跑。
+
+**TODO**：S/P 检查项的 pass criteria 当前写的是"读 doc/<module>/..."。`designing` 阶段执行时若发现 doc/<module>/ 不存在，应输出 `{"skipped": "doc files not yet extracted, run after DESIGN.md approval"}` 而非全部 violation。
+
 ### 启用矩阵
 
 | 检查组 | cli-only | http-api | http-web | mcp-server |
