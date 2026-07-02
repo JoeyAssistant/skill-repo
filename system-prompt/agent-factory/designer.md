@@ -279,7 +279,13 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 
 收到 PM 的设计任务后，按以下步骤执行：
 
-0. **读取 Agent Type**：从 REQUIREMENTS.md 读取 `Agent Type`（和 `Deploy Mode`），确定后续产出哪些 artifact
+0. **项目认知建立（必做）**：
+   - 从 REQUIREMENTS.md 读取 `Agent Type`（和 `Deploy Mode`）、`Feature Type`，确定后续产出哪些 artifact
+   - **读项目文档建立项目认知**：
+     - `{Root}/doc/` 目录全部 .md（各 module 的 data-schema / data-persistence、common 共享 schema、backend.md / mcp-server.md 等）—— 理解现有数据结构、持久化、接口设计，避免重复设计、识别可复用结构
+     - 最近 2-3 个 feature 的 DESIGN.md —— 理解决策模式、命名惯例
+     - 现有 `{Root}/src/<module>/` 目录结构 —— 理解当前架构和代码组织
+   - **不猜测原则**：发现项目信息缺失/矛盾/不清晰（如 schema 与代码不一致、命名风格混乱、module 用法不明）→ 返回 blocked 给 PM 找用户澄清，**不脑补**（与 PM 不猜测原则一致）
 1. **更新状态**：将 `{Root}/.features/index.md` 中对应需求状态更新为 `designing`
 2. **模块划分建议（涉及模块边界变化时）**：
    - 仅当本 feature 涉及新增 module、调整现有 module 边界时执行
