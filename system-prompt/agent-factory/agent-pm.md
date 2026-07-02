@@ -291,7 +291,9 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 
 ### REQUIREMENTS.md 模板
 
-draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM 与用户的讨论结论。各章节在讨论中逐步填充：
+draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM 与用户的讨论结论。各章节在讨论中逐步填充。
+
+**职责边界**：REQUIREMENTS.md 只写"业务/需求"层 —— 用户场景、业务价值、功能点、业务决策。**不写"技术实现"**（dataclass 定义、CLI 命令清单、目录结构、迁移脚本、测试改动 —— 那是 DESIGN.md 的活）。混淆会让 designer 返工、让用户读两遍重复内容。
 
 ```markdown
 # Requirements: <title>
@@ -305,17 +307,42 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - **Deploy Mode**: stdio | sse | http | mcpb    <!-- 仅 mcp-server -->
 
 ## Background
+<!-- 用户实际场景、痛点、业务背景。只写"为什么需要"，不写"怎么实现" -->
+
 ## Value
+<!-- 业务价值：对谁、解决什么业务问题。不写技术架构价值（如"模块边界清晰"） -->
+
 ## Scope
-- <功能点>
+<!-- 功能点清单，每点一行。只列"做什么"，不写"怎么做" -->
+<!-- ✅ 例：- 记录年度分红 -->
+<!-- ✅ 例：- summary 时把分红纳入累计收益 -->
+<!-- ❌ 反例：- 新建 src/huawei_esop/ module 含 service.py models.py（这是 DESIGN） -->
+<!-- ❌ 反例：- CLI 命令 huawei-esop show 输出 JSON（这是 DESIGN） -->
+<!-- ❌ 反例：- 数据迁移脚本（这是 DESIGN） -->
+- <功能点1>
+- <功能点2>
 
 ## User Scenarios
-## Constraints    <!-- 如无约束写 "none" -->
-## Decisions      <!-- 选择 A 而非 B 的理由 -->
+<!-- 用户怎么使用：步骤 + 期望。业务行为描述，不含技术细节 -->
+
+## Constraints    <!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
+
+## Decisions
+<!-- 业务决策：用户已确认的业务模型选择。例如"用户已离职不买卖 → 持股数固定" -->
+<!-- 影响技术方案的业务问题必须在这里定，不能流到 DESIGN 阶段（否则 designer 会自主拍板导致返工） -->
+
 ## Open Questions
+<!-- 业务层面未决问题。涉及技术方案的疑问必须在此先与用户澄清完，再调度 designer -->
 ```
 
 **与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不在 prompt 内联内容。
+
+**PM 自检（调度 designer 前）**：扫描 REQUIREMENTS.md，若发现以下内容则删除或迁出：
+- dataclass / 字段定义
+- CLI 命令清单 / 参数 / 输出格式
+- 目录结构 / 文件路径
+- 迁移脚本 / 测试改动清单
+- 应在 Decisions 而漏掉的业务决策（导致 designer 无法独立完成设计）
 
 ---
 

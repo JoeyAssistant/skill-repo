@@ -171,7 +171,8 @@ graph TD
 <!-- cli-only | http-api | http-web | mcp-server；mcp-server 时附加 Deploy Mode: stdio|sse|http|mcpb -->
 
 ## 概述
-<!-- 1-2 段文字 + 1 张 high-level 架构图（mermaid graph TD/LR） -->
+<!-- 1-2 句话说明本 feature 做什么 + 1 张 high-level 架构图（mermaid graph TD/LR） -->
+<!-- 不重复 Background / Value / 业务场景 —— 那些在 REQUIREMENTS.md，本节只引用，如"业务背景与价值见 REQUIREMENTS.md" -->
 
 ## 名词概念
 <!-- 仅列「与本次需求强相关、reader 不读这一行就会误解后续章节」的业务概念 / 术语 / 模块名。3-8 行即可，宁少勿多 -->
@@ -288,7 +289,10 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
      - 各 module 职责边界
      - 依赖关系（mermaid 图）
    - **由用户拍板**：PM review 时拿给用户确认，designer 仅提供建议
-3. **撰写设计**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md
+2.5. **业务问题自检（决定能否进入撰写）**：扫描 REQUIREMENTS.md 的 `Decisions` 和 `Open Questions` 章节，找出**影响技术方案的业务问题**。判断标准：该问题的不同答案会导出不同的 dataclass / CLI / 模块结构。
+   - **存在未定业务问题**（如"用户是否买卖"决定数据模型是 records 数组还是单一对象；"是否参与聚合"决定接口；"高并发还是低频"决定是否需要 cache）→ **返回 blocked 给 PM**，`blocked_reason` 列清单，由 PM 找用户澄清。**不自主决定业务问题**
+   - **所有业务问题已定** → 继续 step 3
+3. **撰写设计**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，撰写 DESIGN.md。**不复制** REQUIREMENTS 的 Background / Value / 业务场景，只引用（如"业务背景见 REQUIREMENTS.md §Background"）
 4. **规范合规检查**：使用 spec-compliance subagent 检查 doc 文件是否符合设计规范，获取结构化 review 意见
 5. **Review 设计文档**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 DESIGN.md / doc 文件进行 review，直至确认完成
 6. **返回结果**：将结构化结果返回给 PM
