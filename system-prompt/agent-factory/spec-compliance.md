@@ -34,6 +34,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S7 | 唯一真值声明 | 文档说明其作为数据结构唯一真值的地位 | 文档中声明跨文档一致性要求 |
 | S8 | 字段注释完整性 | 每个字段的 dataclass 注释含三维度 | `data-schema.md` 中每个字段的注释包含用途、使用场景、约束三维度描述（格式不限：行注释、块注释、表格注释均可，只要清晰可识别）。任一维度缺失 → violation |
 | S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
+| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 DESIGN.md。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
 
@@ -163,7 +164,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
     },
     {
       "file": "doc/financial/data-schema.md",
-      "summary": { "totalChecks": 9, "passed": ["S1","S2","S4","S5","S6","S7","S8"], "failed": ["S3","S9"] },
+      "summary": { "totalChecks": 10, "passed": ["S1","S2","S4","S5","S6","S7","S8","S10"], "failed": ["S3","S9"] },
       "violations": [
         {
           "checkId": "S3",
@@ -180,7 +181,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
     },
     {
       "file": "doc/common/data-schema.md",
-      "summary": { "totalChecks": 9, "passed": ["S1","S2","S3","S4","S5","S6","S7","S8","S9"], "failed": [] },
+      "summary": { "totalChecks": 10, "passed": ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10"], "failed": [] },
       "violations": []
     },
     {
