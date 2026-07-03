@@ -242,18 +242,84 @@ graph TD
 
 代码目录（`{Root}/src/`、`{Root}/cli/`、`{Root}/backend/`、`{Root}/mcp-server/`）由 developer 实现。
 
-**`doc/<module>/` 内容规则（正式文档）**：
+## doc/ 内容规则（最终正式文档，全 doc/ 适用）
 
-doc/<module>/data-schema.md 和 data-persistence.md 是**最终正式文档**，仅承载"是什么"（数据结构定义、存储方案），**不承载"为什么"**：
+`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 DESIGN.md。
 
-- ✅ dataclass 定义 + 字段三维度注释（用途/使用场景/约束）
-- ✅ 字段关系、计算公式（如 `market_value = shares × price_per_share`）
-- ✅ 不变量、合法值集合
-- ❌ "设计决策（OQ-X 答案）"、"为什么选 A 不选 B"、"决策历史"
-- ❌ "本期 Constraints 明确排除..."等需求讨论过程内容
-- ❌ 与其他 module 的对比说明（除非是字段语义必需的）
+### 适用范围
 
-决策理由留在 DESIGN.md（designing 阶段写入），doc/<module>/ 抽取时丢弃。
+所有 `{Root}/doc/` 下的 .md 文件：
+- `doc/<module>/data-schema.md`、`doc/<module>/data-persistence.md`
+- `doc/common/data-schema.md`
+- `doc/backend.md`、`doc/mcp-server.md`
+
+### ✅ 允许的内容
+
+- 数据结构定义：dataclass + 字段三维度注释（用途/使用场景/约束）
+- 字段关系、计算公式（如 `market_value = shares × price_per_share`）
+- 不变量、合法值集合、字段依赖
+- 存储方案（路径、格式、初始内容、读写机制）
+- API/tools 的 input/output schema、调用流程图
+- 业务术语定义（名词概念）
+
+### ❌ 禁止的内容（过程性）
+
+- "设计决策（OQ-X 答案）"、"OQ-5 答案"
+- "为什么选 A 不选 B"、"权衡 X vs Y"、"决策历史"
+- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除"
+- 与其他 module 的对比说明（除非字段语义必需）
+- 需求讨论过程内容（"用户补充确认"、"架构调整动机"）
+- 变更记录、版本演进（"第一版 / 第二版 / 第三版"）
+
+这些内容**只能**写在 DESIGN.md 的「设计决策」或「概述」章节，作为决策上下文。doc/ 反映"最终是什么"，不解释"为什么这么定"。
+
+### Designer 自检（写完每个 doc 文件后）
+
+扫描文件内容，命中以下任一关键词即删或迁出：
+
+| 启发式关键词 | 处理 |
+|-------------|------|
+| "OQ-"、"Open Question"、"Q1: ... A:" | 移到 DESIGN.md 设计决策 |
+| "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 DESIGN.md 设计决策 |
+| "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 DESIGN.md Constraints |
+| "第一版 / 第二版"、"变更记录"、"架构调整" | 删除（git history 已记录） |
+| "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 Decisions） |
+
+### 反例（来自 #016 momenta-option，禁止重现）
+
+```markdown
+### ExerciseRecord
+
+@dataclass
+class ExerciseRecord:
+    ...
+
+**设计决策（OQ-5 答案）**：已发生行权和计划行权共用同一个 list，通过 status 字段区分。
+理由：① CLI 展示时便于统一排序 ② 汇总查询时可按 status 过滤 ③ 计划行权完成后只需改 status...
+```
+
+正解（仅留 dataclass + 三维度注释）：
+
+```markdown
+### ExerciseRecord -- 行权记录
+
+@dataclass
+class ExerciseRecord:
+    date: str
+        # 用途：行权日期 YYYY-MM-DD（已发生或计划）
+        # 使用场景：exercise add 输入、show 输出、按日期排序
+        # 约束：YYYY-MM-DD 格式
+    shares: int
+        # 用途：行权股数
+        # 使用场景：exercise add 输入、cost 计算
+        # 约束：> 0
+    status: ExerciseStatus
+        # 用途：行权状态（done=已发生 / planned=计划）
+        # 使用场景：show 输出、按 status 过滤汇总
+        # 约束：必须 ∈ ExerciseStatus enum
+```
+
+决策"为什么共用 list" → DESIGN.md「设计决策」。
 
 ## 共享数据提议流程
 
