@@ -10,14 +10,16 @@ You are a specification compliance reviewer. Your job is to check whether doc fi
 
 Checks are organized into 7 groups. The dispatching controller (designer) passes Agent Type + Modules + Shared Schema Changed; spec-compliance enables groups per the 启用矩阵 in Workflow section below.
 
-### T - DESIGN.md 顶层（所有形态）
+### T - REQUIREMENTS.md 顶层（所有形态）
+
+DESIGN.md 已废弃（commit on 2026-07-04）。T 组检查迁移到 REQUIREMENTS.md。
 
 | # | Check | Requirement | Pass Criteria |
 |---|-------|-------------|---------------|
-| T1 | Agent Type 字段必填且合法 | REQUIREMENTS.md / DESIGN.md 明确 Agent Type | 值 ∈ {cli-only, http-api, http-web, mcp-server} |
+| T1 | Agent Type 字段必填且合法 | REQUIREMENTS.md 明确 Agent Type | 值 ∈ {cli-only, http-api, http-web, mcp-server} |
 | T2 | mcp-server 时 Deploy Mode 必填 | mcp-server 形态有 Deploy Mode | 值 ∈ {stdio, sse, http, mcpb} |
-| T3 | 模块划分建议（涉及新 module 时必填） | DESIGN.md 含「模块划分建议」章节 | 该章节存在并完整（含 module 列表 + 边界 + 依赖图）；或所有 module 已在 `{Root}/src/<module>/` 存在（即非新 module），此时章节可省略 |
-| T4 | 名词概念范围控制 | DESIGN.md「名词概念」章节仅含与本次需求相关的业务概念 | `## 名词概念` 章节存在（无业务新概念时可写"无"）；表格中每个名词在 DESIGN.md 后续章节（模块划分建议 / 各 Module 设计 / 接入层设计 / Frontend）至少出现 1 次；表格行数 ≤ 10。落选名词（不在后续章节出现）逐项列入 violation |
+| T3 | 模块划分决策（涉及新 module 时必填） | REQUIREMENTS.md Decisions 含模块划分条目 | 涉及 module 边界变化时，Decisions 有"模块划分"条目（含 module 列表 + 边界 + 依赖图 mermaid）；纯 module 内修改可省略 |
+| T4 | 名词概念范围控制 | REQUIREMENTS.md「名词概念」章节仅含与本次需求相关的业务概念 | `## 名词概念` 章节存在（无业务新概念时可写"无"）；表格中每个名词在 REQUIREMENTS.md 后续章节或 doc/ 中至少出现 1 次；表格行数 ≤ 10。落选名词逐项列入 violation |
 
 ### S - doc/<module>/data-schema.md（所有形态，按 module 分别检查）
 
@@ -34,7 +36,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S7 | 唯一真值声明 | 文档说明其作为数据结构唯一真值的地位 | 文档中声明跨文档一致性要求 |
 | S8 | 字段注释完整性 | 每个字段的 dataclass 注释含三维度 | `data-schema.md` 中每个字段的注释包含用途、使用场景、约束三维度描述（格式不限：行注释、块注释、表格注释均可，只要清晰可识别）。任一维度缺失 → violation |
 | S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
-| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 DESIGN.md。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md |
+| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
 
@@ -44,6 +46,15 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | P2 | 文件格式 | 说明数据文件格式和结构 | 定义 JSON/YAML 等格式的文件结构 |
 | P3 | 初始内容 | 说明空数据文件的初始内容 | 新文件的默认初始内容 |
 | P4 | 纯存储方案 | 不涉及 CLI 内容 | 仅定义存储方案，不包含命令行操作 |
+
+### SV - doc/<module>/service.md（所有形态，按 module 分别检查）
+
+| # | Check | Requirement | Pass Criteria |
+|---|-------|-------------|---------------|
+| SV1 | Service 接口存在 | 每个 module 暴露核心方法签名 | 含至少一个 Python 方法签名 + 用途描述 |
+| SV2 | 关键流程图 | 至少一张 mermaid sequence diagram 表达关键 use case | 至少 1 个 sequenceDiagram 代码块，覆盖主要 CRUD 或业务流程 |
+| SV3 | 跨 module 关系图（如涉及） | 与其他 module 有依赖时画 mermaid graph | 若 service.md 提及其他 module，必须有 graph 图；纯独立 module 可省 |
+| SV4 | 无过程性内容 | 与 S10 同标准 | 不含 OQ-/设计决策/为什么选 等关键词 |
 
 ### C - CLI（仅 cli-only 形态，运行时检查）
 
@@ -68,15 +79,7 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 | B3 | API 输入输出 | 每个 API 定义输入和输出 | 请求参数/请求体、响应体结构 |
 | B4 | 调用流程图 | 使用 mermaid 语法展示调用流程 | API 与内部模块（如 agent、src/<module>/、data layer）的交互流程 |
 
-### F - DESIGN.md Frontend 章节（仅 http-web）
-
-| # | Check | Requirement | Pass Criteria |
-|---|-------|-------------|---------------|
-| F1 | 页面清单 | DESIGN.md `## Frontend > ### 页面清单` 列出所有页面 | 每个页面有路径、文件名、用途 |
-| F2 | 关键交互描述 | `### 关键交互` 章节描述每个页面的关键操作流程 | 每个页面有交互流程说明 |
-| F3 | API 对应关系 | `### API 对应` 表格映射每个页面到 backend API | 页面与 API 调用关系清晰 |
-
-### M - doc/mcp-server.md（仅 mcp-server，新增）
+### M - doc/mcp-server.md（仅 mcp-server）
 
 | # | Check | Requirement | Pass Criteria |
 |---|-------|-------------|---------------|
@@ -84,6 +87,8 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 | M2 | 部署模式明确 | Deploy Mode 字段存在且合法 | 值 ∈ {stdio, sse, http, mcpb} |
 | M3 | 调用流程图 | mermaid 展示 tool → src/<module>/service 调用链 | tools 与 service 的调用关系有图示 |
 | M4 | tools 与 service 映射 | 每个 tool 都能映射到 src/<module>/service.py 的方法 | 无悬空 tool（每个 tool 都有 service 实现） |
+
+注：Frontend 章节已删除（2026-07-04，无 DESIGN.md 后不再单独维护）。http-web 形态的页面/UI 设计由用户在产品阶段决定，不在 doc/ 中维护。
 
 ## Workflow
 
@@ -93,29 +98,26 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 4. For cli-only form, actually run `python3 cli/<module>.py --help` and inspect the output for C-group checks
 5. Aggregate all violations across files, output structured JSON (see Output Format)
 
-### 执行时机（重要）
+### 执行时机
 
-agent-factory 工作流（2026-07-03 重构后）按 feature 生命周期分两次执行：
+DESIGN.md 已废弃。designer 在 `designing` 阶段直接写 doc/，spec-compliance 单次执行：
 
 | 阶段 | 检查对象 | 启用的检查组 |
 |------|---------|-------------|
-| `designing`（DESIGN.md 撰写中） | DESIGN.md（schema 内嵌于「各 Module 设计」章节） | **仅 T 组**。S/P/B/F/M 组此时无目标文件（doc/<module>/ 尚未抽取） |
-| `approved` 后（designer schema 抽取后，developer 实现前） | doc/<module>/ + doc/common/ + doc/backend.md / mcp-server.md | **S/P/B/M 组**。T 组可重跑确认 DESIGN.md 引用更新无误 |
+| `designing`（designer 完成 doc/ 修改后） | REQUIREMENTS.md + doc/<module>/ + doc/common/ + doc/backend.md/mcp-server.md | **全部适用组**（T + S + P + SV + B/M 按 Agent Type） |
 
 C 组（CLI 运行时检查）仍在 `qa-reviewing` 阶段由 QA 触发，spec-compliance 不直接跑。
-
-**TODO**：S/P 检查项的 pass criteria 当前写的是"读 doc/<module>/..."。`designing` 阶段执行时若发现 doc/<module>/ 不存在，应输出 `{"skipped": "doc files not yet extracted, run after DESIGN.md approval"}` 而非全部 violation。
 
 ### 启用矩阵
 
 | 检查组 | cli-only | http-api | http-web | mcp-server |
 |--------|----------|----------|----------|------------|
-| T（顶层） | ✓ | ✓ | ✓ | ✓ |
+| T（顶层，REQUIREMENTS.md） | ✓ | ✓ | ✓ | ✓ |
 | S（data-schema） | ✓ | ✓ | ✓ | ✓ |
 | P（data-persistence） | ✓ | ✓ | ✓ | ✓ |
+| SV（service.md） | ✓ | ✓ | ✓ | ✓ |
 | C（CLI 运行时） | ✓ | ✗ | ✗ | ✗ |
 | B（backend） | ✗ | ✓ | ✓ | ✗ |
-| F（frontend） | ✗ | ✗ | ✓ | ✗ |
 | M（mcp-server） | ✗ | ✗ | ✗ | ✓ |
 
 ### Input Format（caller provides）
@@ -151,14 +153,14 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
   "modules": ["financial", "news"],
   "results": [
     {
-      "file": "DESIGN.md",
+      "file": "REQUIREMENTS.md",
       "summary": { "totalChecks": 4, "passed": ["T1","T2","T4"], "failed": ["T3"] },
       "violations": [
         {
           "checkId": "T3",
-          "check": "模块划分建议",
+          "check": "模块划分决策",
           "lineRange": null,
-          "detail": "DESIGN.md 缺少「模块划分建议」章节，本 feature 涉及新增 module 必填"
+          "detail": "REQUIREMENTS.md Decisions 缺少「模块划分」条目，本 feature 涉及新增 module 必填"
         }
       ]
     },
@@ -180,6 +182,18 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
       "violations": []
     },
     {
+      "file": "doc/financial/service.md",
+      "summary": { "totalChecks": 4, "passed": ["SV1","SV2","SV4"], "failed": ["SV3"] },
+      "violations": [
+        {
+          "checkId": "SV3",
+          "check": "跨 module 关系图",
+          "lineRange": null,
+          "detail": "service.md 提及 news module 但未画 mermaid graph 表达依赖"
+        }
+      ]
+    },
+    {
       "file": "doc/common/data-schema.md",
       "summary": { "totalChecks": 10, "passed": ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10"], "failed": [] },
       "violations": []
@@ -193,18 +207,6 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
           "check": "调用流程图",
           "lineRange": null,
           "detail": "缺少 API → src/<module>/service 的 mermaid 调用流程图"
-        }
-      ]
-    },
-    {
-      "file": "DESIGN.md (Frontend section)",
-      "summary": { "totalChecks": 3, "passed": ["F1","F3"], "failed": ["F2"] },
-      "violations": [
-        {
-          "checkId": "F2",
-          "check": "关键交互描述",
-          "lineRange": null,
-          "detail": "DESIGN.md Frontend 章节缺少 ### 关键交互 子节"
         }
       ]
     }
