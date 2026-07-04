@@ -50,7 +50,7 @@ Designer 从 `REQUIREMENTS.md` 读取完整需求信息，文件包含以下章�
 | User Scenarios | 理解使用上下文 |
 | Constraints | 设计硬约束 |
 | Decisions | 已确认的方案选择，设计中应遵循 |
-| Open Questions | 未决问题，可在设计中给出建议方案 |
+| Open Questions | 待用户选定的可选方案（PM 给 2-3 选项 + 推荐 + 理由，user 选定后移入 Decisions） |
 
 ## 设计工作原则
 
@@ -387,8 +387,9 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
      - 依赖关系（mermaid 图）
    - **由用户拍板**：PM review 时拿给用户确认，designer 仅提供建议
 2.5. **业务问题自检（决定能否进入撰写）**：扫描 REQUIREMENTS.md 的 `Decisions` 和 `Open Questions` 章节，找出**影响技术方案的业务问题**。判断标准：该问题的不同答案会导出不同的 dataclass / CLI / 模块结构。
-   - **存在未定业务问题**（如"用户是否买卖"决定数据模型是 records 数组还是单一对象；"是否参与聚合"决定接口；"高并发还是低频"决定是否需要 cache）→ **返回 blocked 给 PM**，`blocked_reason` 列清单，由 PM 找用户澄清。**不自主决定业务问题**
-   - **所有业务问题已定** → 继续 step 3
+   - **存在未定业务问题**（Open Question 状态="待用户选定"，或 Decisions 缺失关键决策）→ **返回 blocked 给 PM**，`blocked_reason` 列清单，由 PM 找用户澄清。**不自主决定业务问题**
+   - **Open Questions 必须已含 PM 给的选项 + 推荐**：若发现"光问题不给选项"或"designer 决定"式 Open Question，返回 blocked（让 PM 补选项后再让用户选定）
+   - **所有业务问题已定（Decisions 完整 + Open Questions 都已选定移入 Decisions）** → 继续 step 3
 3. **撰写 doc/ 文件**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，直接修改 `{Root}/doc/` 下文件（**不写 DESIGN.md**）：
    - `doc/<module>/data-schema.md`：dataclass + 三维度注释
    - `doc/<module>/data-persistence.md`：存储方案
