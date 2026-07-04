@@ -74,7 +74,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
   - 读相关代码段辅助理解（**不**写诊断结论）
   - **跨环境 issue**（来自 `_incoming/`）：确认 `snapshot/{log,data}` 已就位，作为 QA 复现依据
   - 整理到 `NOTES.md` 供 QA 使用
-- 检查 DESIGN.md 是否覆盖需求点（覆盖率检查，不是技术评审）
+- 检查 doc/ diff 是否覆盖 REQUIREMENTS.md Scope 全部功能点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
 ### 信息收集 vs 诊断结论（关键区分）
@@ -267,11 +267,12 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 .features/
   index.md                          # 需求索引
   <NNN>-<feature-name>/
-    REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建）
-    DESIGN.md                       # 设计文档
+    REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建，含 Decisions）
     BLOCKED.md                      # 阻塞记录（blocked 时创建）
     POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
 ```
+
+注：feature 目录只有 REQUIREMENTS.md。设计产出在 `{Root}/doc/` 下（designer 直接修改），不产 DESIGN.md。
 
 - `.features/` 在项目根目录，纳入 git 管理
 - 编号 `NNN` 三位数字，自动递增（从 index.md 取 max + 1）
@@ -297,36 +298,31 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 
 **强制约束**：
 - `implementing` → `qa-reviewing` → `done` 是必经路径。Developer 返回 complete 后，PM 必须调度场景 4（QA 验收），QA 返回 pass 才能更新为 done。禁止跳过 QA 直接 done
-- `designing` 阶段 designer 只写 DESIGN.md（schema 内嵌），**不写 `doc/<module>/`**。用户审批 DESIGN.md 后，PM 调度场景 9（designer 二轮 schema 抽取）产出 `doc/<module>/` 等正式 doc，再进入 `implementing`
+- `designing` 阶段 designer 直接写 `doc/<module>/` 等最终正式文档（无 DESIGN.md 中间产物）。用户审批 doc/ diff 后即可进入 `implementing`
 
 任何阶段均可流转至 `cancelled`。
 
 | 状态 | 含义 | 触发时机 |
 |------|------|----------|
 | draft | 需求提出，待讨论 | 用户提出新需求 |
-| designing | 设计进行中，已调度 designer subagent | PM 调度设计 |
+| designing | 设计进行中，已调度 designer subagent 直接修改 doc/ | PM 调度设计 |
 | **blocked** | **需要用户介入，等待外部输入** | designer/developer 无法独立完成 |
-| approved | DESIGN.md 通过 review；schema 抽取前 | 用户终审 DESIGN.md 通过 |
-| implementing | 开发中，已调度 developer subagent | schema 抽取完成，PM 调度开发 |
+| approved | doc/ diff 通过用户审阅 | 用户审阅 doc/ 修改通过 |
+| implementing | 开发中，已调度 developer subagent | PM 调度开发 |
 | qa-reviewing | QA 验收中，已调度 QA subagent | Developer 返回 complete 后 PM 调度 QA |
 | done | 验收通过，功能完成 | QA 返回 pass |
 | cancelled | 需求取消/废弃，不再继续 | 任何阶段用户决定取消 |
 
-**approved → implementing 流转**（含 schema 抽取）：
+**approved → implementing 流转**：
 
 ```
-user approves DESIGN.md
+user reviews doc/ diff (git diff)
   ↓
-status=approved
+approve → status=approved
   ↓
-PM 调度场景 9：designer 二轮 schema 抽取
-  - 从 DESIGN.md「各 Module 设计 > 数据结构」抽纯 schema → doc/<module>/data-schema.md
-  - 抽持久化方案 → doc/<module>/data-persistence.md
-  - 按 Agent Type 抽 backend.md / mcp-server.md
-  - 共享数据 → doc/common/data-schema.md
-  - DESIGN.md 数据结构章节更新为引用 doc/<module>/
+PM 调度场景 2（developer 实现，基于已批准 doc/）
   ↓
-抽取完成 → status=implementing → PM 调度场景 2（developer 实现）
+status=implementing
 ```
 
 ### BLOCKED.md 格式
@@ -354,7 +350,7 @@ PM 调度场景 9：designer 二轮 schema 抽取
 
 draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM 与用户的讨论结论。各章节在讨论中逐步填充。
 
-**职责边界**：REQUIREMENTS.md 只写"业务/需求"层 —— 用户场景、业务价值、功能点、业务决策。**不写"技术实现"**（dataclass 定义、CLI 命令清单、目录结构、迁移脚本、测试改动 —— 那是 DESIGN.md 的活）。混淆会让 designer 返工、让用户读两遍重复内容。
+**职责边界**：REQUIREMENTS.md 只写"业务/需求/决策"层 —— 用户场景、业务价值、功能点、业务决策、设计决策（含 OQ 答案、CLI 命令清单）。**不写"技术实现细节"**（dataclass 字段定义、JSON I/O schema、目录结构、迁移脚本、测试改动 —— 那是 doc/<module>/ 和 src/ 的活）。混淆会让 designer 返工、让用户读两遍重复内容。
 
 ```markdown
 # Requirements: <title>
@@ -388,22 +384,38 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 <!-- 用户怎么用，按场景列。业务行为，不含技术细节 -->
 <!-- 例：1. 每年 5-6 月分红到账后，用户跑命令记录本次分红 2. 查询时看到历史所有分红 -->
 
+## 名词概念
+<!-- 仅列「与本次需求强相关、reader 不读就会误解后续章节」的业务概念/术语/模块名。3-8 行即可，宁少勿多 -->
+<!-- 入选：① 本次引入的新业务概念；② 跨 module 易混淆术语；③ 本次新增/调整的 module 名；④ 项目特有合成词或缩写 -->
+<!-- 不入选：通用技术词、字段细节（看 data-schema.md）、其他 feature 已定义的概念、reader 一看就懂的通用业务词 -->
+<!-- 示例：
+| 名词 | 含义 |
+|------|------|
+| 收入流水 | 一笔工资/奖金/其他的进账记录，按月聚合用于报表 |
+| AuditLog | 跨 module 共享的操作审计记录，由 financial 等写入、audit module 读取 |
+-->
+
 ## Scope
 <!-- 业务功能点清单，每点一行。只列"做什么"，不写"怎么做" -->
 <!-- ✅ 例：- 记录年度分红 -->
 <!-- ✅ 例：- summary 时把分红纳入累计收益 -->
-<!-- ❌ 反例：- 新建 src/huawei_esop/ module 含 service.py models.py（这是 DESIGN） -->
-<!-- ❌ 反例：- CLI 命令 huawei-esop show 输出 JSON（这是 DESIGN） -->
-<!-- ❌ 反例：- 数据迁移脚本（这是 DESIGN） -->
+<!-- ❌ 反例：- 新建 src/huawei_esop/ module 含 service.py models.py（这是 doc/<module>/ 的活） -->
+<!-- ❌ 反例：- huawei-esop show 命令的 JSON I/O schema（这是 cli/<module>.py --help 的活） -->
+<!-- ❌ 反例：- 数据迁移脚本（这是 src/ 的活） -->
 - <功能点1>
 - <功能点2>
 
 ## Decisions
 <!-- 已定的方案选择。按类型分组 -->
-<!-- 影响技术方案的业务/技术/接口决策必须在这里定，不能流到 DESIGN 阶段（否则 designer 自主拍板导致返工） -->
+<!-- 影响技术方案的业务/技术/接口决策必须在这里定，不能流到 designer 阶段（否则 designer 自主拍板导致返工） -->
+<!-- 设计决策（OQ 答案、为什么选 A 不选 B）也写在这里，doc/ 不含过程性内容 -->
 - **业务决策**：<如"用户已离职不买卖 → 持股数固定">
 - **技术选型**：<如"用单一对象而非 records 数组">
-- **接口决策**：<如"CLI 用 huawei-esop dividend add/delete 显式子命令">
+- **接口决策**：
+  - cli-only 形态：CLI 命令清单表 `| 命令 | 用途 | 关键参数 |`（产品级决策，要做哪些命令）。详细 JSON I/O 由 cli/<module>.py --help 承载
+  - http-api/http-web 形态：API 路由清单（resources + 关键 endpoint）
+  - mcp-server 形态：tools 清单 `| tool | 用途 |`
+- **设计决策**（OQ 答案）：<如"OQ-5：已发生/计划行权共用 list，status 字段区分。理由：① 统一排序 ② 按状态过滤">
 
 ## Constraints
 <!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
@@ -838,7 +850,6 @@ Root: <project-root-path>
 | 6 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
 | 7 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
 | 8 | POC（技术可行性） | tech-feasibility blocked | `技术可行性分析：feature #<NNN>: <title>` |
-| 9 | designer（schema 抽取二轮） | DESIGN.md approved 后，implementing 前 | `抽取 schema 到 doc/<module>/：feature #<NNN>: <title>` |
 
 跨环境 Issue 验证调度 prompt 见 §跨环境 Issue 处理。
 
@@ -858,12 +869,12 @@ Root: <project-root-path>
 ```
 1. Read REQUIREMENTS.md, especially Agent Type, Deploy Mode, and Feature Type
 2. Update index.md status to "designing"
-3. If module boundary changes are involved: write module boundary proposal in DESIGN.md, submit to user via PM for confirmation
+3. If module boundary changes are involved: write module boundary proposal in REQUIREMENTS.md Decisions, submit to user via PM for confirmation
 3a. If Feature Type = migration: follow Migration Feature 设计规范
-4. Create DESIGN.md following the template (select artifacts per Agent Type)
+4. Directly modify doc/ files (doc/<module>/{data-schema,data-persistence,service}.md, doc/common/, doc/backend.md / doc/mcp-server.md per Agent Type). No DESIGN.md.
 5. Run spec-compliance check
 6. Use doc-review skill to refine
-7. Return structured result
+7. Return structured result with artifacts listing modified doc/ paths
 ```
 
 #### 场景 2: developer（常规开发）
@@ -872,9 +883,9 @@ Root: <project-root-path>
 
 **Instructions**：
 ```
-1. Read DESIGN.md
+1. Read doc/ files modified by designer (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + REQUIREMENTS.md Decisions for CLI command list (cli-only)
 2. Update index.md status to "implementing"
-3. Implement all code per design (按 Agent Type 选 artifact)
+3. Implement all code per doc/ (按 Agent Type 选 artifact)
 4. Run tests
 5. Git commit (one feature = one commit; migration feature 用 refactor(migrate): 前缀)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
@@ -907,7 +918,7 @@ Root: <project-root-path>
 
 **Instructions**：
 ```
-1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
+1. Read REQUIREMENTS.md (User Scenarios) + doc/ files modified by designer (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵 in qa.md for which checks apply)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
@@ -998,42 +1009,15 @@ QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
 
 POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 将决策结果附加到 Designer 的恢复指令中继续设计（见 §Blocked 处理）。
 
-#### 场景 9: designer（schema 抽取二轮）
-
-**调度时机**：用户审批通过 DESIGN.md（status=approved）后、调度 developer（场景 2）之前。把已批准 DESIGN.md 内嵌的 schema 抽取为正式 doc 文件。
-
-**Task**: `抽取 schema 到 doc/<module>/：feature #<NNN>: <title>`
-
-**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
-
-**Instructions**：
-```
-1. 读取已批准的 DESIGN.md「各 Module 设计」章节，定位每个 module 的完整 schema 定义（@dataclass + 三维度注释 + 设计决策理由）
-2. 为每个 module 创建/更新 doc/<module>/data-schema.md：
-   - 仅含 dataclass 定义 + 字段三维度注释（用途/使用场景/约束）+ 字段关系/公式/不变量
-   - 丢弃所有过程性内容：OQ 答案、决策理由、对比说明、Constraints 排除项、"为什么这么设计"
-3. 为每个 module 创建/更新 doc/<module>/data-persistence.md：
-   - 仅含存储方案（文件路径、格式、初始内容、读写机制）
-   - 丢弃决策理由
-4. 按 Agent Type 抽接入层 doc：
-   - http-api / http-web：doc/backend.md（API 路由 + 请求/响应 + 调用流程图）
-   - mcp-server：doc/mcp-server.md（tools 清单 + 部署模式 + 调用流程图）
-5. 如有共享数据（doc/common/data-schema.md）：抽取 cross-module 共享 dataclass
-6. 更新 DESIGN.md「各 Module 设计 > 数据结构」章节：把内嵌 schema 替换为引用 doc/<module>/data-schema.md + 一句话业务角色概述
-7. 返回 complete，artifacts 含所有抽取出的 doc 文件 + 更新后的 DESIGN.md
-```
-
-抽取完成后，PM 更新 status=implementing，调度场景 2（developer 实现）。
-
 ---
 
 Designer subagent 返回设计结果后，PM 进行初步 review：
 
 ### Review 标准
 
-- **需求覆盖率**：DESIGN.md 是否覆盖了 requirement brief 中的每个功能点
-- **完整性**：DESIGN.md 各章节是否完整填写（概述、数据结构、CLI 命令、持久化、模块关系、Doc 变更清单）
-- **一致性**：DESIGN.md Doc 变更清单 章节涉及的文件范围是否与需求范围匹配
+- **需求覆盖率**：doc/ diff 是否覆盖 REQUIREMENTS.md Scope 中的每个功能点
+- **完整性**：所有应产出的 doc 文件都已修改（doc/<module>/{data-schema,data-persistence,service}.md + 按 Agent Type 的 backend.md/mcp-server.md + 共享数据时 doc/common/）
+- **一致性**：本 feature 修改的 doc 文件范围与 REQUIREMENTS.md Scope 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
 
 ### Review 不包含
 
@@ -1044,7 +1028,7 @@ Designer subagent 返回设计结果后，PM 进行初步 review：
 ### Review 通过后
 
 PM 将设计提交用户终审：
-- 展示 DESIGN.md 概要和 doc 变更摘要（`git status --short -- doc/` 显示新增/修改/删除的文件，包含未跟踪的新文件）
+- 展示 doc/ diff 概要（`git status --short -- doc/` + 每个 file 的关键改动）
 - 使用 doc-review skill（如已安装）进行交互式 review
 - 用户确认后，更新 status=approved
 
@@ -1115,7 +1099,9 @@ PM 重新调度 Designer，附加用户决策：
 |------|------|
 | `.features/index.md` | 所有 feature 的状态、优先级、时间 |
 | `.features/<NNN>/BLOCKED.md` | feature 的阻塞详情（含 blocked 类型） |
-| `.features/<NNN>/DESIGN.md` | feature 的设计文档 |
+| `{Root}/doc/<module>/*.md` | designer 直接修改的最终正式文档（data-schema / data-persistence / service） |
+| `{Root}/doc/common/data-schema.md` | 跨 module 共享数据 |
+| `{Root}/doc/backend.md` / `doc/mcp-server.md` | 接入层 doc（按 Agent Type） |
 | `.features/<NNN>/POC-REPORT.md` | 技术可行性评估报告（tech-feasibility blocked 时生成） |
 | `.issues/index.md` | 所有 issue 的状态、类型、关联 |
 | `.issues/<NNN>/NOTES.md` | issue 的描述和讨论记录 |
