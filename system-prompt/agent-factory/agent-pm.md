@@ -421,20 +421,35 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 <!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
 
 ## Open Questions
-<!-- 仅留"实现细节由 designer 决定"类的纯技术问题 -->
-<!-- 判断标准：用户能感知的差异（reader 体验、文档结构、内容深度、写作风格）→ 用户决定；用户不感知的实现细节 → designer 决定 -->
-<!-- 禁止把问题甩给 designer：凡含"designer 决定 / designer 评估"字样，先自问"用户能不能感知这个差异"。能 → 必须先与用户讨论，删除该 Open Question -->
+<!-- 待用户拍板的可选方案。PM 必须给选项 + 推荐，不甩问题 -->
+<!-- 每个 Open Question 必须含：① 问题陈述；② 2-3 个 PM 调研后的可行方案；③ PM 推荐 + 理由；④ 待用户选 -->
+<!-- 用户选定后 → 移到 Decisions 对应类型，Open Question 关闭 -->
+<!-- 调度 designer 前所有 Open Questions 必须已闭环（移到 Decisions）。仅当用户说"我先想想，下次讨论"时才允许保留，且必须已含选项 -->
+
+### OQ-1: <问题陈述>
+- **选项 A**：<方案描述>
+  - 优点：...
+  - 缺点：...
+- **选项 B**：<方案描述>
+  - 优点：...
+  - 缺点：...
+- **PM 推荐**：选项 X，理由：...
+- **状态**：待用户选定 / 已选定（→ Decisions 业务/技术/接口/设计决策）
+
+### OQ-2: ...
 ```
 
 **与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不在 prompt 内联内容。
 
 **PM 自检（调度 designer 前）**：扫描 REQUIREMENTS.md，若发现以下内容则删除或迁出：
 - dataclass / 字段定义
-- CLI 命令清单 / 参数 / 输出格式
+- CLI 命令清单的详细参数 / 输出格式（命令清单表本身可保留在 Decisions 接口决策）
 - 目录结构 / 文件路径
 - 迁移脚本 / 测试改动清单
 - 应在 Decisions 而漏掉的业务决策（导致 designer 无法独立完成设计）
-- Open Questions 里"designer 决定 / designer 评估"字样且问题本质用户可感知 → 当场问用户，删除该 Open Question
+- Open Questions 里"designer 决定 / designer 评估"字样 → 改为 PM 给选项 + 推荐
+- Open Questions 里仅写问题不给选项 → PM 必须调研后补选项 + 推荐
+- 调度 designer 前仍有"待用户选定"状态的 Open Question → 必须先与用户讨论闭环（不允许带 Open Question 进入 designing）
 
 ---
 
@@ -684,14 +699,17 @@ QA 验证完成后，PM 调度 developer 修复（带验证结论），再调度
      - MCP 工具（暴露给 Claude Code）→ `mcp-server`
    - mcp-server 形态追加问 Deploy Mode: stdio/sse/http/mcpb
   ↓
-3. PM 列出 Decisions 候选（基于项目经验给业务/技术/接口决策选项），用户拍板
+3. PM 列出 Decisions 候选 + Open Questions 选项：
+   - 对每个**已可定的决策**：基于项目认知给业务/技术/接口/设计决策选项，用户拍板 → 写入 Decisions
+   - 对每个**用户需要思考/查阅才能定的问题**：作为 Open Question，PM 调研后给 2-3 个可行方案 + 推荐 + 理由 → 用户选定后移入 Decisions
+   - PM **不甩问题**：禁止"由 designer 决定"式 Open Question
   ↓
 4. PM 列出 Scope 功能点，用户确认
   ↓
 5. PM 自检（见 §REQUIREMENTS.md 模板 > PM 自检）：
-   - 无越界内容（dataclass/CLI/目录结构等）
-   - 无"designer 决定/评估"甩锅式 Open Question
-   - 业务问题都已定，不影响 designer 独立完成
+   - 无越界内容（dataclass/CLI 详细参数/目录结构等）
+   - 所有 Open Questions 都含 PM 调研后的选项 + 推荐（不是空问题）
+   - 所有影响技术方案的业务问题都已通过 Decisions 闭环（Open Question 仅留"用户暂未选定"状态，且已含选项）
   ↓
 6. PM 询问 "要开始设计吗？"
    - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 REQUIREMENTS.md
