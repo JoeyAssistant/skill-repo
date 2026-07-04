@@ -31,10 +31,11 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S2 | 字段描述 | class 和每个 field 都有文字描述 | dataclass 上方有类描述，每个字段有 inline 注释描述 |
 | S3 | 枚举使用 | 有限集合值使用 Python enum | 字段值存在有限集合时（如类型、状态），使用 enum 而非字符串常量 |
 | S4 | 命名一致性 | 数据结构命名清晰、一致 | 跨 module 同类命名风格一致 |
-| S5 | 字段合理性 | 不包含非必要字段 | 每个字段都能在 `data-schema.md` 注释中说明用途、使用场景、约束三维度；与 S8/S9 协同 |
+| S5 | 字段合理性 | 不包含非必要字段 | 每个字段都能在 `data-schema.md` 注释中清晰描述（必需）+ 按需使用场景/关键约束；与 S8/S9/S11 协同 |
 | S6 | 纯数据结构 | 不包含业务逻辑代码或持久化内容 | 仅定义数据结构，不包含函数、方法、存储逻辑 |
 | S7 | 唯一真值声明 | 文档说明其作为数据结构唯一真值的地位 | 文档中声明跨文档一致性要求 |
-| S8 | 字段注释完整性 | 每个字段的 dataclass 注释含三维度 | `data-schema.md` 中每个字段的注释包含用途、使用场景、约束三维度描述（格式不限：行注释、块注释、表格注释均可，只要清晰可识别）。任一维度缺失 → violation |
+| S8 | 字段注释完整性 | 每个字段有清晰描述 | `data-schema.md` 中每个字段的注释包含：① 字段描述（必需，含示例值更佳，不写"用途："标签）；② 使用场景（按需，简单字段可省）；③ 约束（按需，仅写非显然约束如 `> 0` / `∈ enum` / `自动计算`，不写"非空字符串"等显然约束）。描述缺失 → violation；约束冗余（"非空字符串"等）→ violation |
+| S11 | 注释格式一致性 | 同一 data-schema.md 内 dataclass 注释格式统一 | 文件内所有 dataclass 使用同一种注释格式（行注释或行尾单行注释），不混用 |
 | S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
 | S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
 
@@ -166,7 +167,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
     },
     {
       "file": "doc/financial/data-schema.md",
-      "summary": { "totalChecks": 10, "passed": ["S1","S2","S4","S5","S6","S7","S8","S10"], "failed": ["S3","S9"] },
+      "summary": { "totalChecks": 11, "passed": ["S1","S2","S4","S5","S6","S7","S8","S10","S11"], "failed": ["S3","S9"] },
       "violations": [
         {
           "checkId": "S3",
@@ -195,7 +196,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
     },
     {
       "file": "doc/common/data-schema.md",
-      "summary": { "totalChecks": 10, "passed": ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10"], "failed": [] },
+      "summary": { "totalChecks": 11, "passed": ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10","S11"], "failed": [] },
       "violations": []
     },
     {

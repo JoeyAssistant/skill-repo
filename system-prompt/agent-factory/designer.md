@@ -169,7 +169,7 @@ designer 在 designing 阶段直接产出**最终正式文档**，不再写 DESI
 
 | 文件 | 适用形态 | 内容 |
 |------|---------|------|
-| `{Root}/doc/<module>/data-schema.md` | 所有形态 | dataclass + 三维度注释（用途/使用场景/约束）+ 字段关系/公式/不变量 |
+| `{Root}/doc/<module>/data-schema.md` | 所有形态 | dataclass + 字段注释（描述 + 按需使用场景 + 关键约束）+ 字段关系/公式/不变量 |
 | `{Root}/doc/<module>/data-persistence.md` | 所有形态 | 存储方案：路径、格式、初始内容、读写机制、字段补全 |
 | `{Root}/doc/<module>/service.md` | 所有形态 | Service 方法签名 + 关键流程 mermaid sequence + 与其他 module 关系图（mermaid graph） |
 | `{Root}/doc/common/data-schema.md` | 所有形态（如需） | 跨 module 共享数据结构 |
@@ -262,7 +262,7 @@ designing 阶段直接写最终 doc 文件，不产 DESIGN.md 中间产物。
 
 ### ✅ 允许的内容
 
-- 数据结构定义：dataclass + 字段三维度注释（用途/使用场景/约束）
+- 数据结构定义：dataclass + 字段注释（描述 + 按需使用场景 + 关键约束）
 - 字段关系、计算公式（如 `market_value = shares × price_per_share`）
 - 不变量、合法值集合、字段依赖
 - 存储方案（路径、格式、初始内容、读写机制）
@@ -307,7 +307,7 @@ class ExerciseRecord:
 理由：① CLI 展示时便于统一排序 ② 汇总查询时可按 status 过滤 ③ 计划行权完成后只需改 status...
 ```
 
-正解（仅留 dataclass + 三维度注释）：
+正解（仅留 dataclass + 字段注释，描述清晰 + 关键约束）：
 
 ```markdown
 ### ExerciseRecord -- 行权记录
@@ -391,7 +391,7 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
    - **Open Questions 必须已含 PM 给的选项 + 推荐**：若发现"光问题不给选项"或"designer 决定"式 Open Question，返回 blocked（让 PM 补选项后再让用户选定）
    - **所有业务问题已定（Decisions 完整 + Open Questions 都已选定移入 Decisions）** → 继续 step 3
 3. **撰写 doc/ 文件**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，直接修改 `{Root}/doc/` 下文件（**不写 DESIGN.md**）：
-   - `doc/<module>/data-schema.md`：dataclass + 三维度注释
+   - `doc/<module>/data-schema.md`：dataclass + 字段注释（描述 + 按需使用场景 + 关键约束）
    - `doc/<module>/data-persistence.md`：存储方案
    - `doc/<module>/service.md`：Service 方法签名 + 关键流程 mermaid sequence + 跨 module 关系图
    - `doc/common/data-schema.md`（如涉及共享数据）
@@ -407,7 +407,7 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
 
 | 文件 | 内容 | 适用形态 |
 |------|------|----------|
-| `{Root}/doc/<module>/data-schema.md` | 该 module 业务数据结构定义（dataclass + 三维度注释） | 所有形态 |
+| `{Root}/doc/<module>/data-schema.md` | 该 module 业务数据结构定义（dataclass + 字段注释） | 所有形态 |
 | `{Root}/doc/<module>/data-persistence.md` | 该 module 数据持久化方案 | 所有形态 |
 | `{Root}/doc/<module>/service.md` | Service 方法签名 + 关键流程 mermaid + 跨 module 关系图 | 所有形态 |
 | `{Root}/doc/common/data-schema.md` | 跨 module 共享数据结构（User/AuditLog/Pagination 等） | 所有形态（如需） |
@@ -429,11 +429,16 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
 
 Agent 设计围绕结构化数据 —— 所有业务、交互、功能都用 `dataclass` 表示和承载。`data-schema.md` 是单一真值。
 
-**每个字段必须在 dataclass 代码注释中清晰说明三个维度**：
+**每个字段必须有清晰注释**，按"必需 + 按需"原则写：
 
-1. **用途** — 字段是做什么的（语义角色）
-2. **使用场景** — 在什么场景下被使用（CLI 命令 / API / UI / 日志 / 持久化等，自然语言描述即可，不强制清单形式）
-3. **约束** — 取值范围、不变量、合法值集合、与其他字段的关系
+1. **字段描述（必需）**：字段是什么、做什么、关键语义。不写"用途："标签 —— 描述本身就是用途
+   - 复杂或易混淆字段附**示例值**（如 `# 券商名称。示例："国金证券（佣金宝）"`）
+   - 字段名已经一目了然时可极简（如 `note: str = ""  # 备注（可选）`）
+2. **使用场景（按需）**：仅当字段被多个 CLI/API/UI 场景使用且需要厘清时写。简单字段（仅展示 + 持久化）可省
+3. **约束（按需，关键）**：仅写**非显然约束**：
+   - ✅ 写："> 0"、"必须 ∈ enum"、"YYYY-MM-DD 格式"、"自动计算 = price * quantity"、"不可变"
+   - ❌ 不写："非空字符串"、"必填"、"str 类型" 等显然约束（浪费空间）
+   - 不强制每字段都有约束；没特殊约束就不写
 
 **示例** — `IncomeRecord`：
 
@@ -443,25 +448,40 @@ class IncomeRecord:
     """一笔收入流水的记录。用于 cli/financial.py 的 add-income / list-income 命令，
     持久化到 data/income.json，写入审计日志。"""
     amount: float
-        # 用途：收入金额（本币）
-        # 使用场景：add-income 输入、list-income 输出、net-worth 聚合
-        # 约束：> 0；2 位小数；最大 1e9
+        # 收入金额（本币）。示例：5000.00
+        # 约束：> 0；2 位小数
     category: Category
-        # 用途：收入类别
-        # 使用场景：add-income 输入、list-income 筛选
-        # 约束：必须 ∈ Category enum（salary/bonus/other）
+        # 收入类别（salary / bonus / other）
     created_at: date
-        # 用途：流水发生日期
-        # 使用场景：持久化、list-income 排序、审计日志
+        # 流水发生日期
         # 约束：自动写入当下日期；不可变
+    note: str = ""
+        # 备注（可选）
+```
+
+**示例** — 极简风格的 `StockTransaction`：
+
+```python
+@dataclass
+class StockTransaction:
+    """单笔 A 股交易记录。"""
+    date: str           # 交易日期。约束：YYYY-MM-DD
+    type: StockTransactionType  # 交易类型（BUY / SELL）
+    price: float        # 成交单价（元）。约束：> 0
+    quantity: int       # 成交数量（股）。约束：> 0，整数
+    amount: float       # 成交金额（元）= price * quantity（service 层自动计算）
+    fee: float          # 手续费（元）
+    note: str = ""      # 备注（可选）
 ```
 
 **判断标准（写入字段前自查）**：
 
 | 字段特点 | 处理 |
 |---------|------|
-| 三维度（用途 / 使用场景 / 约束）都能清晰说明 | 保留 |
-| 任一维度说不清（"将来可能用到"/"看起来应该有"） | 删除（YAGNI） |
+| 描述清晰（一句话能说清做什么）+ 非显然约束有标注 | 保留 |
+| 描述不清（"将来可能用到"/"看起来应该有"）| 删除（YAGNI） |
+
+**格式一致性（强制）**：同一 data-schema.md 文件内所有 dataclass 必须用同一种注释格式（要么全部三维度行注释，要么全部行尾单行注释）。混用 → 违反规范。
 
 **dos**
 
