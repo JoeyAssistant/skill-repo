@@ -294,38 +294,32 @@ designing 阶段直接写最终 doc 文件，不产 DESIGN.md 中间产物。
 | "第一版 / 第二版"、"变更记录"、"架构调整" | 删除（git history 已记录） |
 | "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 REQUIREMENTS.md Decisions） |
 
-### 反例（来自 #016 momenta-option，禁止重现）
+### 反例（过程性内容混入 doc/，禁止）
 
 ```markdown
-### ExerciseRecord
+### <EntityName>
 
 @dataclass
-class ExerciseRecord:
+class <EntityName>:
     ...
 
-**设计决策（OQ-5 答案）**：已发生行权和计划行权共用同一个 list，通过 status 字段区分。
-理由：① CLI 展示时便于统一排序 ② 汇总查询时可按 status 过滤 ③ 计划行权完成后只需改 status...
+**设计决策（OQ-X 答案）**：<某设计选择的理由>。
+理由：① ... ② ... ③ ...
 ```
 
 正解（仅留 dataclass + 字段注释，描述清晰 + 关键约束）：
 
 ```markdown
-### ExerciseRecord -- 行权记录
+### <EntityName> -- <一句话业务角色>
 
 @dataclass
-class ExerciseRecord:
-    date: str
-        # 用途：行权日期 YYYY-MM-DD（已发生或计划）
-        # 使用场景：exercise add 输入、show 输出、按日期排序
-        # 约束：YYYY-MM-DD 格式
-    shares: int
-        # 用途：行权股数
-        # 使用场景：exercise add 输入、cost 计算
-        # 约束：> 0
-    status: ExerciseStatus
-        # 用途：行权状态（done=已发生 / planned=计划）
-        # 使用场景：show 输出、按 status 过滤汇总
-        # 约束：必须 ∈ ExerciseStatus enum
+class <EntityName>:
+    field_a: str
+        # <字段描述>。约束：YYYY-MM-DD
+    field_b: int
+        # <字段描述>。约束：> 0
+    field_c: <EnumName>
+        # <字段描述>（值1 / 值2 / 值3）
 ```
 
 决策"为什么共用 list" → REQUIREMENTS.md Decisions。
@@ -444,37 +438,35 @@ Agent 设计围绕结构化数据 —— 所有业务、交互、功能都用 `d
    - ❌ 不写："非空字符串"、"必填"、"str 类型" 等显然约束（浪费空间）
    - 不强制每字段都有约束；没特殊约束就不写
 
-**示例** — `IncomeRecord`：
+**示例 1** — 详细风格（关键业务实体）：
 
 ```python
 @dataclass
-class IncomeRecord:
-    """一笔收入流水的记录。用于 cli/financial.py 的 add-income / list-income 命令，
-    持久化到 data/income.json，写入审计日志。"""
+class <EntityName>:
+    """<一句话业务角色说明>。<可选：列出主要使用场景>"""
     amount: float
-        # 收入金额（本币）。示例：5000.00
+        # <字段描述>。示例：5000.00
         # 约束：> 0；2 位小数
-    category: Category
-        # 收入类别（salary / bonus / other）
+    category: <EnumName>
+        # <字段描述>（值1 / 值2 / 值3）
     created_at: date
-        # 流水发生日期
+        # <字段描述>
         # 约束：自动写入当下日期；不可变
     note: str = ""
         # 备注（可选）
 ```
 
-**示例** — 极简风格的 `StockTransaction`：
+**示例 2** — 极简风格（简单数据类）：
 
 ```python
 @dataclass
-class StockTransaction:
-    """单笔 A 股交易记录。"""
-    date: str           # 交易日期。约束：YYYY-MM-DD
-    type: StockTransactionType  # 交易类型（BUY / SELL）
-    price: float        # 成交单价（元）。约束：> 0
-    quantity: int       # 成交数量（股）。约束：> 0，整数
-    amount: float       # 成交金额（元）= price * quantity（service 层自动计算）
-    fee: float          # 手续费（元）
+class <EntityName>:
+    """<一句话业务角色说明>。"""
+    date: str           # <字段描述>。约束：YYYY-MM-DD
+    type: <EnumName>    # <字段描述>（值1 / 值2）
+    price: float        # <字段描述>。约束：> 0
+    quantity: int       # <字段描述>。约束：> 0，整数
+    amount: float       # <字段描述> = price * quantity（service 层自动计算）
     note: str = ""      # 备注（可选）
 ```
 
@@ -587,10 +579,10 @@ PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.md Decisions，design
 `cli/<module>.py` 内部通过绝对路径 import `src` 业务逻辑：
 
 ```python
-# cli/financial.py
+# cli/<module>.py
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.financial.service import FinancialService
+from src.<module>.service import <Module>Service
 # ... click 命令定义
 ```
 

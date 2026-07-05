@@ -419,16 +419,16 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 <!-- 示例：
 | 名词 | 含义 |
 |------|------|
-| 收入流水 | 一笔工资/奖金/其他的进账记录，按月聚合用于报表 |
-| AuditLog | 跨 module 共享的操作审计记录，由 financial 等写入、audit module 读取 |
+| <业务概念 1> | <一句话业务定义 + 主要场景> |
+| <跨 module 共享术语> | <定义 + 谁写谁读> |
 -->
 
 ## Scope
 <!-- 业务功能点清单，每点一行。只列"做什么"，不写"怎么做" -->
 <!-- ✅ 例：- 记录年度分红 -->
 <!-- ✅ 例：- summary 时把分红纳入累计收益 -->
-<!-- ❌ 反例：- 新建 src/huawei_esop/ module 含 service.py models.py（这是 doc/<module>/ 的活） -->
-<!-- ❌ 反例：- huawei-esop show 命令的 JSON I/O schema（这是 cli/<module>.py --help 的活） -->
+<!-- ❌ 反例：- 新建 src/<module>/ 含 service.py models.py（这是 doc/<module>/ 的活） -->
+<!-- ❌ 反例：- <command> show 命令的 JSON I/O schema（这是 cli/<module>.py --help 的活） -->
 <!-- ❌ 反例：- 数据迁移脚本（这是 src/ 的活） -->
 - <功能点1>
 - <功能点2>
