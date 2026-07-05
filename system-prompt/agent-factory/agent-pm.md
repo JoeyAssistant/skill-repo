@@ -449,22 +449,67 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 <!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
 
 ## Open Questions
-<!-- 待用户拍板的可选方案。PM 必须给选项 + 推荐，不甩问题 -->
-<!-- 每个 Open Question 必须含：① 问题陈述；② 2-3 个 PM 调研后的可行方案；③ PM 推荐 + 理由；④ 待用户选 -->
+<!-- 待用户拍板的可选方案。PM 必须给背景 + 选项含优缺点 + 推荐理由，不甩问题也不给光秃秃的选项 -->
+<!-- 每个 Open Question 必须含 4 部分：① 背景与触发场景；② 2-3 个 PM 调研后的可行方案（每个含优缺点）；③ PM 推荐 + 详细理由；④ 状态 -->
 <!-- 用户选定后 → 移到 Decisions 对应类型，Open Question 关闭 -->
-<!-- 调度 designer 前所有 Open Questions 必须已闭环（移到 Decisions）。仅当用户说"我先想想，下次讨论"时才允许保留，且必须已含选项 -->
+<!-- 调度 designer 前所有 Open Questions 必须已闭环（移到 Decisions）。仅当用户说"我先想想，下次讨论"时才允许保留，且必须已含完整 4 部分 -->
 
-### OQ-1: <问题陈述>
-- **选项 A**：<方案描述>
-  - 优点：...
-  - 缺点：...
-- **选项 B**：<方案描述>
-  - 优点：...
-  - 缺点：...
-- **PM 推荐**：选项 X，理由：...
-- **状态**：待用户选定 / 已选定（→ Decisions 业务/技术/接口/设计决策）
+### OQ-1: <一句话问题陈述>
+
+**背景与触发场景**：<为什么有这个问题、什么场景下需要决定、不同选择的实际影响>。让用户不看代码也能理解为什么这是个问题。
+
+**选项 A**：<方案描述>
+- 优点：<具体优点>
+- 缺点：<具体缺点>
+- 实际影响：<选了之后会怎样>
+
+**选项 B**：<方案描述>
+- 优点：...
+- 缺点：...
+- 实际影响：...
+
+**PM 推荐**：选项 X
+- 推荐理由：<不只"理由"，要写清楚为什么 PM 推荐这个 —— 基于项目认知、现有惯例、未来扩展性等>
+- 备选条件：<什么情况下应该选 B/C，帮用户判断>
+
+**状态**：待用户选定 / 已选定（→ Decisions 业务/技术/接口/设计决策）
 
 ### OQ-2: ...
+```
+
+**反例**（用户看不懂，禁止）：
+```
+OQ-1: daily-report 的 profile 选择
+- A. CLI 参数 --profile glm
+- B. 环境变量 CLAUDE_PROFILE
+- C（PM 推荐）：A + B 都支持（参数优先，环境变量兜底）
+```
+问题：① 没有背景，用户不知道为什么这是个问题；② 选项无优缺点；③ 推荐无理由；④ "PM 推荐"标记在 C 旁边而不在独立推荐块，不清楚 PM 为什么推荐。
+
+**正解**（完整 4 部分）：
+```
+### OQ-1: daily-report 用哪个 LLM profile
+
+**背景**：daily-report 调 Claude 生成报告，需指定 profile（glm/sonnet）。当前 cron 跑 daily-report 时需明确 profile 来源，影响 cron 配置写法和命令行灵活性。
+
+**选项 A**：CLI 参数 `--profile glm`
+- 优点：每次显式指定，cron 配置直观
+- 缺点：cron 命令行变长；忘记带参数会报错
+- 实际影响：cron 写法 `0 9 * * * python3 cli/financial.py daily-report --profile glm`
+
+**选项 B**：环境变量 `CLAUDE_PROFILE`
+- 优点：cron 配置简单（export 一次）
+- 缺点：调用时不直观；多 profile 切换需改 env
+- 实际影响：cron 写法 `CLAUDE_PROFILE=glm python3 cli/financial.py daily-report`
+
+**选项 C**：A + B 都支持（CLI 参数优先，环境变量兜底）
+- 优点：灵活，cron 用 env，调试用 CLI
+- 缺点：实现略复杂（两路解析）；文档要写清优先级
+- 实际影响：两种 cron 写法都支持
+
+**PM 推荐**：选项 C
+- 推荐理由：项目已有 `cc-launcher` 类工具支持 profile 切换，用户习惯双通道；cron 场景多 env 省事，调试场景多 CLI 清晰
+- 备选条件：如果觉得"双通道实现复杂不值得"，选 A（最简单且强制每次显式）
 ```
 
 **与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不在 prompt 内联内容。
@@ -475,8 +520,10 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - 目录结构 / 文件路径
 - 迁移脚本 / 测试改动清单
 - 应在 Decisions 而漏掉的业务决策（导致 designer 无法独立完成设计）
-- Open Questions 里"designer 决定 / designer 评估"字样 → 改为 PM 给选项 + 推荐
-- Open Questions 里仅写问题不给选项 → PM 必须调研后补选项 + 推荐
+- Open Questions 里"designer 决定 / designer 评估"字样 → 改为 PM 给背景 + 选项含优缺点 + 推荐理由
+- Open Questions 里仅写问题不给选项 → PM 必须调研后补完整 4 部分（背景 + 选项含优缺点 + 推荐理由 + 状态）
+- Open Questions 里选项只写名字不写优缺点/影响 → 补每个选项的 优缺点 + 实际影响（让用户看懂选了之后会怎样）
+- Open Questions 推荐无理由（仅"PM 推荐 X"）→ 补推荐理由（基于项目认知、惯例、扩展性等）+ 备选条件（什么情况选别的）
 - 调度 designer 前仍有"待用户选定"状态的 Open Question → 必须先与用户讨论闭环（不允许带 Open Question 进入 designing）
 
 ---
