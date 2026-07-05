@@ -477,39 +477,36 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 ### OQ-2: ...
 ```
 
-**反例**（用户看不懂，禁止）：
+**反例**（缺背景、缺优缺点、缺推荐理由，禁止）：
 ```
-OQ-1: daily-report 的 profile 选择
-- A. CLI 参数 --profile glm
-- B. 环境变量 CLAUDE_PROFILE
-- C（PM 推荐）：A + B 都支持（参数优先，环境变量兜底）
+OQ-1: <主题>
+- A. <方案 A 名字>
+- B. <方案 B 名字>
+- C（PM 推荐）：<方案 C 名字>
 ```
-问题：① 没有背景，用户不知道为什么这是个问题；② 选项无优缺点；③ 推荐无理由；④ "PM 推荐"标记在 C 旁边而不在独立推荐块，不清楚 PM 为什么推荐。
+问题：① 没有背景，用户不知道为什么这是个问题；② 选项只写名字不写优缺点；③ 推荐标记在选项旁而非独立推荐块，且无推荐理由。
 
-**正解**（完整 4 部分）：
+**正解**（完整 4 部分，通用结构）：
 ```
-### OQ-1: daily-report 用哪个 LLM profile
+### OQ-N: <一句话问题陈述>
 
-**背景**：daily-report 调 Claude 生成报告，需指定 profile（glm/sonnet）。当前 cron 跑 daily-report 时需明确 profile 来源，影响 cron 配置写法和命令行灵活性。
+**背景与触发场景**：<为什么有这个问题、什么场景下需要决定、不同选择的实际影响。让用户不看代码也能理解>
 
-**选项 A**：CLI 参数 `--profile glm`
-- 优点：每次显式指定，cron 配置直观
-- 缺点：cron 命令行变长；忘记带参数会报错
-- 实际影响：cron 写法 `0 9 * * * python3 cli/financial.py daily-report --profile glm`
+**选项 A**：<方案描述>
+- 优点：<具体优点>
+- 缺点：<具体缺点>
+- 实际影响：<选了之后会怎样，最好附具体使用方式 / 调用形态>
 
-**选项 B**：环境变量 `CLAUDE_PROFILE`
-- 优点：cron 配置简单（export 一次）
-- 缺点：调用时不直观；多 profile 切换需改 env
-- 实际影响：cron 写法 `CLAUDE_PROFILE=glm python3 cli/financial.py daily-report`
+**选项 B**：<方案描述>
+- 优点：...
+- 缺点：...
+- 实际影响：...
 
-**选项 C**：A + B 都支持（CLI 参数优先，环境变量兜底）
-- 优点：灵活，cron 用 env，调试用 CLI
-- 缺点：实现略复杂（两路解析）；文档要写清优先级
-- 实际影响：两种 cron 写法都支持
+**PM 推荐**：选项 X
+- 推荐理由：<基于项目认知、现有惯例、扩展性、维护成本等>
+- 备选条件：<什么情况下应该选别的，帮用户判断>
 
-**PM 推荐**：选项 C
-- 推荐理由：项目已有 `cc-launcher` 类工具支持 profile 切换，用户习惯双通道；cron 场景多 env 省事，调试场景多 CLI 清晰
-- 备选条件：如果觉得"双通道实现复杂不值得"，选 A（最简单且强制每次显式）
+**状态**：待用户选定 / 已选定（→ Decisions）
 ```
 
 **与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不在 prompt 内联内容。
