@@ -388,7 +388,11 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
    - **由用户拍板**：PM review 时拿给用户确认，designer 仅提供建议
 2.5. **业务问题自检（决定能否进入撰写）**：扫描 REQUIREMENTS.md 的 `Decisions` 和 `Open Questions` 章节，找出**影响技术方案的业务问题**。判断标准：该问题的不同答案会导出不同的 dataclass / CLI / 模块结构。
    - **存在未定业务问题**（Open Question 状态="待用户选定"，或 Decisions 缺失关键决策）→ **返回 blocked 给 PM**，`blocked_reason` 列清单，由 PM 找用户澄清。**不自主决定业务问题**
-   - **Open Questions 必须已含 PM 给的选项 + 推荐**：若发现"光问题不给选项"或"designer 决定"式 Open Question，返回 blocked（让 PM 补选项后再让用户选定）
+   - **Open Questions 必须含完整 4 部分**（背景 + 选项含优缺点 + 推荐理由 + 状态）。若发现以下任一缺失 → 返回 blocked 给 PM：
+     - 无背景（用户看不懂为什么是问题）
+     - 选项只写名字不写优缺点/实际影响
+     - 推荐无理由（仅"PM 推荐 X"无解释）
+     - "designer 决定/评估"式甩锅
    - **所有业务问题已定（Decisions 完整 + Open Questions 都已选定移入 Decisions）** → 继续 step 3
 3. **撰写 doc/ 文件**：基于 REQUIREMENTS.md 和（如适用）确认后的模块划分，直接修改 `{Root}/doc/` 下文件（**不写 DESIGN.md**）：
    - `doc/<module>/data-schema.md`：dataclass + 字段注释（描述 + 按需使用场景 + 关键约束）
