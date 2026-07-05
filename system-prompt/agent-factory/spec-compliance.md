@@ -151,7 +151,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
 ```json
 {
   "agent_type": "http-web",
-  "modules": ["financial", "news"],
+  "modules": ["<module-a>", "<module-b>"],
   "results": [
     {
       "file": "REQUIREMENTS.md",
@@ -166,31 +166,31 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
       ]
     },
     {
-      "file": "doc/financial/data-schema.md",
+      "file": "doc/<module-a>/data-schema.md",
       "summary": { "totalChecks": 11, "passed": ["S1","S2","S4","S5","S6","S7","S8","S10","S11"], "failed": ["S3","S9"] },
       "violations": [
         {
           "checkId": "S3",
           "check": "枚举使用",
           "lineRange": [45, 48],
-          "detail": "IncomeType 字段使用字符串常量 'salary'/'bonus'/'other' 而非 Python enum"
+          "detail": "<FieldType> 字段使用字符串常量 'value-a'/'value-b' 而非 Python enum"
         }
       ]
     },
     {
-      "file": "doc/financial/data-persistence.md",
+      "file": "doc/<module-a>/data-persistence.md",
       "summary": { "totalChecks": 4, "passed": ["P1","P2","P3","P4"], "failed": [] },
       "violations": []
     },
     {
-      "file": "doc/financial/service.md",
+      "file": "doc/<module-a>/service.md",
       "summary": { "totalChecks": 4, "passed": ["SV1","SV2","SV4"], "failed": ["SV3"] },
       "violations": [
         {
           "checkId": "SV3",
           "check": "跨 module 关系图",
           "lineRange": null,
-          "detail": "service.md 提及 news module 但未画 mermaid graph 表达依赖"
+          "detail": "service.md 提及 <module-b> 但未画 mermaid graph 表达依赖"
         }
       ]
     },
@@ -224,7 +224,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
   - `check`: human-readable check name
   - `lineRange`: `[start, end]` 1-indexed, or `null` for document-wide issues
   - `detail`: specific description of what's missing/wrong (DO NOT suggest fixes—only report compliance status)
-- **Runtime checks (C-group)**: For cli-only form, the `file` field is the command executed, e.g., `"cli/financial.py --help"`. `lineRange` references the output lines.
+- **Runtime checks (C-group)**: For cli-only form, the `file` field is the command executed, e.g., `"cli/<module>.py --help"`. `lineRange` references the output lines.
 - **Empty violations**: If a file passes all checks, `violations: []`.
 - **Exhaustiveness**: Every file that has any violation must appear. Do not aggregate or summarize—list each individually.
 
