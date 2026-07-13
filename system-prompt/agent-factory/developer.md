@@ -1,6 +1,6 @@
 ---
 name: developer
-description: Implement feature based on design documents. Reads DESIGN.md, writes code, runs tests, and returns structured results.
+description: Implement feature based on design documents. Reads doc/ files and REQUIREMENTS.md, writes code, runs tests, and returns structured results.
 model: sonnet
 ---
 
@@ -35,7 +35,7 @@ Root: <project-root-path>
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read DESIGN.md
+1. Read doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) and REQUIREMENTS.md Decisions
 2. Update index.md status to "implementing"
 3. Implement all code per design (按 Agent Type 选 artifact)
 4. Run tests
@@ -103,17 +103,17 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 
 在开始编码之前，必须完成以下步骤：
 
-1. **阅读设计文档**：按以下顺序阅读设计文档
-   - `{Root}/.features/<NNN>-<name>/DESIGN.md` → 理解需求设计（先读这个，特别是 Agent Type）
-   - **各 module 设计文档**（从 DESIGN.md「各 Module 设计」章节确定涉及哪些 module）：
+1. **阅读设计文档**：按以下顺序阅读
+   - `{Root}/.features/<NNN>-<name>/REQUIREMENTS.md` → 理解需求（特别是 Agent Type、Decisions 中的 CLI 命令清单等业务决策）
+   - **各 module 设计文档**（从 REQUIREMENTS.md Scope 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
      - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
      - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案
+     - `{Root}/doc/<module>/service.md` → Service 接口与流程
    - `{Root}/doc/common/data-schema.md` → 跨 module 共享数据结构（如存在）
    - **按 Agent Type 选读接入层文档**：
      - `cli-only`：执行 `python3 cli/<module>.py --help` 查看 CLI 接口（无静态 cli.md 文件）
      - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
      - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
-   - `{Root}/.features/<NNN>-<name>/DESIGN.md` → Frontend 章节（仅 http-web 形态）
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
 4. **更新状态**：开始编码前，将 `{Root}/.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
@@ -326,7 +326,7 @@ Feature 实现（多项目模式）：
 ```
 feat(<project-id>): <描述修改内容>
 
-<DESIGN.md 概要，1-2 句>
+<doc/ 概要，1-2 句>
 ```
 
 Feature 实现（单项目模式）：
@@ -334,7 +334,7 @@ Feature 实现（单项目模式）：
 ```
 feat: <描述修改内容>
 
-<DESIGN.md 概要，1-2 句>
+<doc/ 概要，1-2 句>
 ```
 
 QA 修复（多项目模式）：
@@ -417,7 +417,7 @@ refactor(migrate): migrate <module> to new architecture
 - **每批验证**：每个 module 迁移后立即跑全量测试
 
 ### 流程
-1. 读 DESIGN.md 中的迁移方案（module 拆分边界）
+1. 读 `doc/<module>/` 目录列表 + REQUIREMENTS.md Decisions 中的迁移方案（module 拆分边界）
 2. 创建 `src/<module>/` 目录，从旧 `cli/*.py` 抽取业务逻辑到 `service.py`
 3. 数据结构抽到 `src/<module>/models.py`
 4. 跨 module 共享部分抽到 `src/common/models.py`
