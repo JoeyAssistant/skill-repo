@@ -30,6 +30,24 @@ User ←→ PM (agent-pm.md, system prompt)
             └── spec-compliance (subagent) ┘
 ```
 
+### 生产 ↔ 开发协作
+
+生产环境和开发环境都以 PM 为 system prompt。生产环境 PM 仅在 `.issues/_incoming/` 下提交产物，开发环境 PM 拉取后按文件类型分流。
+
+```
+生产环境 (PM 入口)
+  User 报告 → PM 调度 QA 诊断 (仅诊断，输出 JSON)
+           → PM 在 .issues/_incoming/<timestamp>-<name>/ 下提交:
+             ├─ bug             → NOTES.md (含 QA Diagnosis) + snapshot/
+             └─ feature-request → REQUIREMENTS.md (与用户讨论后) + snapshot/
+           → git push
+                ↓ git pull
+开发环境 (PM 入口)
+  PM 扫描 .issues/_incoming/:
+    ├─ 含 NOTES.md         → 登记 .issues/<NNN>-<name>/  → 标准 issue 修复流程
+    └─ 含 REQUIREMENTS.md  → 登记 .features/<NNN>-<name>/ → 标准 feature 设计流程
+```
+
 ## 安装
 
 ### 1. 设置 PM 为 system prompt
