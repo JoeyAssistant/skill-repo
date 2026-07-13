@@ -249,6 +249,88 @@ designing 阶段直接写最终 doc 文件，不产 DESIGN.md 中间产物。
 
 **内容要求**：所有 doc 文件是**最终正式文档**，不含过程性内容（详见下方 doc/ 内容规则）。设计决策、OQ 答案、为什么选 A 不选 B 等**过程性内容只能写在 REQUIREMENTS.md Decisions**，不写在 doc/。
 
+## doc/<module>/ 章节契约
+
+每个 doc/<module>/ 文件按以下章节组织。designer 撰写前对照契约，撰写后自检章节是否合规。
+
+### data-schema.md（业务数据结构定义）
+
+> 仅定义业务实体（dataclass / enum），含字段语义、值约束。**完全不涉存储**。
+
+**应有章节**：
+- 文件标题 + 一句话业务说明
+- N × `## <EntityName> -- <一句话业务角色>` dataclass 定义
+
+**不应有章节**：SQLite Schema / Field Mapping / 去重 key / 不存储说明 / 变更记录
+
+模板：
+
+```markdown
+# <Module> Data Schema
+
+> 该 module 业务数据结构定义。仅定义"是什么"，不涉"怎么存"（存储见 data-persistence.md）。
+
+## <EntityName> -- <一句话业务角色>
+
+@dataclass
+class <EntityName>:
+    """<业务说明>"""
+    field_a: str
+        # <字段描述>。示例: <值>
+        # 约束: <非显然约束>
+```
+
+### data-persistence.md（数据存储方案）
+
+> 聚焦"怎么存"——介质、Schema、读写、生命周期。**引用 data-schema 的 dataclass，不重复定义字段语义**。
+
+**应有章节**：
+- `## 存储介质`
+- `## Schema`（含 CREATE TABLE / 索引 / 字段映射）
+- `## 读写机制`
+- `## 数据生命周期`（初始化 / 清理 / 备份）
+- `## 配置`（环境变量、路径参数）
+
+**不应有章节**：dataclass 重复定义 / 决策对比 / 实测数据
+
+### service.md（Service 接口契约 + 流程 + 模块关系）
+
+> Service.py 的实现契约。仅描述"是什么/怎么调用/怎么走流程"，**不解释"为什么这么设计"**。
+
+**应有章节**：
+- `## Service 接口`（class + 方法签名 + docstring）
+- `## 关键流程`（mermaid sequence，按 use case 组织）
+- `## 模块关系`（mermaid graph + 依赖说明）
+
+**不应有章节**：方案概览 / 问题背景 / 关键技术决策 / 决策 N / 异常场景（issue 引用）/ 实测数据
+
+## 跨文件内容归属表
+
+每写一段内容前，先对照下表判断归属。命中"应写到 REQUIREMENTS.md / 删"的，**不要写到 doc/**。
+
+| 内容类别 | 应写到 | 不应写到 |
+|---------|--------|---------|
+| 业务字段定义（dataclass） | data-schema.md | data-persistence.md |
+| 字段语义/约束 | data-schema.md（字段注释） | data-persistence.md |
+| 内存对象（不持久化）dataclass | data-schema.md | data-persistence.md |
+| CREATE TABLE / DDL | data-persistence.md | data-schema.md |
+| 索引定义 | data-persistence.md | data-schema.md |
+| Column ↔ 字段映射（仅非一一对应时） | data-persistence.md | data-schema.md |
+| 存储介质选型理由 | data-persistence.md（一句话）+ REQUIREMENTS.md Decisions（深度） | service.md |
+| 读写机制 | data-persistence.md | data-schema.md |
+| 数据生命周期 | data-persistence.md | service.md |
+| 配置（环境变量/路径） | data-persistence.md | service.md |
+| Service 方法签名 | service.md | - |
+| Service 关键流程 | service.md | - |
+| 模块依赖关系 | service.md | - |
+| 设计决策 | REQUIREMENTS.md Decisions | doc/ |
+| 决策对比（方案 A/B/C） | REQUIREMENTS.md Decisions | doc/ |
+| 实测数据 / POC 命中率 | REQUIREMENTS.md Decisions | doc/ |
+| Issue 引用（QA-XXX） | REQUIREMENTS.md Decisions | doc/ |
+| 异常场景（接口契约） | service.md（方法 docstring） | - |
+| 异常场景（issue 上下文） | REQUIREMENTS.md Decisions | service.md |
+| 变更记录 / "X 已删除" | 删（不应存在任何 doc/） | 任何 |
+
 ## doc/ 内容规则（最终正式文档，全 doc/ 适用）
 
 `{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 REQUIREMENTS.md Decisions。
@@ -262,25 +344,20 @@ designing 阶段直接写最终 doc 文件，不产 DESIGN.md 中间产物。
 
 ### ✅ 允许的内容
 
-- 数据结构定义：dataclass + 字段注释（描述 + 按需使用场景 + 关键约束）
-- 字段关系、计算公式（如 `market_value = shares × price_per_share`）
-- 不变量、合法值集合、字段依赖
-- 存储方案（路径、格式、初始内容、读写机制）
-- Service 接口（方法签名 + 用途）
-- 关键流程（mermaid sequence diagram）
-- 与其他 module 关系图（mermaid graph）
-- API/tools 的 input/output schema、调用流程图
+按文件类型分布（详见上方"doc/<module>/ 章节契约"和"跨文件内容归属表"）：
+
+- `data-schema.md`：dataclass 定义 + 字段注释（字段关系、不变量、合法值集合写在字段注释里）
+- `data-persistence.md`：存储方案（介质、Schema、读写机制、生命周期、配置）
+- `service.md`：Service 接口 + 关键流程（mermaid sequence）+ 模块关系（mermaid graph）
+- `backend.md` / `mcp-server.md`：API/tools 的 input/output schema、调用流程图
 
 ### ❌ 禁止的内容（过程性）
 
-- "设计决策（OQ-X 答案）"、"OQ-5 答案"
-- "为什么选 A 不选 B"、"权衡 X vs Y"、"决策历史"
-- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除"
-- 与其他 module 的对比说明（除非字段语义必需）
-- 需求讨论过程内容（"用户补充确认"、"架构调整动机"）
-- 变更记录、版本演进（"第一版 / 第二版 / 第三版"）
+详见上方"跨文件内容归属表"。重点：
 
-这些内容**只能**写在 REQUIREMENTS.md 的 Decisions 章节，作为决策上下文。doc/ 反映"最终是什么"，不解释"为什么这么定"。
+- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除" → 移到 REQUIREMENTS.md Constraints
+- 与其他 module 的对比说明（除非字段语义必需）
+- 决策讨论、issue 引用、实测数据、变更记录等 → 见归属表对应行
 
 ### Designer 自检（写完每个 doc 文件后）
 
@@ -484,6 +561,26 @@ class <EntityName>:
 - 字段值存在有限集合时，优先使用枚举（Python `enum`）而非字符串常量或整数魔法值
 - 数据结构命名清晰、合理，保证一致性
 - 文档仅承载数据结构定义，不体现业务使用代码或持久化等其他内容
+
+### 字段类型选型原则
+
+设计每个字段时，按以下原则选类型。**违反任一 = 设计缺陷**，需重新设计。
+
+| 原则 | 反例 | 正解 |
+|------|------|------|
+| **str 仅用于自由文本**——需被解析/比较/计算/含结构化语义时禁用 | `value: str  # "X 个" / "无限制"` | `value_type: Enum (LIMITED / UNLIMITED)`<br>`value_count: Optional[int]` |
+| **数值与单位分离**——单位写进字段名 | `timeout: str  # "30s" / "5m"` | `timeout_seconds: int` |
+| **Optional 表"未提供"**——与零值区分（None ≠ 0 ≠ ""） | `count: int = 0  # 无数据时填 0` | `count: Optional[int] = None  # None = 未提供, 0 = 显式零` |
+| **成组字段封装 dataclass**——N 字段一起出现一起消失 | `tag_k1: str`<br>`tag_k2: str`<br>`tag_k3: str` | `tags: list[TagItem]`（`TagItem` 含 key + value，可扩展） |
+
+**字段自检**（写完每个字段前对照）：
+
+| 字段类型 / 形态 | 自检 |
+|---------------|------|
+| `str` | 值是自由文本吗？需解析/比较/计算 → 改类型 |
+| 数值字段 | 单位在字段名里吗？ |
+| `Optional[X]` | None 语义是"未提供"还是"零值"？后者用默认值 |
+| 多个相关字段 | 总是一起出现？若是 → 封装 dataclass |
 
 ### 关键原则
 

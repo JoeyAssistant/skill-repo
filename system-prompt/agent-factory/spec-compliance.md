@@ -38,6 +38,9 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S11 | 注释格式一致性 | 同一 data-schema.md 内 dataclass 注释格式统一 | 文件内所有 dataclass 使用同一种注释格式（行注释或行尾单行注释），不混用 |
 | S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
 | S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
+| S12 | 不含 DDL | data-schema.md 不出现 CREATE TABLE/INDEX 等 DDL | 文件不含 `CREATE TABLE` / `CREATE INDEX` / `ALTER TABLE` / `DROP TABLE` 等关键词。命中即 violation，建议 designer 把 DDL 迁到 data-persistence.md |
+| S13 | 不含存储层映射 | data-schema.md 不含 SQLite Column ↔ Python Field 映射表 | 文件不含 "Field Mapping" / "Column Mapping" / "字段映射" 章节，不含 SQLite 列名 ↔ dataclass 字段对照表。命中即 violation，建议 designer 把映射迁到 data-persistence.md |
+| S14 | 不含存储机制描述 | data-schema.md 不含"去重 key"/"唯一索引"/"存到 X 表"等存储机制描述 | 文件不含 "不存储" / "去重 key" / "唯一索引" / "存到.*表" / "X 列" 等关键词。命中即 violation，建议 designer 把存储机制描述迁到 data-persistence.md |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
 
@@ -47,6 +50,8 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | P2 | 文件格式 | 说明数据文件格式和结构 | 定义 JSON/YAML 等格式的文件结构 |
 | P3 | 初始内容 | 说明空数据文件的初始内容 | 新文件的默认初始内容 |
 | P4 | 纯存储方案 | 不涉及 CLI 内容 | 仅定义存储方案，不包含命令行操作 |
+| P5 | 不重复定义 dataclass | data-persistence.md 引用 data-schema 的 dataclass，不重复定义 | 文件不含 `@dataclass` / `class <EntityName>:` 等定义（除非是存储介质的内部结构说明，如 SQL Row 类）。命中即 violation，建议 designer 删除重复定义并引用 data-schema.md |
+| P6 | 含完整 Schema | data-persistence.md 含完整 CREATE TABLE 或文件结构定义 | 文件含至少一个 DDL 代码块（DB 形态）或文件结构示例（文件存储形态）。无 Schema 定义 → violation |
 
 ### SV - doc/<module>/service.md（所有形态，按 module 分别检查）
 
@@ -56,6 +61,8 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | SV2 | 关键流程图 | 至少一张 mermaid sequence diagram 表达关键 use case | 至少 1 个 sequenceDiagram 代码块，覆盖主要 CRUD 或业务流程 |
 | SV3 | 跨 module 关系图（如涉及） | 与其他 module 有依赖时画 mermaid graph | 若 service.md 提及其他 module，必须有 graph 图；纯独立 module 可省 |
 | SV4 | 无过程性内容 | 与 S10 同标准 | 不含 OQ-/设计决策/为什么选 等关键词 |
+| SV5 | 不含过程性章节 | service.md 不含方案概览/问题背景/技术决策/异常场景（issue 引用）等过程性章节 | 文件不含以下章节标题或关键词："方案概览" / "问题背景" / "关键技术决策" / "决策 [0-9]" / "方案 [ABC]" / "异常场景" / "实测数据" / "QA-[0-9]+" / "POC 实测" / "QA-00X 发现"。命中即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions |
+| SV6 | 必含三大章节 | service.md 含 Service 接口 + 关键流程 + 模块关系 | 文件含 `## Service 接口`（或等价命名如 `## Service Interface`）+ `## 关键流程`（或 `## Key Flows`）+ `## 模块关系`（或 `## Module Boundaries` / `## Dependencies`）三章节。缺任一即 violation |
 
 ### C - CLI（仅 cli-only 形态，运行时检查）
 
