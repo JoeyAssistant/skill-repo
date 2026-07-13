@@ -53,7 +53,7 @@ Root: <project-root-path>
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read REQUIREMENTS.md (User Scenarios) and DESIGN.md
+1. Read REQUIREMENTS.md (User Scenarios) and doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
@@ -193,7 +193,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 
 ### 阶段 1：设计合规检查
 
-对照 DESIGN.md 检查实现，按 Agent Type 启用对应检查：
+对照 doc/ 文件检查实现，按 Agent Type 启用对应检查：
 
 | 检查项 | cli-only | http-api | http-web | mcp-server |
 |--------|----------|----------|----------|------------|
@@ -202,8 +202,9 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 | 共享数据 | ✓（如使用 common） | ✓（如使用） | ✓（如使用） | ✓（如使用） |
 | CLI 接口 | ✓ `python3 cli/<module>.py --help` 实际输出 | ✗ | ✗ | ✗ |
 | API 接口 | ✗ | ✓ `doc/backend.md` | ✓ | ✗ |
-| UI 元素 | ✗ | ✗ | ✓ DESIGN.md `## Frontend` 章节 | ✗ |
 | MCP tools | ✗ | ✗ | ✗ | ✓ `doc/mcp-server.md` |
+
+> http-web 形态不再单独验 UI：Frontend 章节已删除，页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
 
 ### 阶段 2：E2E 场景验收
 

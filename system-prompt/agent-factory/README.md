@@ -148,7 +148,7 @@ project-root/
   .features/
     index.md
     <NNN>-<name>/
-      DESIGN.md
+      REQUIREMENTS.md
       BLOCKED.md          # blocked 时创建
       POC-REPORT.md       # 技术可行性评估报告（tech-feasibility blocked 时生成）
       QA-REPORT.md        # QA 验收报告（QA 验收后生成）
