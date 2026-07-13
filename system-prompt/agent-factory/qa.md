@@ -88,9 +88,9 @@ Root: <project-root-path>
 Note: QA only updates NOTES.md in the issue directory. Issue status in index.md is managed by PM.
 ```
 
-### 模式三：生产环境诊断模式
+### 模式三：生产环境诊断（仅诊断，PM 接管提交）
 
-生产环境发现问题后，在生产环境直接定位根因、收集快照、提交 `_incoming` 报告供开发环境处理。
+生产环境发现问题后，QA **仅做诊断 + 输出结构化报告**。不创建文件、不 commit、不回复用户——这些动作由调度方（生产环境 PM）接管。
 
 #### 输入格式
 
@@ -110,12 +110,8 @@ Root: <project-root-path>
 2. Reproduce the issue if possible
 3. Diagnose root cause
 4. Assess impact
-5. Create _incoming report:
-   - Create directory: <Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/
-   - Write NOTES.md with filled Description, Steps to Reproduce, Environment, Impact, QA Diagnosis
-   - Collect snapshot: copy log/ and data/ into snapshot/ (skip if not exist)
-6. Git commit and push (仅 add .issues/_incoming/，不涉及代码)
-7. Return user-facing summary
+5. Determine issue type (bug / feature-request)
+6. Return structured diagnosis report (do NOT create files or commit)
 ```
 
 #### 生产环境诊断工作流程
@@ -138,29 +134,39 @@ Root: <project-root-path>
    - 哪些功能受到影响
    - 影响范围和严重程度
 
-5. **生成 _incoming 报告**
-   - 在 `<Root>/.issues/_incoming/` 下创建 `<timestamp>-<brief-name>/` 目录
-   - 使用 Bug 类 NOTES.md 模板，填写：Description、Steps to Reproduce、Environment、Impact、QA Diagnosis
-   - Fix 和 Resolution 章节留空（开发环境填写）
-   - 收集快照：将 `log/` 和 `data/` 复制到 `snapshot/` 目录下
+5. **判断 issue 类型**
+   - **bug**：系统行为不符合已有设计（crash、错误响应、数据丢失、明显逻辑错）
+   - **feature-request**：系统按设计工作，但用户想做现有功能不支持的事
+   - 不确定时给 feature-request（保守，避免误改代码引入回归）
 
-6. **提交推送**
-   ```bash
-   cd <Root>
-   git add .issues/_incoming/
-   git commit -m "issue: <brief description> (生产环境 QA 诊断)"
-   git push
-   ```
+6. **输出诊断报告**（结构化 JSON，由 PM 接管后续）
 
-7. **回复用户**
-   简洁告知：已定位问题、正在处理、预计修复时间（如可判断）
+#### 输出格式
+
+```json
+{
+  "status": "diagnosed",
+  "issue_type": "bug | feature-request",
+  "root_cause": "<根因描述，含具体 file:line>",
+  "reproduction_steps": ["<步骤 1>", "<步骤 2>", "..."],
+  "impact": "<影响范围>",
+  "fix_suggestion": "<修复建议>",
+  "log_auditability": "sufficient | insufficient",
+  "feature_request_context": {
+    "_comment": "仅 issue_type=feature-request 时填",
+    "what_user_wants_to_do": "<用户想做什么>",
+    "current_limitation": "<系统当前限制>",
+    "use_case": "<实际使用场景>"
+  }
+}
+```
 
 #### 约束
 
-- **只读操作**：不修改任何代码或数据文件（仅创建 _incoming 目录）
-- **不修改 index.md**：不在 index.md 中登记（由开发环境 PM 负责）
+- **只读操作**：不修改任何代码或数据文件
+- **不创建文件**：不创建 `_incoming` 目录、NOTES.md、REQUIREMENTS.md（由 PM 接管）
+- **不 commit**：不执行任何 git 操作（由 PM 接管）
 - **环境变量脱敏**：日志和配置中如包含 API key、密码等，收集时遮蔽
-- **commit 范围限定**：仅 `git add .issues/_incoming/`，不涉及代码改动
 
 ## 按 Agent Type 差异化验收
 
