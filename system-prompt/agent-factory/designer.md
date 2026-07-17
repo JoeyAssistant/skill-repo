@@ -304,6 +304,20 @@ class <EntityName>:
 
 **不应有章节**：方案概览 / 问题背景 / 关键技术决策 / 决策 N / 异常场景（issue 引用）/ 实测数据
 
+### cli.md（CLI 契约，仅 cli-only 形态）
+
+> designer 设计期产出，作为 developer 实现 `cli.py` 的契约。`--help` 运行时输出应与本文档一致。
+
+**应有章节**：
+- 文件标题 + 一句话说明
+- N × `## <command>` 章节，每个含：
+  - 功能说明（脚本用途、内部实现原理）
+  - 输入 schema（arguments / options / `--json-input` 示例）
+  - 输出 schema（成功响应 + 失败响应 + 错误码）
+  - 使用示例（典型调用）
+
+**不应有章节**：dataclass 定义 / 决策讨论 / 设计过程
+
 ## 跨文件内容归属表
 
 每写一段内容前，先对照下表判断归属。命中"应写到 REQUIREMENTS.md / 删"的，**不要写到 doc/**。
@@ -323,6 +337,10 @@ class <EntityName>:
 | Service 方法签名 | service.md | - |
 | Service 关键流程 | service.md | - |
 | 模块依赖关系 | service.md | - |
+| CLI 命令清单（产品级） | REQUIREMENTS.md Decisions | cli.md |
+| CLI 详细 JSON I/O schema | cli.md（仅 cli-only） | data-schema.md / service.md |
+| CLI 错误码定义 | cli.md（仅 cli-only） | data-schema.md |
+| CLI 使用示例 | cli.md（仅 cli-only） | data-schema.md |
 | 设计决策 | REQUIREMENTS.md Decisions | doc/ |
 | 决策对比（方案 A/B/C） | REQUIREMENTS.md Decisions | doc/ |
 | 实测数据 / POC 命中率 | REQUIREMENTS.md Decisions | doc/ |
@@ -338,7 +356,7 @@ class <EntityName>:
 ### 适用范围
 
 所有 `{Root}/doc/` 下的 .md 文件：
-- `doc/<module>/data-schema.md`、`doc/<module>/data-persistence.md`、`doc/<module>/service.md`
+- `doc/<module>/data-schema.md`、`doc/<module>/data-persistence.md`、`doc/<module>/service.md`、`doc/<module>/cli.md`（cli-only）
 - `doc/common/data-schema.md`
 - `doc/backend.md`、`doc/mcp-server.md`
 
@@ -596,27 +614,29 @@ class <EntityName>:
 ## CLI Layer
 
 ### CLI 设计原则
-- **`--help as doc`**：CLI 命令文档通过 `python3 {Root}/cli/<module>.py --help` 运行时输出获得（**不写静态 CLI 文档文件**），包含：
+- **`--help as doc`**：CLI 命令文档通过 `python3 {Root}/cli/<module>.py --help` 运行时输出获得（运行期产出），包含：
     - **功能说明**：脚本用途、内部实现原理
     - **输入说明**：参数、选项、结构化输入格式
     - **输出说明**：成功/失败响应结构、错误码定义
     - **使用示例**：典型调用场景
+- **设计期契约在 `doc/<module>/cli.md`**：cli-only 形态下 designer 写 `cli.md`，含每个命令的 JSON I/O schema、错误码、使用示例，作为 developer 实现 `cli.py` 的契约。developer 实现完成后，`cli.md` 与 `--help` 输出应一致（QA 验收时机械比对）
 - data-oriented：CLI 以数据为中心，提供 `data layer` 数据相关的操作，如查询、修改、新增、删除等，command 与入参设计保持精简，避免过度设计
 - 结构化输入输出：除了常规 CLI 的 arguments/options，提供 json 格式输入全量入参，输出格式统一使用 json，方便代码或 agent 解析
 - 使用 `click` 框架
 - 使用 `dataclass` 定义 data schema
 - 默认使用 `python3`
 
-### CLI 设计归属（无 DESIGN.md，分两阶段）
+### CLI 设计归属（无 DESIGN.md，分三阶段）
 
-cli-only 形态下，CLI 设计分布在两处：
+cli-only 形态下，CLI 设计分布在三处：
 
 | 阶段 | 文件 | 内容 |
 |------|------|------|
 | `draft`（PM 与用户讨论） | REQUIREMENTS.md Decisions · 接口决策 | 命令清单表 `\| 命令 \| 用途 \| 关键参数 \|`（产品级决策，要做哪些命令） |
-| `implementing`（developer 实现） | `cli/<module>.py` docstring + click decorators → 运行时 `--help` | 完整 JSON I/O schema、错误码、使用示例（实现级契约） |
+| `designing`（designer 设计） | `doc/<module>/cli.md` | 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
+| `implementing`（developer 实现） | `cli/<module>.py` docstring + click decorators → 运行时 `--help` | 实现 `cli.py`，运行 `--help` 输出应与 `cli.md` 一致 |
 
-PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.md Decisions，designer 不重复。designer 在 `doc/<module>/service.md` 的关键流程图里可标注"由哪个 CLI 命令触发"。详细 `--help` 内容由 developer 实现时填充。
+PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.md Decisions；designer 在 designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
 
 ## Agent Layer
 
