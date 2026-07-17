@@ -41,6 +41,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S12 | 不含 DDL | data-schema.md 不出现 CREATE TABLE/INDEX 等 DDL | 文件不含 `CREATE TABLE` / `CREATE INDEX` / `ALTER TABLE` / `DROP TABLE` 等关键词。命中即 violation，建议 designer 把 DDL 迁到 data-persistence.md |
 | S13 | 不含存储层映射 | data-schema.md 不含 SQLite Column ↔ Python Field 映射表 | 文件不含 "Field Mapping" / "Column Mapping" / "字段映射" 章节，不含 SQLite 列名 ↔ dataclass 字段对照表。命中即 violation，建议 designer 把映射迁到 data-persistence.md |
 | S14 | 不含存储机制描述 | data-schema.md 不含"去重 key"/"唯一索引"/"存到 X 表"等存储机制描述 | 文件不含 "不存储" / "去重 key" / "唯一索引" / "存到.*表" / "X 列" 等关键词。命中即 violation，建议 designer 把存储机制描述迁到 data-persistence.md |
+| S15 | 不含 CLI JSON I/O | data-schema.md 不含 CLI 命令的 JSON input/output schema、错误码、使用示例 | 文件不含 `## CLI` / `## CLI --json-input` / `--json-input` / `<command> 输入 schema` / `错误响应示例` 等 CLI 契约内容。命中即 violation，建议 designer 把 CLI 内容迁到 cli.md（仅 cli-only 形态） |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
 
@@ -63,6 +64,18 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | SV4 | 无过程性内容 | 与 S10 同标准 | 不含 OQ-/设计决策/为什么选 等关键词 |
 | SV5 | 不含过程性章节 | service.md 不含方案概览/问题背景/技术决策/异常场景（issue 引用）等过程性章节 | 文件不含以下章节标题或关键词："方案概览" / "问题背景" / "关键技术决策" / "决策 [0-9]" / "方案 [ABC]" / "异常场景" / "实测数据" / "QA-[0-9]+" / "POC 实测" / "QA-00X 发现"。命中即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions |
 | SV6 | 必含三大章节 | service.md 含 Service 接口 + 关键流程 + 模块关系 | 文件含 `## Service 接口`（或等价命名如 `## Service Interface`）+ `## 关键流程`（或 `## Key Flows`）+ `## 模块关系`（或 `## Module Boundaries` / `## Dependencies`）三章节。缺任一即 violation |
+
+### CL - doc/<module>/cli.md（仅 cli-only 形态，静态契约检查）
+
+检查 designer 设计期产出的 cli.md 是否含完整 CLI 契约。Apply per module.
+
+| # | Check | Requirement | Pass Criteria |
+|---|-------|-------------|---------------|
+| CL1 | 文件存在 | cli-only 形态下 cli.md 必须存在 | `<Root>/doc/<module>/cli.md` 文件存在。不存在 → violation |
+| CL2 | 命令章节完整 | 每个命令（来自 REQUIREMENTS.md Decisions 命令清单）都有对应 `## <command>` 章节 | cli.md 含所有命令的章节，每个章节有功能说明 + 输入 schema + 输出 schema + 使用示例 |
+| CL3 | 输入 schema | 每个命令定义输入（arguments / options / `--json-input`） | 每个命令章节含 arguments 表、options 表、`--json-input` JSON 示例（如适用） |
+| CL4 | 输出 schema | 每个命令定义输出（成功响应 + 失败响应 + 错误码） | 每个命令章节含成功 JSON 示例、失败 JSON 示例、错误码定义 |
+| CL5 | 使用示例 | 每个命令提供典型调用示例 | 每个命令章节含至少一个 bash 调用示例 |
 
 ### C - CLI（仅 cli-only 形态，运行时检查）
 
@@ -124,6 +137,7 @@ C 组（CLI 运行时检查）仍在 `qa-reviewing` 阶段由 QA 触发，spec-c
 | S（data-schema） | ✓ | ✓ | ✓ | ✓ |
 | P（data-persistence） | ✓ | ✓ | ✓ | ✓ |
 | SV（service.md） | ✓ | ✓ | ✓ | ✓ |
+| CL（cli.md 静态契约） | ✓ | ✗ | ✗ | ✗ |
 | C（CLI 运行时） | ✓ | ✗ | ✗ | ✗ |
 | B（backend） | ✗ | ✓ | ✓ | ✗ |
 | M（mcp-server） | ✗ | ✗ | ✗ | ✓ |

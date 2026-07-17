@@ -111,7 +111,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
      - `{Root}/doc/<module>/service.md` → Service 接口与流程
    - `{Root}/doc/common/data-schema.md` → 跨 module 共享数据结构（如存在）
    - **按 Agent Type 选读接入层文档**：
-     - `cli-only`：执行 `python3 cli/<module>.py --help` 查看 CLI 接口（无静态 cli.md 文件）
+     - `cli-only`：`{Root}/doc/<module>/cli.md` → CLI 契约（实现 `cli/<module>.py` 时按此写 click decorators + docstring）
      - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
      - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
@@ -317,7 +317,12 @@ except ConnectError as e:
 
 ### Commit 前自检
 
-返回 complete 前，developer 必须执行 `git log -1 --oneline` 确认最新 commit 是本次任务的。若工作区仍有未提交的代码改动，禁止返回 complete。
+返回 complete 前，developer 必须执行：
+
+1. `git log -1 --oneline` 确认最新 commit 是本次任务的
+2. **cli-only 形态额外检查**：执行 `python3 cli/<module>.py --help` 比对 `{Root}/doc/<module>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或反馈 designer 更新 cli.md
+
+若工作区仍有未提交的代码改动，禁止返回 complete。
 
 ### Commit Message 格式
 
