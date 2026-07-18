@@ -18,8 +18,8 @@ DESIGN.md 已废弃（commit on 2026-07-04）。T 组检查迁移到 REQUIREMENT
 |---|-------|-------------|---------------|
 | T1 | Agent Type 字段必填且合法 | REQUIREMENTS.md 明确 Agent Type | 值 ∈ {cli-only, http-api, http-web, mcp-server} |
 | T2 | mcp-server 时 Deploy Mode 必填 | mcp-server 形态有 Deploy Mode | 值 ∈ {stdio, sse, http, mcpb} |
-| T3 | 模块划分决策（涉及新 module 时必填） | REQUIREMENTS.md Decisions 含模块划分条目 | 涉及 module 边界变化时，Decisions 有"模块划分"条目（含 module 列表 + 边界 + 依赖图 mermaid）；纯 module 内修改可省略 |
-| T4 | 名词概念范围控制 | REQUIREMENTS.md「名词概念」章节仅含与本次需求相关的业务概念 | `## 名词概念` 章节存在（无业务新概念时可写"无"）；表格中每个名词在 REQUIREMENTS.md 后续章节或 doc/ 中至少出现 1 次；表格行数 ≤ 10。落选名词逐项列入 violation |
+| T3 | 模块划分决策（涉及新 module 时必填） | REQUIREMENTS.md 需求规格 > 技术决策 含模块划分 | 涉及 module 边界变化时，技术决策 有"模块划分"条目（含 module 列表 + 边界 + 依赖图 mermaid）；纯 module 内修改可省略 |
+| T4 | 名词概念范围控制 | REQUIREMENTS.md「需求背景 > 名词、概念、术语」章节仅含与本次需求相关的业务概念 | `## 名词、概念、术语` 章节存在（无业务新概念时可写"无"）；表格中每个名词在 REQUIREMENTS.md 后续章节或 doc/ 中至少出现 1 次；表格行数 ≤ 10。落选名词逐项列入 violation |
 
 ### S - doc/<module>/data-schema.md（所有形态，按 module 分别检查）
 
@@ -37,7 +37,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S8 | 字段注释完整性 | 每个字段有清晰描述 | `data-schema.md` 中每个字段的注释包含：① 字段描述（必需，含示例值更佳，不写"用途："标签）；② 使用场景（按需，简单字段可省）；③ 约束（按需，仅写非显然约束如 `> 0` / `∈ enum` / `自动计算`，不写"非空字符串"等显然约束）。描述缺失 → violation；约束冗余（"非空字符串"等）→ violation |
 | S11 | 注释格式一致性 | 同一 data-schema.md 内 dataclass 注释格式统一 | 文件内所有 dataclass 使用同一种注释格式（行注释或行尾单行注释），不混用 |
 | S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
-| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
+| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md 需求规格。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
 | S12 | 不含 DDL | data-schema.md 不出现 CREATE TABLE/INDEX 等 DDL | 文件不含 `CREATE TABLE` / `CREATE INDEX` / `ALTER TABLE` / `DROP TABLE` 等关键词。命中即 violation，建议 designer 把 DDL 迁到 data-persistence.md |
 | S13 | 不含存储层映射 | data-schema.md 不含 SQLite Column ↔ Python Field 映射表 | 文件不含 "Field Mapping" / "Column Mapping" / "字段映射" 章节，不含 SQLite 列名 ↔ dataclass 字段对照表。命中即 violation，建议 designer 把映射迁到 data-persistence.md |
 | S14 | 不含存储机制描述 | data-schema.md 不含"去重 key"/"唯一索引"/"存到 X 表"等存储机制描述 | 文件不含 "不存储" / "去重 key" / "唯一索引" / "存到.*表" / "X 列" 等关键词。命中即 violation，建议 designer 把存储机制描述迁到 data-persistence.md |
@@ -62,7 +62,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | SV2 | 关键流程图 | 至少一张 mermaid sequence diagram 表达关键 use case | 至少 1 个 sequenceDiagram 代码块，覆盖主要 CRUD 或业务流程 |
 | SV3 | 跨 module 关系图（如涉及） | 与其他 module 有依赖时画 mermaid graph | 若 service.md 提及其他 module，必须有 graph 图；纯独立 module 可省 |
 | SV4 | 无过程性内容 | 与 S10 同标准 | 不含 OQ-/设计决策/为什么选 等关键词 |
-| SV5 | 不含过程性章节 | service.md 不含方案概览/问题背景/技术决策/异常场景（issue 引用）等过程性章节 | 文件不含以下章节标题或关键词："方案概览" / "问题背景" / "关键技术决策" / "决策 [0-9]" / "方案 [ABC]" / "异常场景" / "实测数据" / "QA-[0-9]+" / "POC 实测" / "QA-00X 发现"。命中即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md Decisions |
+| SV5 | 不含过程性章节 | service.md 不含方案概览/问题背景/技术决策/异常场景（issue 引用）等过程性章节 | 文件不含以下章节标题或关键词："方案概览" / "问题背景" / "关键技术决策" / "决策 [0-9]" / "方案 [ABC]" / "异常场景" / "实测数据" / "QA-[0-9]+" / "POC 实测" / "QA-00X 发现"。命中即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md 需求规格 |
 | SV6 | 必含三大章节 | service.md 含 Service 接口 + 关键流程 + 模块关系 | 文件含 `## Service 接口`（或等价命名如 `## Service Interface`）+ `## 关键流程`（或 `## Key Flows`）+ `## 模块关系`（或 `## Module Boundaries` / `## Dependencies`）三章节。缺任一即 violation |
 
 ### CL - doc/<module>/cli.md（仅 cli-only 形态，静态契约检查）
@@ -72,7 +72,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | # | Check | Requirement | Pass Criteria |
 |---|-------|-------------|---------------|
 | CL1 | 文件存在 | cli-only 形态下 cli.md 必须存在 | `<Root>/doc/<module>/cli.md` 文件存在。不存在 → violation |
-| CL2 | 命令章节完整 | 每个命令（来自 REQUIREMENTS.md Decisions 命令清单）都有对应 `## <command>` 章节 | cli.md 含所有命令的章节，每个章节有功能说明 + 输入 schema + 输出 schema + 使用示例 |
+| CL2 | 命令章节完整 | 每个命令（来自 REQUIREMENTS.md 关键接口 命令清单）都有对应 `## <command>` 章节 | cli.md 含所有命令的章节，每个章节有功能说明 + 输入 schema + 输出 schema + 使用示例 |
 | CL3 | 输入 schema | 每个命令定义输入（arguments / options / `--json-input`） | 每个命令章节含 arguments 表、options 表、`--json-input` JSON 示例（如适用） |
 | CL4 | 输出 schema | 每个命令定义输出（成功响应 + 失败响应 + 错误码） | 每个命令章节含成功 JSON 示例、失败 JSON 示例、错误码定义 |
 | CL5 | 使用示例 | 每个命令提供典型调用示例 | 每个命令章节含至少一个 bash 调用示例 |
@@ -182,7 +182,7 @@ Return a per-file aggregated result. Each file (or runtime command) inspected ge
           "checkId": "T3",
           "check": "模块划分决策",
           "lineRange": null,
-          "detail": "REQUIREMENTS.md Decisions 缺少「模块划分」条目，本 feature 涉及新增 module 必填"
+          "detail": "REQUIREMENTS.md 需求规格 > 技术决策 缺少「模块划分」条目，本 feature 涉及新增 module 必填"
         }
       ]
     },

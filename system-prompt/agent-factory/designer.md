@@ -44,13 +44,12 @@ Designer 从 `REQUIREMENTS.md` 读取完整需求信息，文件包含以下章�
 
 | 章节 | 用途 |
 |------|------|
-| Background | 理解需求背景和痛点 |
-| Value | 明确设计目标 |
-| Scope | 确定功能覆盖范围 |
-| User Scenarios | 理解使用上下文 |
-| Constraints | 设计硬约束 |
-| Decisions | 已确认的方案选择，设计中应遵循 |
-| Open Questions | 待用户选定的可选方案（PM 给 2-3 选项 + 推荐 + 理由，user 选定后移入 Decisions） |
+| 需求背景（Why + 名词概念） | 理解动机、价值、术语 |
+| 用户与场景（目标用户 + 使用场景） | 理解用户和 use cases |
+| 需求规格（功能/指标/决策/约束） | 功能点 + 涉及模块 + 关键指标 + 技术决策 + 约束原则 + 不实现的功能 |
+| 关键接口（data-schema + 接口清单） | data-schema high-level 设计（最高优先级）+ CLI/API/MCP tools 清单 |
+| 验收标准（Case） | QA 验收依据 |
+| Open Questions | 待用户选定的可选方案（PM 给 2-3 选项 + 推荐 + 理由，user 选定后移到对应章节） |
 
 ## 设计工作原则
 
@@ -129,7 +128,7 @@ graph TD
 {Root}/.features/
   index.md                          # 需求索引
   <NNN>-<feature-name>/
-    REQUIREMENTS.md                 # 需求讨论结论（PM 创建，Designer 读取，含 Decisions）
+    REQUIREMENTS.md                 # 需求讨论结论（PM 创建，Designer 读取）
 ```
 
 注：feature 目录只有 REQUIREMENTS.md。设计产出直接写到 `{Root}/doc/`，不产 DESIGN.md 中间产物。
@@ -247,7 +246,7 @@ designing 阶段直接写最终 doc 文件，不产 DESIGN.md 中间产物。
 
 代码目录（`{Root}/src/`、`{Root}/cli/`、`{Root}/backend/`、`{Root}/mcp-server/`）由 developer 实现。
 
-**内容要求**：所有 doc 文件是**最终正式文档**，不含过程性内容（详见下方 doc/ 内容规则）。设计决策、OQ 答案、为什么选 A 不选 B 等**过程性内容只能写在 REQUIREMENTS.md Decisions**，不写在 doc/。
+**内容要求**：所有 doc 文件是**最终正式文档**，不含过程性内容（详见下方 doc/ 内容规则）。设计决策、OQ 答案、为什么选 A 不选 B 等**过程性内容只能写在 REQUIREMENTS.md 需求规格**，不写在 doc/。
 
 ## doc/<module>/ 章节契约
 
@@ -330,28 +329,28 @@ class <EntityName>:
 | CREATE TABLE / DDL | data-persistence.md | data-schema.md |
 | 索引定义 | data-persistence.md | data-schema.md |
 | Column ↔ 字段映射（仅非一一对应时） | data-persistence.md | data-schema.md |
-| 存储介质选型理由 | data-persistence.md（一句话）+ REQUIREMENTS.md Decisions（深度） | service.md |
+| 存储介质选型理由 | data-persistence.md（一句话）+ REQUIREMENTS.md 需求规格 > 技术决策（深度） | service.md |
 | 读写机制 | data-persistence.md | data-schema.md |
 | 数据生命周期 | data-persistence.md | service.md |
 | 配置（环境变量/路径） | data-persistence.md | service.md |
 | Service 方法签名 | service.md | - |
 | Service 关键流程 | service.md | - |
 | 模块依赖关系 | service.md | - |
-| CLI 命令清单（产品级） | REQUIREMENTS.md Decisions | cli.md |
+| CLI 命令清单（产品级） | REQUIREMENTS.md 关键接口 | cli.md |
 | CLI 详细 JSON I/O schema | cli.md（仅 cli-only） | data-schema.md / service.md |
 | CLI 错误码定义 | cli.md（仅 cli-only） | data-schema.md |
 | CLI 使用示例 | cli.md（仅 cli-only） | data-schema.md |
-| 设计决策 | REQUIREMENTS.md Decisions | doc/ |
-| 决策对比（方案 A/B/C） | REQUIREMENTS.md Decisions | doc/ |
-| 实测数据 / POC 命中率 | REQUIREMENTS.md Decisions | doc/ |
-| Issue 引用（QA-XXX） | REQUIREMENTS.md Decisions | doc/ |
+| 设计决策 | REQUIREMENTS.md 需求规格 | doc/ |
+| 决策对比（方案 A/B/C） | REQUIREMENTS.md 需求规格 | doc/ |
+| 实测数据 / POC 命中率 | REQUIREMENTS.md 需求规格 | doc/ |
+| Issue 引用（QA-XXX） | REQUIREMENTS.md 需求规格 | doc/ |
 | 异常场景（接口契约） | service.md（方法 docstring） | - |
-| 异常场景（issue 上下文） | REQUIREMENTS.md Decisions | service.md |
+| 异常场景（issue 上下文） | REQUIREMENTS.md 需求规格 | service.md |
 | 变更记录 / "X 已删除" | 删（不应存在任何 doc/） | 任何 |
 
 ## doc/ 内容规则（最终正式文档，全 doc/ 适用）
 
-`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 REQUIREMENTS.md Decisions。
+`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 REQUIREMENTS.md 需求规格。
 
 ### 适用范围
 
@@ -373,7 +372,7 @@ class <EntityName>:
 
 详见上方"跨文件内容归属表"。重点：
 
-- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除" → 移到 REQUIREMENTS.md Constraints
+- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除" → 移到 REQUIREMENTS.md 需求规格 > 约束/原则
 - 与其他 module 的对比说明（除非字段语义必需）
 - 决策讨论、issue 引用、实测数据、变更记录等 → 见归属表对应行
 
@@ -383,11 +382,11 @@ class <EntityName>:
 
 | 启发式关键词 | 处理 |
 |-------------|------|
-| "OQ-"、"Open Question"、"Q1: ... A:" | 移到 REQUIREMENTS.md Decisions |
-| "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 REQUIREMENTS.md Decisions |
-| "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 REQUIREMENTS.md Constraints |
+| "OQ-"、"Open Question"、"Q1: ... A:" | 移到 REQUIREMENTS.md 需求规格 |
+| "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 REQUIREMENTS.md 需求规格 |
+| "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 REQUIREMENTS.md 需求规格 > 约束/原则 |
 | "第一版 / 第二版"、"变更记录"、"架构调整" | 删除（git history 已记录） |
-| "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 REQUIREMENTS.md Decisions） |
+| "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 REQUIREMENTS.md 需求规格） |
 
 ### 反例（过程性内容混入 doc/，禁止）
 
@@ -417,13 +416,13 @@ class <EntityName>:
         # <字段描述>（值1 / 值2 / 值3）
 ```
 
-决策"为什么共用 list" → REQUIREMENTS.md Decisions。
+决策"为什么共用 list" → REQUIREMENTS.md 需求规格。
 
 ## 共享数据提议流程
 
 Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个 module 使用，按以下流程提议加入 `doc/common/data-schema.md`：
 
-1. 在 REQUIREMENTS.md Decisions 新增"提议 common 数据结构"条目：
+1. 在 REQUIREMENTS.md 需求规格 新增"提议 common 数据结构"条目：
    - 结构名、dataclass 字段定义
    - 使用方（≥2 module）
    - 理由（为什么不归属单一 module）
@@ -449,7 +448,7 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
    - 推断 module 边界（按业务领域如 financial / news / user）
    - 设计 `src/<module>/{service,models}.py` 拆分
    - 直接写 `doc/<module>/{data-schema,data-persistence,service}.md`（从旧单文件按边界拆出）
-   - 列出 `doc/common/` 候选（跨 module 共享数据如 User、AuditLog），写入 REQUIREMENTS.md Decisions 待用户确认
+   - 列出 `doc/common/` 候选（跨 module 共享数据如 User、AuditLog），写入 REQUIREMENTS.md Open Questions 待用户确认
 
 ### Migration 简化
 
@@ -470,12 +469,12 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
 2. **模块划分建议（涉及模块边界变化时）**：
    - 仅当本 feature 涉及新增 module、调整现有 module 边界时执行
    - 纯 module 内修改（加字段、加方法）跳过此步
-   - 在 REQUIREMENTS.md Decisions 新增模块划分条目：
+   - 在 REQUIREMENTS.md 需求规格 新增模块划分条目：
      - 建议的 module 列表
      - 各 module 职责边界
      - 依赖关系（mermaid 图）
    - **由用户拍板**：PM review 时拿给用户确认，designer 仅提供建议
-2.5. **业务问题自检（决定能否进入撰写）**：扫描 REQUIREMENTS.md 的 `Decisions` 和 `Open Questions` 章节，找出**影响技术方案的业务问题**。判断标准：该问题的不同答案会导出不同的 dataclass / CLI / 模块结构。
+2.5. **业务问题自检（决定能否进入撰写）**：扫描 REQUIREMENTS.md 的 `需求规格` 和 `Open Questions` 章节，找出**影响技术方案的业务问题**。判断标准：该问题的不同答案会导出不同的 dataclass / CLI / 模块结构。
    - **存在未定业务问题**（Open Question 状态="待用户选定"，或 Decisions 缺失关键决策）→ **返回 blocked 给 PM**，`blocked_reason` 列清单，由 PM 找用户澄清。**不自主决定业务问题**
    - **Open Questions 必须含完整 4 部分**（背景 + 选项含优缺点 + 推荐理由 + 状态）。若发现以下任一缺失 → 返回 blocked 给 PM：
      - 无背景（用户看不懂为什么是问题）
@@ -489,7 +488,7 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
    - `doc/<module>/service.md`：Service 方法签名 + 关键流程 mermaid sequence + 跨 module 关系图
    - `doc/common/data-schema.md`（如涉及共享数据）
    - 按 Agent Type：`doc/backend.md`（http-api/http-web）或 `doc/mcp-server.md`（mcp-server）
-   - cli-only 形态：CLI 命令清单已在 REQUIREMENTS.md Decisions 确定，无需 designer 重复
+   - cli-only 形态：CLI 命令清单已在 REQUIREMENTS.md 关键接口 确定，无需 designer 重复
 4. **规范合规检查**：使用 spec-compliance subagent 检查 doc/ 文件是否符合规范（S 组 schema、P 组 persistence、新增 service 组、B/M 组按形态），获取结构化 review 意见
 5. **Review doc 文件**：将 spec-compliance 返回的 fail 项作为 review suggestions，使用 doc-review skill 对 doc/ 文件进行 review，直至确认完成
 6. **返回结果**：将结构化结果返回给 PM。`artifacts` 列出本次修改的 doc/ 文件路径
@@ -504,7 +503,7 @@ migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章
 | `{Root}/doc/<module>/data-persistence.md` | 该 module 数据持久化方案 | 所有形态 |
 | `{Root}/doc/<module>/service.md` | Service 方法签名 + 关键流程 mermaid + 跨 module 关系图 | 所有形态 |
 | `{Root}/doc/common/data-schema.md` | 跨 module 共享数据结构（User/AuditLog/Pagination 等） | 所有形态（如需） |
-| `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 REQUIREMENTS.md Decisions 定） | cli-only |
+| `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 REQUIREMENTS.md 关键接口定） | cli-only |
 | `{Root}/doc/backend.md` | 后端技术选型 + REST API 设计 | http-api / http-web |
 | `{Root}/doc/mcp-server.md` | MCP tools 清单 + 部署模式 + 调用流程 | mcp-server |
 
@@ -632,11 +631,11 @@ cli-only 形态下，CLI 设计分布在三处：
 
 | 阶段 | 文件 | 内容 |
 |------|------|------|
-| `draft`（PM 与用户讨论） | REQUIREMENTS.md Decisions · 接口决策 | 命令清单表 `\| 命令 \| 用途 \| 关键参数 \|`（产品级决策，要做哪些命令） |
+| `draft`（PM 与用户讨论） | REQUIREMENTS.md 关键接口 | 命令清单表 `\| 命令 \| 用途 \| 关键参数 \|`（产品级决策，要做哪些命令） |
 | `designing`（designer 设计） | `doc/<module>/cli.md` | 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
 | `implementing`（developer 实现） | `cli/<module>.py` docstring + click decorators → 运行时 `--help` | 实现 `cli.py`，运行 `--help` 输出应与 `cli.md` 一致 |
 
-PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.md Decisions；designer 在 designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
+PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.md 关键接口；designer 在 designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
 
 ## Agent Layer
 
