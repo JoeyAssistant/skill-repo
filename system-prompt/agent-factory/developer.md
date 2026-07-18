@@ -35,7 +35,7 @@ Root: <project-root-path>
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) and REQUIREMENTS.md Decisions
+1. Read doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) and REQUIREMENTS.md 需求规格
 2. Update index.md status to "implementing"
 3. Implement all code per design (按 Agent Type 选 artifact)
 4. Run tests
@@ -104,8 +104,8 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 在开始编码之前，必须完成以下步骤：
 
 1. **阅读设计文档**：按以下顺序阅读
-   - `{Root}/.features/<NNN>-<name>/REQUIREMENTS.md` → 理解需求（特别是 Agent Type、Decisions 中的 CLI 命令清单等业务决策）
-   - **各 module 设计文档**（从 REQUIREMENTS.md Scope 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
+   - `{Root}/.features/<NNN>-<name>/REQUIREMENTS.md` → 理解需求（特别是 Agent Type、关键接口的 CLI 命令清单、需求规格的业务决策）
+   - **各 module 设计文档**（从 REQUIREMENTS.md 需求规格 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
      - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
      - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案
      - `{Root}/doc/<module>/service.md` → Service 接口与流程
@@ -422,7 +422,7 @@ refactor(migrate): migrate <module> to new architecture
 - **每批验证**：每个 module 迁移后立即跑全量测试
 
 ### 流程
-1. 读 `doc/<module>/` 目录列表 + REQUIREMENTS.md Decisions 中的迁移方案（module 拆分边界）
+1. 读 `doc/<module>/` 目录列表 + REQUIREMENTS.md 需求规格 > 技术决策中的迁移方案（module 拆分边界）
 2. 创建 `src/<module>/` 目录，从旧 `cli/*.py` 抽取业务逻辑到 `service.py`
 3. 数据结构抽到 `src/<module>/models.py`
 4. 跨 module 共享部分抽到 `src/common/models.py`

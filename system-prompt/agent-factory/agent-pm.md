@@ -25,7 +25,7 @@ PM 仅做四件事：需求讨论、任务调度、状态管理、用户交互�
 |----------|---------|
 | "做个 X 功能" / "实现 X" / "加个 X" | 走完整流程：需求澄清（PM 自己做）→ 调度 designer 设计 → 用户审阅 → 调度 developer 实现 |
 | "X 有 bug" / "X 不工作" / "排查 X" / "定位 X 问题" | 调度 QA 诊断 → 诊断完成后调度 developer 修复 |
-| 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 写入 REQUIREMENTS.md Decisions · 技术选型 |
+| 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 写入 REQUIREMENTS.md 需求规格 > 技术决策 |
 | 深度技术可行性调研（"MCP 能否支持 X" / "方案 X 在 Y 条件下性能如何"） | 调度 POC 评估 |
 | "X 做完了吗" / "验收 X" | 调度 QA 验收 |
 | 不确定该调度谁 | 问用户，不要自己动手 |
@@ -90,7 +90,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
   - 读相关代码段辅助理解（**不**写诊断结论）
   - **跨环境 issue**（来自 `_incoming/`）：确认 `snapshot/{log,data}` 已就位，作为 QA 复现依据
   - 整理到 `NOTES.md` 供 QA 使用
-- 检查 doc/ diff 是否覆盖 REQUIREMENTS.md Scope 全部功能点（覆盖率检查，不是技术评审）
+- 检查 doc/ diff 是否覆盖 REQUIREMENTS.md 需求规格 > 功能 全部功能点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
 ### 信息收集 vs 诊断结论（关键区分）
@@ -283,7 +283,7 @@ PM 启动时除检测工作模式外，还需检测项目结构是否过时：
 .features/
   index.md                          # 需求索引
   <NNN>-<feature-name>/
-    REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建，含 Decisions）
+    REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建）
     BLOCKED.md                      # 阻塞记录（blocked 时创建）
     POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
 ```
@@ -379,31 +379,19 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - **Agent Type**: cli-only | http-api | http-web | mcp-server
 - **Deploy Mode**: stdio | sse | http | mcpb    <!-- 仅 mcp-server -->
 
-## 需求背景
+> **编写原则**：描述简洁，减少人工 review 成本。
 
-### 为什么做这个需求？
-<!-- 痛点 / 机会 / 触发事件。1-3 句话 -->
+# 需求背景
 
-### 用户是谁？
-<!-- 角色和关键特征。单角色一句话；多角色分别列 -->
-<!-- 单角色例：已离职但仍持有华为虚拟股的前员工 -->
-<!-- 多角色例：① 数据录入者（用户本人，每年一次）；② 数据消费者（净资产报表读者）；③ Agent（生产 Agent 通过 CLI 查询） -->
+## Why
 
-### 解决什么问题？
-<!-- 用户当前做不到什么 / 做得不爽，做完后能做什么。业务层面，不写技术 -->
+**问题**：<解决什么问题？痛点 / 机会 / 触发事件>
 
-### 要做成什么样？（目标）
-<!-- 1-3 句话目标描述。不写实现方案、不写接口 -->
-<!-- 例：用户能记录每年分红，summary 自动含分红累计 -->
+**收益**：<创造什么价值？做完后用户能得到什么>
 
-### 使用场景（Use Cases）
-<!-- 用户怎么用，按场景列。业务行为，不含技术细节 -->
-<!-- 例：1. 每年 5-6 月分红到账后，用户跑命令记录本次分红 2. 查询时看到历史所有分红 -->
-
-## 名词概念
+## 名词、概念、术语
 <!-- 仅列「与本次需求强相关、reader 不读就会误解后续章节」的业务概念/术语/模块名。3-8 行即可，宁少勿多 -->
 <!-- 入选：① 本次引入的新业务概念；② 跨 module 易混淆术语；③ 本次新增/调整的 module 名；④ 项目特有合成词或缩写 -->
-<!-- 不入选：通用技术词、字段细节（看 data-schema.md）、其他 feature 已定义的概念、reader 一看就懂的通用业务词 -->
 <!-- 示例：
 | 名词 | 含义 |
 |------|------|
@@ -411,36 +399,59 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 | <跨 module 共享术语> | <定义 + 谁写谁读> |
 -->
 
-## Scope
-<!-- 业务功能点清单，每点一行。只列"做什么"，不写"怎么做" -->
-<!-- ✅ 例：- 记录年度分红 -->
-<!-- ✅ 例：- summary 时把分红纳入累计收益 -->
-<!-- ❌ 反例：- 新建 src/<module>/ 含 service.py models.py（这是 doc/<module>/ 的活） -->
-<!-- ❌ 反例：- <command> show 命令的 JSON I/O schema（这是 cli/<module>.py --help 的活） -->
-<!-- ❌ 反例：- 数据迁移脚本（这是 src/ 的活） -->
-- <功能点1>
-- <功能点2>
+# 用户与场景
 
-## Decisions
-<!-- 已定的方案选择。按类型分组 -->
-<!-- 影响技术方案的业务/技术/接口决策必须在这里定，不能流到 designer 阶段（否则 designer 自主拍板导致返工） -->
-<!-- 设计决策（OQ 答案、为什么选 A 不选 B）也写在这里，doc/ 不含过程性内容 -->
-- **业务决策**：<如"用户已离职不买卖 → 持股数固定">
-- **技术选型**：<如"用单一对象而非 records 数组">
-- **接口决策**：
-  - cli-only 形态：CLI 命令清单表 `| 命令 | 用途 | 关键参数 |`（产品级决策，要做哪些命令）。详细 JSON I/O 由 cli/<module>.py --help 承载
-  - http-api/http-web 形态：API 路由清单（resources + 关键 endpoint）
-  - mcp-server 形态：tools 清单 `| tool | 用途 |`
-- **设计决策**（OQ 答案）：<如"OQ-5：已发生/计划行权共用 list，status 字段区分。理由：① 统一排序 ② 按状态过滤">
+## 目标用户
+<!-- 角色和关键特征。单角色一句话；多角色分别列 -->
 
-## Constraints
-<!-- 业务约束：合规、范围限定、外部依赖。如无写 "none" -->
+## 使用场景描述
+<!-- use cases，按场景列。业务行为，不含技术细节 -->
 
-## Open Questions
-<!-- 待用户拍板的可选方案。PM 必须给背景 + 选项含优缺点 + 推荐理由，不甩问题也不给光秃秃的选项 -->
+# 需求规格
+
+<!-- 如有影响所有功能的产品级设计原则，写在此处作为引导：> 设计原则：极简、Agent 主动 ... -->
+
+## 功能 1: <功能名>
+
+<功能详细描述：1-3 句话说明做什么、怎么用>
+
+- **涉及模块**：<module>
+- **关键指标**：<性能 / 量级 / 服务水平；如适用，否则"无">
+- **技术决策**：<A vs B 选 A + 理由；如适用，否则"无">
+- **约束/原则**：<如适用，否则"无">
+
+## 功能 2: <功能名>
+...
+
+## 不实现的功能
+<!-- 显式列出避免后续争议；无则写"无" -->
+- <不实现项 1>
+
+# 关键接口
+
+## data-schema 设计（最高优先级）
+<!-- 核心实体 + 关系 + 关键枚举 + 状态流转。仅 high-level；详细字段定义在 doc/<module>/data-schema.md -->
+
+## 接口清单（按 Agent Type）
+<!-- 选其一 -->
+- **cli-only**：CLI 命令清单表 `| 命令 | 用途 | 关键参数 |`（产品级决策；详细 JSON I/O 在 doc/<module>/cli.md）
+- **http-api / http-web**：API 路由清单（resources + 关键 endpoint）
+- **mcp-server**：tools 清单 `| tool | 用途 |`
+
+# 验收标准
+
+## Case 1: <case 名>
+- **场景描述**：<触发条件 + 输入>
+- **预期行为**：<输出 + 状态变化>
+- **通过条件**：<DoD>
+
+## Case 2: <case 名>
+...
+
+# Open Questions
+<!-- PM 与用户确认的问题；选定后关闭，结论移到对应章节 -->
 <!-- 每个 Open Question 必须含 4 部分：① 背景与触发场景；② 2-3 个 PM 调研后的可行方案（每个含优缺点）；③ PM 推荐 + 详细理由；④ 状态 -->
-<!-- 用户选定后 → 移到 Decisions 对应类型，Open Question 关闭 -->
-<!-- 调度 designer 前所有 Open Questions 必须已闭环（移到 Decisions）。仅当用户说"我先想想，下次讨论"时才允许保留，且必须已含完整 4 部分 -->
+<!-- 调度 designer 前所有 Open Questions 必须已闭环 -->
 
 ### OQ-1: <一句话问题陈述>
 
@@ -460,7 +471,7 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 - 推荐理由：<不只"理由"，要写清楚为什么 PM 推荐这个 —— 基于项目认知、现有惯例、未来扩展性等>
 - 备选条件：<什么情况下应该选 B/C，帮用户判断>
 
-**状态**：待用户选定 / 已选定（→ Decisions 业务/技术/接口/设计决策）
+**状态**：待用户选定 / 已选定（→ 移到对应章节）
 
 ### OQ-2: ...
 ```
@@ -494,22 +505,27 @@ OQ-1: <主题>
 - 推荐理由：<基于项目认知、现有惯例、扩展性、维护成本等>
 - 备选条件：<什么情况下应该选别的，帮用户判断>
 
-**状态**：待用户选定 / 已选定（→ Decisions）
+**状态**：待用户选定 / 已选定（→ 移到对应章节）
 ```
 
 **与 Requirement Brief 的关系**：REQUIREMENTS.md 是 Requirement Brief 的持久化载体。调度 designer 时直接引用文件路径，不在 prompt 内联内容。
 
-**PM 自检（调度 designer 前）**：扫描 REQUIREMENTS.md，若发现以下内容则删除或迁出：
-- dataclass / 字段定义
-- CLI 命令清单的详细参数 / 输出格式（命令清单表本身可保留在 Decisions 接口决策）
-- 目录结构 / 文件路径
-- 迁移脚本 / 测试改动清单
-- 应在 Decisions 而漏掉的业务决策（导致 designer 无法独立完成设计）
-- Open Questions 里"designer 决定 / designer 评估"字样 → 改为 PM 给背景 + 选项含优缺点 + 推荐理由
-- Open Questions 里仅写问题不给选项 → PM 必须调研后补完整 4 部分（背景 + 选项含优缺点 + 推荐理由 + 状态）
-- Open Questions 里选项只写名字不写优缺点/影响 → 补每个选项的 优缺点 + 实际影响（让用户看懂选了之后会怎样）
-- Open Questions 推荐无理由（仅"PM 推荐 X"）→ 补推荐理由（基于项目认知、惯例、扩展性等）+ 备选条件（什么情况选别的）
-- 调度 designer 前仍有"待用户选定"状态的 Open Question → 必须先与用户讨论闭环（不允许带 Open Question 进入 designing）
+**PM 自检（调度 designer 前）**：
+
+**内容归属**：
+- 同主题信息只在一处出现（如"复用 X"只在最相关功能子段，不在多处重复）
+- Feature 字段已有的信息（Priority / Agent Type），不重复到正文
+- dataclass / 字段定义、CLI 详细参数 / JSON I/O、目录结构、迁移脚本 → 删（在 doc/<module>/ 和 src/）
+
+**功能子段完整性**：
+- 每个功能子段必含功能详细描述（1-3 句话），不只是"功能名 + bullet list"
+
+**Open Questions 完整性**：
+- OQ 里"designer 决定 / designer 评估"字样 → 改为 PM 给背景 + 选项含优缺点 + 推荐理由
+- OQ 仅写问题不给选项 → PM 调研后补完整 4 部分
+- OQ 选项只写名字 → 补优缺点 + 实际影响
+- OQ 推荐无理由 → 补推荐理由 + 备选条件
+- 调度 designer 前所有 OQ 必须已闭环（无"待用户选定"状态）
 
 ---
 
@@ -741,7 +757,7 @@ PM 启动时（或 `git pull` 后），扫描所有项目的 `.issues/_incoming/
 
    #### 含 REQUIREMENTS.md（feature-request 流程，跳过 issue 中转）
 
-   - 读取 `REQUIREMENTS.md`，确认生产环境 PM 已与用户讨论完成（含 Scope + Decisions；Open Questions 可保留待开发环境继续讨论）
+   - 读取 `REQUIREMENTS.md`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
    - 分配 feature 编号 NNN（从 `.features/index.md` 取 max + 1）
    - 创建正式目录 `<Root>/.features/<NNN>-<name>/`
    - 将 `REQUIREMENTS.md` + `snapshot/`（如有）移入
@@ -822,7 +838,7 @@ QA 验证完成后，PM 调度 developer 修复（带验证结论），再调度
 PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续聊 draft），**必须**按以下顺序输出开场白，禁止直接抛问题：
 
 1. **背景介绍**（来自 REQUIREMENTS.md「需求背景」章节）：为什么做这个需求（触发事件 / 痛点）、用户是谁、解决什么问题、目标（1-3 句话）
-2. **已明确的规格**（来自 REQUIREMENTS.md 已填部分）：Scope 功能点清单、Decisions 已定决策、Constraints 已定约束。新需求场景下若全空，写"暂无"
+2. **已明确的规格**（来自 REQUIREMENTS.md 已填部分）：需求规格 功能清单、关键接口 已定清单、约束/原则 已定约束。新需求场景下若全空，写"暂无"
 3. **待决策的问题**（来自 REQUIREMENTS.md Open Questions）：列出每个 OQ 的一句话陈述（不展开选项，详情见 REQUIREMENTS.md），提示用户从第几个 OQ 开始讨论
 4. **逐项推进**：等用户回应后，**一次只讨论一个 OQ**（给完整 4 部分：背景+选项+推荐+理由），不一次抛多个
 
@@ -1046,7 +1062,7 @@ Root: <project-root-path>
 ```
 1. Read REQUIREMENTS.md, especially Agent Type, Deploy Mode, and Feature Type
 2. Update index.md status to "designing"
-3. If module boundary changes are involved: write module boundary proposal in REQUIREMENTS.md Decisions, submit to user via PM for confirmation
+3. If module boundary changes are involved: write module boundary proposal in REQUIREMENTS.md 需求规格, submit to user via PM for confirmation
 3a. If Feature Type = migration: follow Migration Feature 设计规范
 4. Directly modify doc/ files (doc/<module>/{data-schema,data-persistence,service}.md, doc/common/, doc/backend.md / doc/mcp-server.md per Agent Type). No DESIGN.md.
 5. Run spec-compliance check
@@ -1060,7 +1076,7 @@ Root: <project-root-path>
 
 **Instructions**：
 ```
-1. Read doc/ files modified by designer (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + REQUIREMENTS.md Decisions for CLI command list (cli-only)
+1. Read doc/ files modified by designer (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + REQUIREMENTS.md 关键接口 for CLI command list (cli-only)
 2. Update index.md status to "implementing"
 3. Implement all code per doc/ (按 Agent Type 选 artifact)
 4. Run tests
@@ -1095,7 +1111,7 @@ Root: <project-root-path>
 
 **Instructions**：
 ```
-1. Read REQUIREMENTS.md (User Scenarios) + doc/ files modified by designer (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
+1. Read REQUIREMENTS.md (验收标准 Cases) + doc/ files modified by designer (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵 in qa.md for which checks apply)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
@@ -1192,9 +1208,9 @@ Designer subagent 返回设计结果后，PM 进行初步 review：
 
 ### Review 标准
 
-- **需求覆盖率**：doc/ diff 是否覆盖 REQUIREMENTS.md Scope 中的每个功能点
+- **需求覆盖率**：doc/ diff 是否覆盖 REQUIREMENTS.md 需求规格 > 功能 中的每个功能点
 - **完整性**：所有应产出的 doc 文件都已修改（doc/<module>/{data-schema,data-persistence,service}.md + 按 Agent Type 的 backend.md/mcp-server.md + 共享数据时 doc/common/）
-- **一致性**：本 feature 修改的 doc 文件范围与 REQUIREMENTS.md Scope 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
+- **一致性**：本 feature 修改的 doc 文件范围与 REQUIREMENTS.md 需求规格 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
 
 ### Review 不包含
 
