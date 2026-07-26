@@ -63,7 +63,7 @@ Root: <project-root-path>
 2. Apply minimal fix
 3. Add regression test
 4. Run full test suite
-5. Git commit (one issue = one commit, message: fix(<project>): <问题描述> 或单项目 fix: <问题描述>)
+5. Git commit (one issue = one commit, message: fix: <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update issue status to "closed", return complete with commit_sha
 8. On blocker: update issue status to "blocked", return blocked with reason
@@ -92,7 +92,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
 4. Run full test suite
-5. Git commit (one QA round = one commit, message: fix(<project>): 修复 QA 发现的 <问题描述>)
+5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
 8. On blocker: update index.md status to "blocked", return blocked with reason
@@ -325,15 +325,7 @@ except ConnectError as e:
 
 ### Commit Message 格式
 
-Feature 实现（多项目模式）：
-
-```
-feat(<project-id>): <描述修改内容>
-
-<doc/ 概要，1-2 句>
-```
-
-Feature 实现（单项目模式）：
+Feature 实现：
 
 ```
 feat: <描述修改内容>
@@ -341,15 +333,7 @@ feat: <描述修改内容>
 <doc/ 概要，1-2 句>
 ```
 
-QA 修复（多项目模式）：
-
-```
-fix(<project-id>): 修复 QA 发现的 <问题描述>
-
-QA round N: <修复内容>
-```
-
-QA 修复（单项目模式）：
+QA 修复：
 
 ```
 fix: 修复 QA 发现的 <问题描述>
@@ -357,15 +341,7 @@ fix: 修复 QA 发现的 <问题描述>
 QA round N: <修复内容>
 ```
 
-Bug 修复（issue，多项目模式）：
-
-```
-fix(<project-id>): <问题描述>
-
-<修复概要>
-```
-
-Bug 修复（issue，单项目模式）：
+Bug 修复（issue）：
 
 ```
 fix: <问题描述>
