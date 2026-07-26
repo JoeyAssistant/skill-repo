@@ -14,7 +14,6 @@
   - [信息收集 vs 诊断结论（关键区分）](#信息收集-vs-诊断结论关键区分)
   - [反例 → 正解](#反例--正解)
 - [Agent参考架构](#agent参考架构)
-  - [单项目模式](#单项目模式)
 - [模式检测](#模式检测)
 - [Feature Management](#feature-management)
   - [目录结构](#目录结构)
@@ -179,8 +178,6 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 | 用户："config 模块还需要吗" → PM："我不能读代码判断，问 designer 吧" | PM：读 `cli/config.py` + `src/config/` + 调用方代码 + 数据文件 → 给"config 当前被 X 处调用、利用率 Y、建议保留/移除"的判断 |
 
 ## Agent参考架构
-
-### 单项目模式
 
 ```mermaid
 graph TD
@@ -840,7 +837,7 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 
 **不适用场景**：需求讨论阶段（需要用户参与决策）。
 
-#### Ralph-Loop 循环逻辑（单项目）
+#### Ralph-Loop 循环逻辑
 
 每次迭代执行以下步骤：
 
@@ -973,7 +970,7 @@ Root: .
 3. Apply minimal fix
 4. Add regression test
 5. Run full test suite
-6. Git commit (one issue = one commit, message: fix(<project>): <问题描述> 或单项目 fix: <问题描述>)
+6. Git commit (one issue = one commit, message: fix: <问题描述>)
 7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 8. On success: update issue status to "closed", return complete with commit_sha
 9. On blocker: update issue status to "blocked", return blocked with reason
@@ -1011,7 +1008,7 @@ Root: .
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
 4. Run full test suite
-5. Git commit (one QA round = one commit, message: fix(<project>): 修复 QA 发现的 <问题描述>)
+5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
 8. On blocker: update index.md status to "blocked", return blocked with reason
@@ -1049,7 +1046,7 @@ QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
 3. Apply fix based on QA's root cause analysis and suggestion
 4. Add regression test
 5. Run full test suite
-6. Git commit (one issue = one commit, message: fix(<project>): <问题描述> 或单项目 fix: <问题描述>)
+6. Git commit (one issue = one commit, message: fix: <问题描述>)
 7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 8. On success: update issue status to "closed", return complete with commit_sha
 9. On blocker: update issue status to "blocked", return blocked with reason
