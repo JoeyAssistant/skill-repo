@@ -431,35 +431,12 @@ Designer 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个
 4. 通过后 designer 直接写入 `doc/common/data-schema.md`
 5. 各 module 在自己的 `data-schema.md` 中 import 引用，**不重复定义字段**
 
-详见 spec §5。
-
-## Migration Feature 设计规范
-
-当 REQUIREMENTS.md 标记 `Type: migration` 时，除以下差异外，其余流程同主工作流。
-
-### 设计目标
-
-把现有 `cli/*.py` 平铺代码按业务边界拆分到 `src/<module>/`。纯迁移，保持原有功能、行为、数据格式不变；用户新提的功能开新 feature 单独处理。
-
-### Migration 专属步骤（替换主工作流 step 2-3）
-
-2. **扫描现有结构**：读取 `{Root}/cli/*.py`、`{Root}/doc/cli.md`、`{Root}/doc/data-schema.md`、`{Root}/doc/data-persistence.md`（旧单文件）
-3. **设计拆分方案**：
-   - 推断 module 边界（按业务领域如 financial / news / user）
-   - 设计 `src/<module>/{service,models}.py` 拆分
-   - 直接写 `doc/<module>/{data-schema,data-persistence,service}.md`（从旧单文件按边界拆出）
-   - 列出 `doc/common/` 候选（跨 module 共享数据如 User、AuditLog），写入 REQUIREMENTS.md Open Questions 待用户确认
-
-### Migration 简化
-
-migration feature 的 `doc/<module>/service.md` 可省略「Service 接口」章节（迁移保持 service 接口不变，由 developer 按现有结构实现）。保留：data-schema、data-persistence、（可选）关键流程。
-
 ## 工作流程
 
 收到 PM 的设计任务后，按以下步骤执行：
 
 0. **项目认知建立（必做）**：
-   - 从 REQUIREMENTS.md 读取 `Agent Type`（和 `Deploy Mode`）、`Feature Type`，确定后续产出哪些 artifact
+   - 从 REQUIREMENTS.md 读取 `Agent Type`（和 `Deploy Mode`），确定后续产出哪些 artifact
    - **读项目文档建立项目认知**：
      - `{Root}/doc/` 目录全部 .md（各 module 的 data-schema / data-persistence / service、common 共享 schema、backend.md / mcp-server.md 等）—— 理解现有数据结构、持久化、接口设计，避免重复设计、识别可复用结构
      - 最近 2-3 个 feature 的 REQUIREMENTS.md —— 理解决策模式、命名惯例

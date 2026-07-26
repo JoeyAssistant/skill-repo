@@ -186,13 +186,6 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 - 验证 tool 返回结构与 `doc/mcp-server.md` 定义的 output schema 一致
 - 验证每个 tool 实际调用了 `src/<module>/service.py` 的对应方法
 
-### Migration feature 的验收特殊性
-
-- 不验收新功能（设计上不变）
-- **重点**：迁移前后行为一致性
-- 跑全量回归测试，所有用例必须 PASS
-- 对比迁移前后的 E2E 输出（如可能）
-
 ## 验收工作流程
 
 验收按以下 4 个阶段执行：

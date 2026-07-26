@@ -40,7 +40,6 @@ Root: <project-root-path>
 3. Implement all code per design (按 Agent Type 选 artifact)
 4. Run tests
 5. Git commit (one feature = one commit, see Git 提交规范)
-   - Migration feature commit message 用 `refactor(migrate):` 前缀
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
 8. On blocker: update index.md status to "blocked", return blocked with reason
@@ -154,7 +153,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 {Root}/test/
 ```
 
-完整目录结构示意参考 `designer.md` 的「Agent 参考架构」章节或 spec §1。
+完整目录结构示意参考 `designer.md` 的「Agent 参考架构」章节。
 
 ## 按 Agent Type 实现
 
@@ -374,14 +373,6 @@ fix: <问题描述>
 <修复概要>
 ```
 
-Migration feature：
-
-```
-refactor(migrate): migrate <module> to new architecture
-
-<迁移概要>
-```
-
 ## Bug 修复流程
 
 强烈建议修复任何 bug 时按以下步骤执行，根据问题复杂度灵活调整：
@@ -411,33 +402,6 @@ refactor(migrate): migrate <module> to new architecture
 - 运行全量测试确认无回归
 - 检查是否引入新文件、新依赖或临时文件残留
 - 测试生成的临时文件必须写入系统临时目录或测试目录，不得污染源码
-
-## Migration Feature 实现规范
-
-当 feature 标记为 `Type: migration` 时，developer 遵循以下差异：
-
-### 约束
-- **纯迁移**：不改业务行为，不加新功能，不改数据格式
-- **分批迁移**：按 module 顺序迁移，一次一个 module
-- **每批验证**：每个 module 迁移后立即跑全量测试
-
-### 流程
-1. 读 `doc/<module>/` 目录列表 + REQUIREMENTS.md 需求规格 > 技术决策中的迁移方案（module 拆分边界）
-2. 创建 `src/<module>/` 目录，从旧 `cli/*.py` 抽取业务逻辑到 `service.py`
-3. 数据结构抽到 `src/<module>/models.py`
-4. 跨 module 共享部分抽到 `src/common/models.py`
-5. 创建 `cli/<module>.py` 作为 wrapper（如保留 cli-only 形态）
-6. 删除旧 `cli/*.py` 中的业务逻辑（保留 wrapper 入口）
-7. 更新 `doc/<module>/data-schema.md`（从旧 `doc/data-schema.md` 按边界拆分）
-8. 删除旧 `doc/cli.md`、`doc/data-schema.md`、`doc/data-persistence.md`
-9. 跑全量测试确认行为不变
-10. Commit（`refactor(migrate): migrate <module> to new architecture`）
-
-### 不允许的操作
-- 顺手修 bug（记录到 `.issues/`，单独修复）
-- 加新字段（开新 feature）
-- 重构无关代码
-
 
 ## 部署脚本
 
