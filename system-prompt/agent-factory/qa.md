@@ -207,7 +207,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 
 ### 阶段 2：E2E 场景验收
 
-按 Agent Type 选择验收入口，逐一执行 REQUIREMENTS.md `# 验收标准` 下的每个 Case（场景描述 → 预期行为 → 通过条件）：
+按 Agent Type 选择验收入口，逐一执行 REQUIREMENTS.md `# 验收标准` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
 
 **cli-only**：
 1. 准备测试输入（JSON / 参数）

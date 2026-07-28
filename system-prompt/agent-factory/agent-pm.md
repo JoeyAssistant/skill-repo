@@ -380,23 +380,17 @@ draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM �
 
 # 验收标准
 
-<!-- 三可原则：每个 Case 必须满足 可构造（前置可准备）/ 可观测（结果可读取）/ 可验收（PASS/FAIL deterministic） -->
-<!-- 被测对象 = CLI / 脚本 / Service（deterministic）；AI / 外部依赖是黑盒输入源，用 fixture / mock 隔离 -->
-<!-- 脚本类 feature 必须支持 --dry-run / --mock 类参数（依赖注入式设计），便于开发环境构造场景 -->
+<!-- 三可原则：每个 Case 必须同时满足 可构造 / 可观测 / 可验收。 -->
+<!-- 不能真跑（需要打桩）的 Case 直接不列，改用代码 review / 上线人工验收等其它手段。 -->
 
 ## Case 1: <case 名>
 
 <业务场景一句话描述>
 
-- **前置构造**：<怎么准备测试数据 / mock / fixture。例："seed X 到 data/..." / "mock API 返回 Y（fixture 文件）" / "脚本以 --dry-run-smtp 模式运行，HTML 写到 tests/output/" / "脚本带 --claude-mock fixture 接收 mock AI 输出">
-- **执行步骤**：<CLI / 脚本 / API 调用，可重复执行。例："python3 script/cron-X.sh --time 08:00 --dry-run-smtp --claude-mock tests/fixtures/X.txt">
-- **观测点**：<从哪里读结果：stdout / 文件 / DB diff / log。避免依赖外部副作用（真发邮件、真用户介入）>
-- **判定标准**：<deterministic PASS 条件，可机器判定；全 PASS 才算过。例："exit 0 + tests/output/email.html 存在 + email.html 含 X 关键字 + data/Y.json diff 含 Z 变化">
-
-<!-- 禁止写法 -->
-<!-- - "用户收到邮件 / 收到通知"（观测不到）→ 改"邮件 HTML 文件存在 + 含 X 字段" -->
-<!-- - "AI 判断正确 / AI 输出合理"（不 deterministic）→ 改"AI 输出 stdout 含固定 marker X" 或验脚本如何处理 AI 输出 -->
-<!-- - "08:00 触发 / 真实环境运行"（构造不了）→ 脚本支持 --time / --dry-run 参数 -->
+- **前置构造**：<真实运行条件怎么准备>
+- **执行步骤**：<端到端 CLI / 脚本 / API 调用，可重复执行>
+- **观测点**：<结果从哪里读取>
+- **判定标准**：<PASS/FAIL 判定条件>
 
 ## Case 2: <case 名>
 ...
@@ -480,12 +474,11 @@ OQ-1: <主题>
 - OQ 推荐无理由 → 补推荐理由 + 备选条件
 - 调度 designer 前所有 OQ 必须已闭环（无"待用户选定"状态）
 
-**验收 Case 三可检查**（QA 能否在开发环境自动化端到端验证）：
-- 每个 Case 必须含四字段：前置构造 / 执行步骤 / 观测点 / 判定标准
-- **可构造**：前置条件能在开发环境准备（数据 seed / fixture / mock / --dry-run），不依赖真实环境（cron 触发 / 生产 Pi / 真实用户）
-- **可观测**：结果能从 stdout / 文件 / DB diff / log 读取，不依赖外部副作用（真发邮件 / 真用户介入 / 真实 AI 输出）
-- **可验收**：PASS/FAIL deterministic，可机器判定，不含"AI 判断正确 / 用户收到 / 真实环境运行"等模糊表述
-- 脚本 / Service 类 feature 必须在"技术决策"或"约束/原则"段声明 `--dry-run` / `--mock` / fixture 机制，让 Case 能脱离外部依赖构造
+**验收 Case 三可检查**：
+- 每个 Case 必含四字段：前置构造 / 执行步骤 / 观测点 / 判定标准
+- **可构造**：能在真实环境端到端跑通；不能真跑（需要打桩）的 Case 不列
+- **可观测**：结果从 stdout / 文件 / DB diff / log 读取
+- **可验收**：PASS/FAIL deterministic，可机器判定
 
 ---
 
