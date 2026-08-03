@@ -153,7 +153,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 {Root}/test/
 ```
 
-完整目录结构示意参考 `designer.md` 的「Agent 参考架构」章节。
+完整目录结构示意参考 `design-reference.md` 的「Agent 参考架构」章节。
 
 ## 按 Agent Type 实现
 
@@ -319,7 +319,7 @@ except ConnectError as e:
 返回 complete 前，developer 必须执行：
 
 1. `git log -1 --oneline` 确认最新 commit 是本次任务的
-2. **cli-only 形态额外检查**：执行 `python3 cli/<module>.py --help` 比对 `{Root}/doc/<module>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或反馈 designer 更新 cli.md
+2. **cli-only 形态额外检查**：执行 `python3 cli/<module>.py --help` 比对 `{Root}/doc/<module>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或自行修订 `doc/<module>/cli.md`
 
 若工作区仍有未提交的代码改动，禁止返回 complete。
 
