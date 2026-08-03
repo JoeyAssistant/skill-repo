@@ -1,6 +1,6 @@
 ---
 name: spec-compliance
-description: Check doc files against the agent design pattern requirements. Returns structured review results for agent-designer to feed into doc-review skill.
+description: Check doc files against the agent design pattern requirements. Returns structured review results for agent-pm to refine doc/ files.
 model: sonnet
 ---
 
@@ -8,7 +8,7 @@ You are a specification compliance reviewer. Your job is to check whether doc fi
 
 ## Review Checklist
 
-Checks are organized into 7 groups. The dispatching controller (designer) passes Agent Type + Modules + Shared Schema Changed; spec-compliance enables groups per the 启用矩阵 in Workflow section below.
+Checks are organized into 7 groups. The dispatching controller (PM) passes Agent Type + Modules + Shared Schema Changed; spec-compliance enables groups per the 启用矩阵 in Workflow section below.
 
 ### T - REQUIREMENTS.md 顶层（所有形态）
 
@@ -36,12 +36,12 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | S7 | 唯一真值声明 | 文档说明其作为数据结构唯一真值的地位 | 文档中声明跨文档一致性要求 |
 | S8 | 字段注释完整性 | 每个字段有清晰描述 | `data-schema.md` 中每个字段的注释包含：① 字段描述（必需，含示例值更佳，不写"用途："标签）；② 使用场景（按需，简单字段可省）；③ 约束（按需，仅写非显然约束如 `> 0` / `∈ enum` / `自动计算`，不写"非空字符串"等显然约束）。描述缺失 → violation；约束冗余（"非空字符串"等）→ violation |
 | S11 | 注释格式一致性 | 同一 data-schema.md 内 dataclass 注释格式统一 | 文件内所有 dataclass 使用同一种注释格式（行注释或行尾单行注释），不混用 |
-| S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 designer 复核 |
-| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md 需求规格。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
-| S12 | 不含 DDL | data-schema.md 不出现 CREATE TABLE/INDEX 等 DDL | 文件不含 `CREATE TABLE` / `CREATE INDEX` / `ALTER TABLE` / `DROP TABLE` 等关键词。命中即 violation，建议 designer 把 DDL 迁到 data-persistence.md |
-| S13 | 不含存储层映射 | data-schema.md 不含 SQLite Column ↔ Python Field 映射表 | 文件不含 "Field Mapping" / "Column Mapping" / "字段映射" 章节，不含 SQLite 列名 ↔ dataclass 字段对照表。命中即 violation，建议 designer 把映射迁到 data-persistence.md |
-| S14 | 不含存储机制描述 | data-schema.md 不含"去重 key"/"唯一索引"/"存到 X 表"等存储机制描述 | 文件不含 "不存储" / "去重 key" / "唯一索引" / "存到.*表" / "X 列" 等关键词。命中即 violation，建议 designer 把存储机制描述迁到 data-persistence.md |
-| S15 | 不含 CLI JSON I/O | data-schema.md 不含 CLI 命令的 JSON input/output schema、错误码、使用示例 | 文件不含 `## CLI` / `## CLI --json-input` / `--json-input` / `<command> 输入 schema` / `错误响应示例` 等 CLI 契约内容。命中即 violation，建议 designer 把 CLI 内容迁到 cli.md（仅 cli-only 形态） |
+| S9 | 字段必要性自检 | data-schema.md 中无"将来可能"/"看起来应该有"类描述 | 字段描述不包含"将来可能用到"、"看起来应该有"、"预留"等启发式关键词；发现疑似项列入 violation 待 PM 复核 |
+| S10 | 无过程性内容 | data-schema.md 是最终正式文档，仅含定义 | 不含决策讨论类关键词："OQ-"/"设计决策（.*答案）"/"为什么选"/"权衡.*vs"/"本期 Constraints 明确排除"/"第一版.*第二版"/"变更记录"/"用户补充确认"。命中任一即 violation，建议 PM 把过程内容迁到 REQUIREMENTS.md 需求规格。本检查同样适用于 doc/common/data-schema.md、doc/backend.md、doc/mcp-server.md、doc/<module>/service.md |
+| S12 | 不含 DDL | data-schema.md 不出现 CREATE TABLE/INDEX 等 DDL | 文件不含 `CREATE TABLE` / `CREATE INDEX` / `ALTER TABLE` / `DROP TABLE` 等关键词。命中即 violation，建议 PM 把 DDL 迁到 data-persistence.md |
+| S13 | 不含存储层映射 | data-schema.md 不含 SQLite Column ↔ Python Field 映射表 | 文件不含 "Field Mapping" / "Column Mapping" / "字段映射" 章节，不含 SQLite 列名 ↔ dataclass 字段对照表。命中即 violation，建议 PM 把映射迁到 data-persistence.md |
+| S14 | 不含存储机制描述 | data-schema.md 不含"去重 key"/"唯一索引"/"存到 X 表"等存储机制描述 | 文件不含 "不存储" / "去重 key" / "唯一索引" / "存到.*表" / "X 列" 等关键词。命中即 violation，建议 PM 把存储机制描述迁到 data-persistence.md |
+| S15 | 不含 CLI JSON I/O | data-schema.md 不含 CLI 命令的 JSON input/output schema、错误码、使用示例 | 文件不含 `## CLI` / `## CLI --json-input` / `--json-input` / `<command> 输入 schema` / `错误响应示例` 等 CLI 契约内容。命中即 violation，建议 PM 把 CLI 内容迁到 cli.md（仅 cli-only 形态） |
 
 ### P - doc/<module>/data-persistence.md（所有形态，按 module 分别检查）
 
@@ -51,7 +51,7 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | P2 | 文件格式 | 说明数据文件格式和结构 | 定义 JSON/YAML 等格式的文件结构 |
 | P3 | 初始内容 | 说明空数据文件的初始内容 | 新文件的默认初始内容 |
 | P4 | 纯存储方案 | 不涉及 CLI 内容 | 仅定义存储方案，不包含命令行操作 |
-| P5 | 不重复定义 dataclass | data-persistence.md 引用 data-schema 的 dataclass，不重复定义 | 文件不含 `@dataclass` / `class <EntityName>:` 等定义（除非是存储介质的内部结构说明，如 SQL Row 类）。命中即 violation，建议 designer 删除重复定义并引用 data-schema.md |
+| P5 | 不重复定义 dataclass | data-persistence.md 引用 data-schema 的 dataclass，不重复定义 | 文件不含 `@dataclass` / `class <EntityName>:` 等定义（除非是存储介质的内部结构说明，如 SQL Row 类）。命中即 violation，建议 PM 删除重复定义并引用 data-schema.md |
 | P6 | 含完整 Schema | data-persistence.md 含完整 CREATE TABLE 或文件结构定义 | 文件含至少一个 DDL 代码块（DB 形态）或文件结构示例（文件存储形态）。无 Schema 定义 → violation |
 
 ### SV - doc/<module>/service.md（所有形态，按 module 分别检查）
@@ -62,12 +62,12 @@ Apply to each module's `doc/<module>/data-schema.md` and (if Shared Schema Chang
 | SV2 | 关键流程图 | 至少一张 mermaid sequence diagram 表达关键 use case | 至少 1 个 sequenceDiagram 代码块，覆盖主要 CRUD 或业务流程 |
 | SV3 | 跨 module 关系图（如涉及） | 与其他 module 有依赖时画 mermaid graph | 若 service.md 提及其他 module，必须有 graph 图；纯独立 module 可省 |
 | SV4 | 无过程性内容 | 与 S10 同标准 | 不含 OQ-/设计决策/为什么选 等关键词 |
-| SV5 | 不含过程性章节 | service.md 不含方案概览/问题背景/技术决策/异常场景（issue 引用）等过程性章节 | 文件不含以下章节标题或关键词："方案概览" / "问题背景" / "关键技术决策" / "决策 [0-9]" / "方案 [ABC]" / "异常场景" / "实测数据" / "QA-[0-9]+" / "POC 实测" / "QA-00X 发现"。命中即 violation，建议 designer 把过程内容迁到 REQUIREMENTS.md 需求规格 |
+| SV5 | 不含过程性章节 | service.md 不含方案概览/问题背景/技术决策/异常场景（issue 引用）等过程性章节 | 文件不含以下章节标题或关键词："方案概览" / "问题背景" / "关键技术决策" / "决策 [0-9]" / "方案 [ABC]" / "异常场景" / "实测数据" / "QA-[0-9]+" / "POC 实测" / "QA-00X 发现"。命中即 violation，建议 PM 把过程内容迁到 REQUIREMENTS.md 需求规格 |
 | SV6 | 必含三大章节 | service.md 含 Service 接口 + 关键流程 + 模块关系 | 文件含 `## Service 接口`（或等价命名如 `## Service Interface`）+ `## 关键流程`（或 `## Key Flows`）+ `## 模块关系`（或 `## Module Boundaries` / `## Dependencies`）三章节。缺任一即 violation |
 
 ### CL - doc/<module>/cli.md（仅 cli-only 形态，静态契约检查）
 
-检查 designer 设计期产出的 cli.md 是否含完整 CLI 契约。Apply per module.
+检查 PM 设计期产出的 cli.md 是否含完整 CLI 契约。Apply per module.
 
 | # | Check | Requirement | Pass Criteria |
 |---|-------|-------------|---------------|
@@ -121,11 +121,11 @@ Execute `python3 cli/<module>.py --help` and verify the output. Apply per module
 
 ### 执行时机
 
-DESIGN.md 已废弃。designer 在 `designing` 阶段直接写 doc/，spec-compliance 单次执行：
+DESIGN.md 已废弃。PM 在 `designing` 阶段直接写 doc/，spec-compliance 单次执行：
 
 | 阶段 | 检查对象 | 启用的检查组 |
 |------|---------|-------------|
-| `designing`（designer 完成 doc/ 修改后） | REQUIREMENTS.md + doc/<module>/ + doc/common/ + doc/backend.md/mcp-server.md | **全部适用组**（T + S + P + SV + B/M 按 Agent Type） |
+| `designing`（PM 完成 doc/ 修改后） | REQUIREMENTS.md + doc/<module>/ + doc/common/ + doc/backend.md/mcp-server.md | **全部适用组**（T + S + P + SV + B/M 按 Agent Type） |
 
 C 组（CLI 运行时检查）仍在 `qa-reviewing` 阶段由 QA 触发，spec-compliance 不直接跑。
 
@@ -164,7 +164,7 @@ true | false
 
 ## Output Format
 
-Return a per-file aggregated result. Each file (or runtime command) inspected gets one entry. The controller (designer) uses this to feed into doc-review skill.
+Return a per-file aggregated result. Each file (or runtime command) inspected gets one entry. PM uses this to refine doc/ files directly.
 
 ### Structure
 
