@@ -1,6 +1,6 @@
 # Agent Factory - PM-Driven Agent System
 
-PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature 和 issue，调度 designer 和 developer subagent 完成设计与开发。
+PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature 和 issue，直接完成设计并调度 developer subagent 完成开发。
 
 ## 架构
 
@@ -8,11 +8,12 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 
 ```
 User ←→ PM (agent-pm.md, system prompt)
-            ├── designer (subagent, .claude/agents/designer.md)
             ├── developer (subagent, .claude/agents/developer.md)
             ├── qa (subagent, .claude/agents/qa.md)
             ├── poc (subagent, .claude/agents/poc.md)
             └── spec-compliance (subagent, .claude/agents/spec-compliance.md)
+
+PM 在 designing 阶段直接修改 doc/，调度 spec-compliance 自检，向用户展示 git diff 终审。
 ```
 
 ### 多项目模式
@@ -23,8 +24,7 @@ User ←→ PM (agent-pm.md, system prompt)
             ├── Project A (独立 git 仓) ──┐
             ├── Project B (独立 git 仓) ──┤── 共享 subagents
             └── ...                       │
-            ├── designer (subagent) ───────┤
-            ├── developer (subagent)       │
+            ├── developer (subagent) ──────┤
             ├── qa (subagent)              │
             ├── poc (subagent)             │
             └── spec-compliance (subagent) ┘
@@ -63,11 +63,13 @@ User ←→ PM (agent-pm.md, system prompt)
 
 ```bash
 mkdir -p <project-root>/.claude/agents
-cp designer.md <project-root>/.claude/agents/designer.md
 cp developer.md <project-root>/.claude/agents/developer.md
 cp qa.md <project-root>/.claude/agents/qa.md
 cp poc.md <project-root>/.claude/agents/poc.md
 cp spec-compliance.md <project-root>/.claude/agents/spec-compliance.md
+
+# Optional: copy design-reference.md to project root for PM's on-demand reference
+cp design-reference.md <project-root>/design-reference.md
 ```
 
 ### 3. 初始化目录结构
@@ -91,7 +93,6 @@ cp <agent-factory>/agent-pm.md CLAUDE.md
 
 # 安装全局 subagents
 mkdir -p .claude/agents
-cp <agent-factory>/designer.md .claude/agents/
 cp <agent-factory>/developer.md .claude/agents/
 cp <agent-factory>/qa.md .claude/agents/
 cp <agent-factory>/poc.md .claude/agents/
@@ -122,8 +123,8 @@ PM 启动时自动检测模式：
 用户: 我想做一个财务日报功能
 PM:   [创建 feature #NNN，引导讨论背景、价值、范围]
 用户: 确认范围
-PM:   [整理 requirement brief，调度 designer]
-用户: [review 设计]
+PM:   [整理 REQUIREMENTS.md，自己写 doc/，调度 spec-compliance 自检]
+用户: [review git diff]
 PM:   [调度 developer]
 ```
 
@@ -143,7 +144,7 @@ PM:   [triage: bug → 调度 QA 诊断 → 调度 developer 修复]
 
 PM 会自动：
 1. 检查 open issue → triage
-2. 检查 draft feature → 调度 designer
+2. 检查 draft feature → 直接设计 doc/ 并调度 spec-compliance 自检
 3. 检查 approved feature → 调度 developer
 4. 检查 qa-reviewing feature → 调度 QA 验收
 5. 检查 blocked item (tech-feasibility) → 调度 POC 分析
@@ -155,7 +156,6 @@ PM 会自动：
 用户也可以跳过 PM，直接调用 subagent：
 
 ```
-用户: Use the designer agent to design feature #004
 用户: Use the developer agent to implement feature #003
 ```
 
@@ -178,7 +178,6 @@ project-root/
       BLOCKED.md          # blocked 时创建
   .claude/
     agents/
-      designer.md
       developer.md
       qa.md
       poc.md
@@ -198,7 +197,6 @@ project-root/
 agent-workspace/
 ├── .claude/
 │   └── agents/
-│       ├── designer.md
 │       ├── developer.md
 │       ├── qa.md
 │       ├── poc.md
@@ -223,12 +221,12 @@ agent-workspace/
 
 | 文件 | 用途 |
 |------|------|
-| `agent-pm.md` | PM system prompt，用户主入口 |
-| `designer.md` | Designer subagent 定义，负责设计文档输出 |
+| `agent-pm.md` | PM system prompt，用户主入口（含设计阶段直接修改 doc/） |
+| `design-reference.md` | PM 设计阶段按需参考手册 |
 | `developer.md` | Developer subagent 定义，负责代码实现 |
 | `qa.md` | QA subagent 定义，负责功能验收和问题诊断 |
 | `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
-| `spec-compliance.md` | 规范合规检查 subagent（designer 内部调用） |
+| `spec-compliance.md` | 规范合规检查 subagent（PM 内部调用） |
 
 ## 生命周期
 
