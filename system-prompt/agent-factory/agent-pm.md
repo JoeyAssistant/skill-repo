@@ -233,7 +233,7 @@ PM 启动时自动检测项目是否已初始化：
 
 - `.features/` 在项目根目录，纳入 git 管理
 - 编号 `NNN` 三位数字，自动递增（从 index.yaml 取 max + 1）
-- 目录名 kebab-case，如 `001-income-module`
+- 目录名为数字编号，如 `001`
 
 ### index.yaml 格式
 
@@ -323,7 +323,7 @@ PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema
 - `.issues/` 在项目根目录，纳入 git 管理
 - `_incoming/` 是生产环境提交问题报告的临时区，开发环境处理后删除
 - 编号 `NNN` 三位数字，自动递增
-- 目录名 kebab-case，如 `001-login-crash`
+- 目录名为数字编号，如 `001`
 - 快照收集基于约定：默认收集 `log/` 和 `data/`（存在就收集，不存在跳过），不需要额外配置
 
 ### index.yaml 格式
@@ -358,7 +358,7 @@ PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema
 1. 在 `.features/index.yaml` 新增一行（status=draft）
 2. 创建 feature 目录
 3. 将 issue 的 ISSUE.yaml 内容作为 REQUIREMENTS.yaml 讨论的输入
-4. 更新 `.issues/index.yaml`：status=closed，Related Feature 填写 `NNN-<name>`
+4. 更新 `.issues/index.yaml`：status=closed，Related Feature 填写 `<id>`
 5. 后续按 feature 流程处理
 
 ### ISSUE.yaml 格式
@@ -509,7 +509,7 @@ PM 调度 QA subagent，对生产环境的诊断进行验证：
 
 #### QA 验证调度 prompt
 
-通过 Agent tool（`run_in_background: true`）调用 `qa` subagent：
+通过 Agent tool 同步调用 `qa` subagent：
 
 ```
 ## Task
@@ -883,7 +883,7 @@ PM 删除 BLOCKED.yaml，恢复状态为 designing
 PM 基于用户决策继续修改 doc/：
   "## POC Decision
    用户选择方案: <方案名称>
-   POC 报告: .features/<NNN>/POC-REPORT.md
+   POC 报告: .features/<id>/POC-REPORT.md
    基于此决策继续 design。"
 ```
 
@@ -909,14 +909,14 @@ PM 基于用户决策继续修改 doc/：
 | 文件 | 用途 |
 |------|------|
 | `.features/index.yaml` | 所有 feature 的状态、优先级、时间 |
-| `.features/<NNN>/BLOCKED.yaml` | feature 的阻塞详情（含 blocked 类型） |
+| `.features/<id>/BLOCKED.yaml` | feature 的阻塞详情（含 blocked 类型） |
 | `{Root}/doc/<module>/*.md` | PM 在 designing 阶段直接修改的最终正式文档（data-schema / data-persistence / service） |
 | `{Root}/doc/common/data-schema.md` | 跨 module 共享数据 |
 | `{Root}/doc/backend.md` / `doc/mcp-server.md` | 接入层 doc（按 Agent Type） |
-| `.features/<NNN>/POC-REPORT.md` | 技术可行性评估报告（tech-feasibility blocked 时生成） |
+| `.features/<id>/POC-REPORT.md` | 技术可行性评估报告（tech-feasibility blocked 时生成） |
 | `.issues/index.yaml` | 所有 issue 的状态、类型、关联 |
-| `.issues/<NNN>/ISSUE.yaml` | issue 的描述和讨论记录 |
-| `.issues/<NNN>/BLOCKED.yaml` | issue 的阻塞详情 |
+| `.issues/<id>/ISSUE.yaml` | issue 的描述和讨论记录 |
+| `.issues/<id>/BLOCKED.yaml` | issue 的阻塞详情 |
 
 ---
 
