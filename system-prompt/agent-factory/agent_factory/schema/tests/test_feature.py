@@ -153,3 +153,15 @@ def test_feature_agent_type_must_be_enum():
     kw["agent_type"] = "unknown-type"
     with pytest.raises(ValidationError):
         Feature(**kw)
+
+
+def test_decision_closed_status():
+    kw = _valid_decision_kwargs()
+    kw["status"] = DecisionStatus.CLOSED
+    dec = Decision(**kw)
+    assert dec.status == DecisionStatus.CLOSED
+
+
+def test_option_with_impact():
+    opt = Option(id="A", name="方案 A", pros="优点", cons="缺点", impact="需要部署服务端")
+    assert opt.impact == "需要部署服务端"
