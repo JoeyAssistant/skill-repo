@@ -1,0 +1,27 @@
+[project]
+name = "agent-factory-schema"
+version = "0.1.0"
+description = "Pydantic schema for agent-factory PM workflow files"
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+]
+
+[project.scripts]
+agent-factory-validate = "agent_factory.schema.validate:main"
+
+[tool.pytest.ini_options]
+testpaths = ["schema/tests"]
+pythonpath = ["."]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
