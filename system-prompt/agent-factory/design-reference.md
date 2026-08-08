@@ -50,7 +50,7 @@
 
 ## Agent Type 与形态分流
 
-接到设计任务时，第一步从 REQUIREMENTS.md 读取 `Agent Type`，按形态决定产出哪些 artifact。
+接到设计任务时，第一步从 REQUIREMENTS.yaml 读取 `Agent Type`，按形态决定产出哪些 artifact。
 
 ### 四种形态
 
@@ -63,7 +63,7 @@
 
 ### mcp-server 子模式（Deploy Mode）
 
-`mcp-server` 形态必须在 REQUIREMENTS.md 填 `Deploy Mode`：
+`mcp-server` 形态必须在 REQUIREMENTS.yaml 填 `Deploy Mode`：
 - `stdio`：Claude Code 启动本地进程，无鉴权，无 script/
 - `sse` / `http`：远程服务，需鉴权 + 部署脚本
 - `mcpb`：打包分发，需 `.mcpb` 文件结构
@@ -181,7 +181,7 @@ class <EntityName>:
 
 ## 跨文件内容归属表
 
-每写一段内容前，先对照下表判断归属。命中"应写到 REQUIREMENTS.md / 删"的，**不要写到 doc/**。
+每写一段内容前，先对照下表判断归属。命中"应写到 REQUIREMENTS.yaml / 删"的，**不要写到 doc/**。
 
 | 内容类别 | 应写到 | 不应写到 |
 |---------|--------|---------|
@@ -191,28 +191,28 @@ class <EntityName>:
 | CREATE TABLE / DDL | data-persistence.md | data-schema.md |
 | 索引定义 | data-persistence.md | data-schema.md |
 | Column ↔ 字段映射（仅非一一对应时） | data-persistence.md | data-schema.md |
-| 存储介质选型理由 | data-persistence.md（一句话）+ REQUIREMENTS.md 需求规格 > 技术决策（深度） | service.md |
+| 存储介质选型理由 | data-persistence.md（一句话）+ REQUIREMENTS.yaml 需求规格 > 技术决策（深度） | service.md |
 | 读写机制 | data-persistence.md | data-schema.md |
 | 数据生命周期 | data-persistence.md | service.md |
 | 配置（环境变量/路径） | data-persistence.md | service.md |
 | Service 方法签名 | service.md | - |
 | Service 关键流程 | service.md | - |
 | 模块依赖关系 | service.md | - |
-| CLI 命令清单（产品级） | REQUIREMENTS.md 关键接口 | cli.md |
+| CLI 命令清单（产品级） | REQUIREMENTS.yaml 关键接口 | cli.md |
 | CLI 详细 JSON I/O schema | cli.md（仅 cli-only） | data-schema.md / service.md |
 | CLI 错误码定义 | cli.md（仅 cli-only） | data-schema.md |
 | CLI 使用示例 | cli.md（仅 cli-only） | data-schema.md |
-| 设计决策 | REQUIREMENTS.md 需求规格 | doc/ |
-| 决策对比（方案 A/B/C） | REQUIREMENTS.md 需求规格 | doc/ |
-| 实测数据 / POC 命中率 | REQUIREMENTS.md 需求规格 | doc/ |
-| Issue 引用（QA-XXX） | REQUIREMENTS.md 需求规格 | doc/ |
+| 设计决策 | REQUIREMENTS.yaml 需求规格 | doc/ |
+| 决策对比（方案 A/B/C） | REQUIREMENTS.yaml 需求规格 | doc/ |
+| 实测数据 / POC 命中率 | REQUIREMENTS.yaml 需求规格 | doc/ |
+| Issue 引用（QA-XXX） | REQUIREMENTS.yaml 需求规格 | doc/ |
 | 异常场景（接口契约） | service.md（方法 docstring） | - |
-| 异常场景（issue 上下文） | REQUIREMENTS.md 需求规格 | service.md |
+| 异常场景（issue 上下文） | REQUIREMENTS.yaml 需求规格 | service.md |
 | 变更记录 / "X 已删除" | 删（不应存在任何 doc/） | 任何 |
 
 ## doc/ 内容规则（最终正式文档，全 doc/ 适用）
 
-`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 REQUIREMENTS.md 需求规格。
+`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 REQUIREMENTS.yaml 需求规格。
 
 ### 适用范围
 
@@ -234,7 +234,7 @@ class <EntityName>:
 
 详见上方"跨文件内容归属表"。重点：
 
-- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除" → 移到 REQUIREMENTS.md 需求规格 > 约束/原则
+- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除" → 移到 REQUIREMENTS.yaml 需求规格 > 约束/原则
 - 与其他 module 的对比说明（除非字段语义必需）
 - 决策讨论、issue 引用、实测数据、变更记录等 → 见归属表对应行
 
@@ -244,11 +244,11 @@ class <EntityName>:
 
 | 启发式关键词 | 处理 |
 |-------------|------|
-| "OQ-"、"Open Question"、"Q1: ... A:" | 移到 REQUIREMENTS.md 需求规格 |
-| "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 REQUIREMENTS.md 需求规格 |
-| "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 REQUIREMENTS.md 需求规格 > 约束/原则 |
+| "OQ-"、"Open Question"、"Q1: ... A:" | 移到 REQUIREMENTS.yaml 需求规格 |
+| "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 REQUIREMENTS.yaml 需求规格 |
+| "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 REQUIREMENTS.yaml 需求规格 > 约束/原则 |
 | "第一版 / 第二版"、"变更记录"、"架构调整" | 删除（git history 已记录） |
-| "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 REQUIREMENTS.md 需求规格） |
+| "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 REQUIREMENTS.yaml 需求规格） |
 
 ### 反例（过程性内容混入 doc/，禁止）
 
@@ -278,18 +278,18 @@ class <EntityName>:
         # <字段描述>（值1 / 值2 / 值3）
 ```
 
-决策"为什么共用 list" → REQUIREMENTS.md 需求规格。
+决策"为什么共用 list" → REQUIREMENTS.yaml 需求规格。
 
 ## 共享数据提议流程
 
 设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个 module 使用，按以下流程提议加入 `doc/common/data-schema.md`：
 
-1. 在 REQUIREMENTS.md 需求规格 新增"提议 common 数据结构"条目：
+1. 在 REQUIREMENTS.yaml 需求规格 新增"提议 common 数据结构"条目：
    - 结构名、dataclass 字段定义
    - 使用方（≥2 module）
    - 理由（为什么不归属单一 module）
 2. PM 初步 review：合理性 + 是否真共享
-3. 用户在 REQUIREMENTS.md review 时确认
+3. 用户在 REQUIREMENTS.yaml review 时确认
 4. 通过后直接写入 `doc/common/data-schema.md`
 5. 各 module 在自己的 `data-schema.md` 中 import 引用，**不重复定义字段**
 
@@ -303,7 +303,7 @@ class <EntityName>:
 | `{Root}/doc/<module>/data-persistence.md` | 该 module 数据持久化方案 | 所有形态 |
 | `{Root}/doc/<module>/service.md` | Service 方法签名 + 关键流程 mermaid + 跨 module 关系图 | 所有形态 |
 | `{Root}/doc/common/data-schema.md` | 跨 module 共享数据结构（User/AuditLog/Pagination 等） | 所有形态（如需） |
-| `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 REQUIREMENTS.md 关键接口定） | cli-only |
+| `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 REQUIREMENTS.yaml 关键接口定） | cli-only |
 | `{Root}/doc/backend.md` | 后端技术选型 + REST API 设计 | http-api / http-web |
 | `{Root}/doc/mcp-server.md` | MCP tools 清单 + 部署模式 + 调用流程 | mcp-server |
 
@@ -431,11 +431,11 @@ cli-only 形态下，CLI 设计分布在三处：
 
 | 阶段 | 文件 | 内容 |
 |------|------|------|
-| `draft`（PM 与用户讨论） | REQUIREMENTS.md 关键接口 | 命令清单表 `\| 命令 \| 用途 \| 关键参数 \|`（产品级决策，要做哪些命令） |
+| `draft`（PM 与用户讨论） | REQUIREMENTS.yaml 关键接口 | 命令清单表 `\| 命令 \| 用途 \| 关键参数 \|`（产品级决策，要做哪些命令） |
 | `designing`（设计） | `doc/<module>/cli.md` | 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
 | `implementing`（developer 实现） | `cli/<module>.py` docstring + click decorators → 运行时 `--help` | 实现 `cli.py`，运行 `--help` 输出应与 `cli.md` 一致 |
 
-PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.md 关键接口；designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
+PM 在 draft 阶段把 CLI 命令清单写到 REQUIREMENTS.yaml 关键接口；designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
 
 ## Agent Layer
 
