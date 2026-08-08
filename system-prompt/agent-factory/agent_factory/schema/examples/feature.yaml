@@ -1,0 +1,78 @@
+# agent_factory/schema/examples/feature.yaml
+id: 1
+title: 收入管理模块：记录工资/奖金收入流水
+agent_type: cli-only
+
+problem: |
+  现有 expense 模块只记支出，无法看到完整财务画像。
+  月底复盘时收入数据散落在多个银行/支付宝/工资单里。
+
+benefit: |
+  集中记录收入流水，与支出模块联合分析月度净收支。
+
+description: |
+  目标用户：个人用户，需要月底复盘月度净收支。
+
+  场景：
+  1. 月底发工资后批量录入本月所有收入条目
+  2. 查询某月所有收入并按类型汇总
+
+  功能：
+  - 录入收入（单条/批量，支持 JSON 输入）
+  - 按月查询收入
+
+data_schema: |
+  from dataclasses import dataclass
+  from enum import Enum
+  from datetime import date
+
+  class IncomeType(str, Enum):
+      SALARY = "salary"
+      BONUS = "bonus"
+      OTHER = "other"
+
+  @dataclass
+  class IncomeEntry:
+      id: int
+      type: IncomeType
+      amount: float    # 约束：> 0
+      date: date
+      note: str = ""
+
+interfaces: |
+  | 命令 | 用途 | 关键参数 |
+  |------|------|----------|
+  | add | 录入单条收入 | --type, --amount, --date |
+  | list | 按月查询收入 | --month |
+
+acceptance_cases: |
+  ## Case 1: 录入并查询
+  - 场景：录入工资 5000 元后查询当月应能看到该条目
+  - 步骤：
+    1. python3 cli/income.py add --type salary --amount 5000 --date 2026-08-08
+    2. python3 cli/income.py list --month 2026-08
+  - 通过条件：list 输出含 amount=5000、type=salary 的条目
+
+decisions:
+  - id: dec-1
+    question: "数据存储用 JSON 还是 SQLite？"
+    background: |
+      income 模块数据量预估每月 5-10 条，年累计 60-120 条。
+      需要决定存储介质。
+    options:
+      - id: A
+        name: "JSON"
+        pros: "实现简单，与现有 expense 模块一致"
+        cons: "查询效率低，大数据量时性能差"
+        impact: "data/income.json，CRUD 全文件读写"
+      - id: B
+        name: "SQLite"
+        pros: "查询高效，支持索引"
+        cons: "实现复杂，需要 schema migration"
+        impact: "data/income.db，需要建表语句"
+    recommendation: A
+    rationale: |
+      收入数据量小（年百条级），JSON 性能够用。
+      与现有 expense 模块保持一致，降低维护成本。
+    fallback_condition: "如果数据量增长到年千条以上，迁移到 SQLite"
+    status: closed

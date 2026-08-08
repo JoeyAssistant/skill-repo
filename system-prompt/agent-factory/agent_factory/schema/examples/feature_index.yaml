@@ -1,0 +1,14 @@
+# agent_factory/schema/examples/feature_index.yaml
+features:
+  - id: 1
+    title: 收入管理模块：记录工资/奖金收入流水
+    status: done
+    priority: P1
+  - id: 2
+    title: 持仓股票每日动态追踪
+    status: draft
+    priority: P2
+  - id: 3
+    title: 品类短期信号字段
+    status: designing
+    priority: P2

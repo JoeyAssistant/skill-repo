@@ -1,0 +1,44 @@
+# agent_factory/schema/examples/issue.yaml
+id: 1
+title: 登录页面点击提交后崩溃
+
+scenario: |
+  现象：登录页面点击提交后页面崩溃，控制台报错 "Cannot read property 'token' of undefined"。
+
+  复现步骤：
+  1. 打开 /login
+  2. 输入 admin / 123456
+  3. 点击"登录"
+  4. 观察控制台
+
+  环境：生产环境，Chrome 120，commit abc1234。
+
+impact: |
+  问题点：login.py L42 取 token 时未做空值判断。
+  后端密码错误时返回的 JSON 没有 token 字段，前端代码假设 token 一定存在。
+
+  影响范围：所有用户无法登录，P1。
+
+root_cause: |
+  login.py L42 未做空值判断；后端密码错误时返回的 JSON 没有 token 字段，
+  前端代码假设 token 一定存在。
+
+fix_suggestion: |
+  方案 A（推荐）：前端做 token 存在性判断，缺失时显示错误提示
+    - 改动小，前端单点修复
+    - 后端响应不变
+
+  方案 B：后端规范化错误响应，密码错误时返回 token=null
+    - 改动后端 schema
+    - 影响其他调用方
+
+  推荐方案 A，理由：影响面小，回滚成本低。
+  修复后需补 log（当前登录失败无日志）。
+
+fix: |
+  Changed Files:
+    - cli/login.py (+5)
+    - src/auth/service.py (+3)
+  Regression Test: test_login_failure.py 新增 test_login_wrong_password_returns_error
+
+resolution: direct-fix
