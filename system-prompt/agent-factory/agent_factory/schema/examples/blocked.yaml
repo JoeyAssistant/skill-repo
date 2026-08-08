@@ -1,0 +1,10 @@
+# agent_factory/schema/examples/blocked.yaml
+reason: |
+  designing 阶段卡住（tech-feasibility）。
+  需要确认 MCP server 是否支持流式响应。
+  当前 schema 假设同步返回，但用户场景需要流式推送长任务进度。
+  日期：2026-08-08。
+
+action: |
+  调度 POC subagent 验证 MCP 流式响应能力；
+  或用户决定改为 http-api 形态（用 SSE 推送）。
