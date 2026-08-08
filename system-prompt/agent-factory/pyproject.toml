@@ -19,7 +19,7 @@ dev = [
 agent-factory-validate = "agent_factory.schema.validate:main"
 
 [tool.pytest.ini_options]
-testpaths = ["schema/tests"]
+testpaths = ["agent_factory/schema/tests"]
 pythonpath = ["."]
 
 [build-system]
