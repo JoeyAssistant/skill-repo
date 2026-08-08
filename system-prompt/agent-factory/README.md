@@ -38,14 +38,14 @@ User ←→ PM (agent-pm.md, system prompt)
 生产环境 (PM 入口)
   User 报告 → PM 调度 QA 诊断 (仅诊断，输出 JSON)
            → PM 在 .issues/_incoming/<timestamp>-<name>/ 下提交:
-             ├─ bug             → NOTES.md (含 QA Diagnosis) + snapshot/
-             └─ feature-request → REQUIREMENTS.md (与用户讨论后) + snapshot/
+             ├─ bug             → ISSUE.yaml (含 QA Diagnosis) + snapshot/
+             └─ feature-request → REQUIREMENTS.yaml (与用户讨论后) + snapshot/
            → git push
                 ↓ git pull
 开发环境 (PM 入口)
   PM 扫描 .issues/_incoming/:
-    ├─ 含 NOTES.md         → 登记 .issues/<NNN>-<name>/  → 标准 issue 修复流程
-    └─ 含 REQUIREMENTS.md  → 登记 .features/<NNN>-<name>/ → 标准 feature 设计流程
+    ├─ 含 ISSUE.yaml         → 登记 .issues/<NNN>-<name>/  → 标准 issue 修复流程
+    └─ 含 REQUIREMENTS.yaml  → 登记 .features/<NNN>-<name>/ → 标准 feature 设计流程
 ```
 
 ## 安装
@@ -123,7 +123,7 @@ PM 启动时自动检测模式：
 用户: 我想做一个财务日报功能
 PM:   [创建 feature #NNN，引导讨论背景、价值、范围]
 用户: 确认范围
-PM:   [整理 REQUIREMENTS.md，自己写 doc/，调度 spec-compliance 自检]
+PM:   [整理 REQUIREMENTS.yaml，自己写 doc/，调度 spec-compliance 自检]
 用户: [review git diff]
 PM:   [调度 developer]
 ```
@@ -135,21 +135,6 @@ PM:   [调度 developer]
 PM:   [创建 issue #NNN，确认复现步骤]
 PM:   [triage: bug → 调度 QA 诊断 → 调度 developer 修复]
 ```
-
-### Ralph-Loop 模式：批量处理
-
-```bash
-/ralph-loop "PM: 处理所有待办需求和issue" --completion-promise "PM_BATCH_COMPLETE" --max-iterations 20
-```
-
-PM 会自动：
-1. 检查 open issue → triage
-2. 检查 draft feature → 直接设计 doc/ 并调度 spec-compliance 自检
-3. 检查 approved feature → 调度 developer
-4. 检查 qa-reviewing feature → 调度 QA 验收
-5. 检查 blocked item (tech-feasibility) → 调度 POC 分析
-6. 检查 blocked item (其他) → 尝试继续
-7. 全部处理完毕后输出 `<promise>PM_BATCH_COMPLETE</promise>`
 
 ### 直接调用 subagent
 
@@ -164,18 +149,18 @@ PM 会自动：
 ```
 project-root/
   .features/
-    index.md
-    <NNN>-<name>/
-      REQUIREMENTS.md
-      BLOCKED.md          # blocked 时创建
-      POC-REPORT.md       # 技术可行性评估报告（tech-feasibility blocked 时生成）
-      QA-REPORT.md        # QA 验收报告（QA 验收后生成）
-      poc/                # POC 验证代码（验证完成后保留）
+    index.yaml
+    <id>/
+      REQUIREMENTS.yaml
+      BLOCKED.yaml
+      POC-REPORT.md
+      QA-REPORT.md
+      poc/
   .issues/
-    index.md
-    <NNN>-<name>/
-      NOTES.md
-      BLOCKED.md          # blocked 时创建
+    index.yaml
+    <id>/
+      ISSUE.yaml
+      BLOCKED.yaml
   .claude/
     agents/
       developer.md
@@ -227,6 +212,32 @@ agent-workspace/
 | `qa.md` | QA subagent 定义，负责功能验收和问题诊断 |
 | `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
 | `spec-compliance.md` | 规范合规检查 subagent（PM 内部调用） |
+
+## Schema 模块
+
+PM 工作流 YAML 文件的 schema 定义在 `agent_factory/schema/` 目录：
+
+| 文件 | 内容 |
+|------|------|
+| `agent_factory/schema/enums.py` | 6 个枚举（AgentType / Priority / FeatureStatus / 等） |
+| `agent_factory/schema/feature.py` | Feature / Decision / Option 模型 |
+| `agent_factory/schema/issue.py` | Issue 模型 |
+| `agent_factory/schema/index.py` | FeatureIndex / IssueIndex 模型 |
+| `agent_factory/schema/blocked.py` | BlockedRecord 模型 |
+| `agent_factory/schema/validate.py` | YAML 校验 CLI |
+| `agent_factory/schema/examples/` | 5 个示例 YAML 文件 |
+
+校验单个文件：
+
+```bash
+python3 -m agent_factory.schema.validate path/to/file.yaml
+```
+
+校验整个项目：
+
+```bash
+python3 -m agent_factory.schema.validate .
+```
 
 ## 生命周期
 
