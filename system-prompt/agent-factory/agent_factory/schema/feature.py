@@ -12,10 +12,10 @@ class Option(BaseModel):
     """决策选项."""
     model_config = ConfigDict(extra="forbid")
 
-    id: str = Field(..., pattern=r"^[A-Z]$", description="选项标识，单字母 A-Z")
-    name: str
-    pros: str
-    cons: str
+    id: str = Field(..., pattern=r"^[A-Z]$", description="选项标识，单字母 A-Z（必须大写）")
+    name: str = Field(..., description="选项名称")
+    pros: str = Field(..., description="优点")
+    cons: str = Field(..., description="缺点")
     impact: Optional[str] = Field(None, description="选了这个选项的实际影响")
 
 
@@ -23,7 +23,7 @@ class Decision(BaseModel):
     """PM 与用户的决策记录."""
     model_config = ConfigDict(extra="forbid")
 
-    id: str = Field(..., pattern=r"^dec-\d+$", description="决策标识，如 dec-1")
+    id: str = Field(..., pattern=r"^dec-[1-9]\d*$", description="决策标识，如 dec-1（从 1 开始）")
     question: str = Field(..., description="一句话问题陈述")
     background: str = Field(..., description="背景与触发场景")
     options: list[Option] = Field(..., min_length=2, max_length=5,
@@ -32,7 +32,7 @@ class Decision(BaseModel):
     rationale: str = Field(..., description="推荐理由")
     fallback_condition: Optional[str] = Field(None,
         description="什么情况下应选其他选项")
-    status: DecisionStatus = DecisionStatus.OPEN
+    status: DecisionStatus = Field(DecisionStatus.OPEN, description="决策状态（open=待定 / closed=已选定）")
 
     @model_validator(mode="after")
     def check_recommendation_in_options(self):
@@ -50,7 +50,7 @@ class Feature(BaseModel):
 
     id: int = Field(..., ge=1, le=999, description="feature 编号")
     title: str = Field(..., description="一句话标题，人读展示")
-    agent_type: AgentType
+    agent_type: AgentType = Field(..., description="Agent 形态（cli-only/http-api/http-web/mcp-server）")
 
     problem: str = Field(..., description="解决什么问题")
     benefit: str = Field(..., description="创造什么价值")
