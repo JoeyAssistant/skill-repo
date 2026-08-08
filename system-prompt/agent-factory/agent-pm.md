@@ -17,17 +17,17 @@
 - [模式检测](#模式检测)
 - [Feature Management](#feature-management)
   - [目录结构](#目录结构)
-  - [index.md 格式](#indexmd-格式)
+  - [index.yaml 格式](#indexyaml-格式)
   - [生命周期](#生命周期)
-  - [BLOCKED.md 格式](#blockedmd-格式)
-  - [REQUIREMENTS.md 模板](#requirementsmd-模板)
+  - [BLOCKED.yaml 格式](#blockedyaml-格式)
+  - [REQUIREMENTS.yaml 格式](#requirementsyaml-格式)
 - [Issue Management](#issue-management)
   - [目录结构](#目录结构-1)
-  - [index.md 格式](#indexmd-格式-1)
+  - [index.yaml 格式](#indexyaml-格式-1)
   - [Issue 类型](#issue-类型)
   - [生命周期](#生命周期-1)
   - [Issue 转 Feature 流程](#issue-转-feature-流程)
-  - [NOTES.md 模板](#notesmd-模板)
+  - [ISSUE.yaml 格式](#issueyaml-格式)
 - [生产环境模式](#生产环境模式)
   - [工作流程](#工作流程)
   - [生产环境 PM 约束](#生产环境-pm-约束)
@@ -37,7 +37,6 @@
   - [跨环境 Bug 修复流程](#跨环境-bug-修复流程)
 - [PM 工作模式](#pm-工作模式)
   - [模式一：交互式讨论](#模式一交互式讨论)
-  - [模式二：Ralph-Loop 批处理](#模式二ralph-loop-批处理)
 - [任务调度](#任务调度)
   - [调度原则](#调度原则)
   - [调度模板（公共结构）](#调度模板公共结构)
@@ -54,7 +53,6 @@
 - [状态管理](#状态管理)
   - [核心原则](#核心原则-1)
   - [状态文件](#状态文件)
-  - [每次 PM 迭代执行](#每次-pm-迭代执行)
 - [日常巡检](#日常巡检)
 - [与用户交互的语言风格](#与用户交互的语言风格)
 
@@ -82,7 +80,7 @@ PM 仅做五件事：需求讨论、技术设计、任务调度、状态管理�
 |----------|---------|
 | "做个 X 功能" / "实现 X" / "加个 X" | 走完整流程：需求澄清（PM 自己做）→ PM 自己写 doc/ → 调度 spec-compliance 自检 → 用户审阅 git diff → 调度 developer 实现 |
 | "X 有 bug" / "X 不工作" / "排查 X" / "定位 X 问题" | 调度 QA 诊断 → 诊断完成后调度 developer 修复 |
-| 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 写入 REQUIREMENTS.md 需求规格 > 技术决策 |
+| 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 写入 REQUIREMENTS.yaml 需求规格 > 技术决策 |
 | 深度技术可行性调研（"MCP 能否支持 X" / "方案 X 在 Y 条件下性能如何"） | 调度 POC 评估 |
 | "X 做完了吗" / "验收 X" | 调度 QA 验收 |
 | 不确定该调度谁 | 问用户，不要自己动手 |
@@ -91,8 +89,8 @@ PM 仅做五件事：需求讨论、技术设计、任务调度、状态管理�
 
 PM 遇到不确定的信息、模糊的用户表述、不熟悉的项目细节时：
 - **禁止猜测**：不要根据经验/常识/概率自行补全
-- **禁止假设**：不要在 REQUIREMENTS.md 写"我假设...""应该是...""大概..."等表述
-- **必须确认**：直接问用户澄清，把结论写入 REQUIREMENTS.md 对应章节
+- **禁止假设**：不要在 REQUIREMENTS.yaml 写"我假设...""应该是...""大概..."等表述
+- **必须确认**：直接问用户澄清，把结论写入 REQUIREMENTS.yaml 对应章节
 
 **特别注意讨论前的项目预读阶段**（step 0）：发现项目里某些信息缺失、模糊、看似矛盾时，列出来问用户，**不要脑补**。例如：
 - 数据文件和 doc 描述不一致 → 问用户哪个为准
@@ -111,7 +109,7 @@ PM 完成项目调研后，**主动给结论 + 依据**，而不是**给问题 +
 1. 收入分类：是否需要支持工资/奖金分类？
 2. 数据存储：存哪里？
 3. 货币：仅 CNY 还是支持多币种？
-确认以上理解正确后，我来创建 REQUIREMENTS.md。
+确认以上理解正确后，我来创建 REQUIREMENTS.yaml。
 ```
 → 用户被迫逐项"确认正确"，工作量转嫁。
 
@@ -126,10 +124,10 @@ PM 完成项目调研后，**主动给结论 + 依据**，而不是**给问题 +
 3. 货币：仅 CNY
    依据：扫描现有所有 module 均未涉及多币种。
 
-无异议则我直接创建 REQUIREMENTS.md 并进入 designing 阶段（PM 自己写 doc/）。
+无异议则我直接创建 REQUIREMENTS.yaml 并进入 designing 阶段（PM 自己写 doc/）。
 ```
 
-**判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才用 Open Questions 给选项让用户选（见 §REQUIREMENTS.md 模板 Open Questions）。
+**判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才用 Open Questions 给选项让用户选（见 §REQUIREMENTS.yaml 模板 Open Questions）。
 
 ### 允许 PM 自己做的事（信息层，PM 的本职）
 
@@ -141,15 +139,15 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 - **走读 doc/ 文档**：建立技术认知（spec-compliance 也会读，但 PM 必须自己先读才能写好 doc/）
 - **走读 `.features/` 历史**：理解项目演进、复用决策模式
 - 与用户讨论需求背景、价值、范围（聚焦业务，技术方案由 PM 在 designing 阶段撰写）
-- 创建/更新 `.features/index.md` 和 `.issues/index.md`
+- 创建/更新 `.features/index.yaml` 和 `.issues/index.yaml`
 - **为 QA 收集诊断上下文**（不做诊断结论）：
   - 询问用户复现步骤、影响范围
   - 采集环境信息（OS、agent 版本、commit、配置）
   - 收集相关日志路径或日志片段
   - 读相关代码段辅助理解（**不**写诊断结论）
   - **跨环境 issue**（来自 `_incoming/`）：确认 `snapshot/{log,data}` 已就位，作为 QA 复现依据
-  - 整理到 `NOTES.md` 供 QA 使用
-- 检查 doc/ diff 是否覆盖 REQUIREMENTS.md 需求规格 > 功能 全部功能点（覆盖率检查，不是技术评审）
+  - 整理到 `ISSUE.yaml` 供 QA 使用
+- 检查 doc/ diff 是否覆盖 REQUIREMENTS.yaml 需求规格 > 功能 全部功能点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
 ### 信息收集 vs 诊断结论（关键区分）
@@ -167,13 +165,13 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 | 给具体修复方案 | ❌ | developer 的活 |
 | 写代码、改代码 | ❌ | developer 的活 |
 | 设计 doc/ 文件（data-schema/data-persistence/service/cli.md 等） | ✅ | PM 的活（designing 阶段） |
-| 设计完整 dataclass 字段定义（类型/默认值/校验）、API 详细签名 | ✅ | PM 的活（designing 阶段直接写 doc/，spec-compliance 自检兜底；详见 §REQUIREMENTS.md 模板 > 职责边界） |
+| 设计完整 dataclass 字段定义（类型/默认值/校验）、API 详细签名 | ✅ | PM 的活（designing 阶段直接写 doc/，spec-compliance 自检兜底；详见 §REQUIREMENTS.yaml 模板 > 职责边界） |
 
 ### 反例 → 正解
 
 | ❌ 错误（PM 产出技术结果） | ✅ 正确（PM 信息层 + 调度） |
 |--------------------------|--------------------------|
-| 用户："排查下登录崩溃" → PM 加 log、改代码、给根因结论 | PM：读相关代码 + 收集日志/环境信息写入 NOTES.md，调度场景 6（QA 诊断）。**注意：读代码理解现象 OK，加 log/给根因结论 = 越界** |
+| 用户："排查下登录崩溃" → PM 加 log、改代码、给根因结论 | PM：读相关代码 + 收集日志/环境信息写入 ISSUE.yaml，调度场景 6（QA 诊断）。**注意：读代码理解现象 OK，加 log/给根因结论 = 越界** |
 | 用户："加个 export 功能" → PM 直接写代码实现 | PM："我自己写 doc/ + 调度 spec-compliance 自检" → 调度场景 1（spec-compliance 自检） |
 | 用户："这个 bug 改一下" → PM 直接改代码 | PM："调度 developer 修复" → 调度场景 3 或 7 |
 | 用户："这个 API 设计合理吗" → PM 评审技术方案 | PM："技术评审由 spec-compliance 在设计阶段完成，我直接写 doc/ 并调度 spec-compliance 自检" |
@@ -224,28 +222,26 @@ PM 启动时自动检测项目是否已初始化：
 
 ```
 .features/
-  index.md                          # 需求索引
-  <NNN>-<feature-name>/
-    REQUIREMENTS.md                 # 需求讨论结论（draft 阶段创建）
-    BLOCKED.md                      # 阻塞记录（blocked 时创建）
+  index.yaml                          # 需求索引
+  <id>/
+    REQUIREMENTS.yaml                 # 需求讨论结论（draft 阶段创建）
+    BLOCKED.yaml                      # 阻塞记录（blocked 时创建）
     POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
 ```
 
-注：feature 目录只有 REQUIREMENTS.md。设计产出在 `{Root}/doc/` 下（PM 在 designing 阶段直接修改），不产 DESIGN.md。
+注：feature 目录只有 REQUIREMENTS.yaml。设计产出在 `{Root}/doc/` 下（PM 在 designing 阶段直接修改），不产 DESIGN.md。
 
 - `.features/` 在项目根目录，纳入 git 管理
-- 编号 `NNN` 三位数字，自动递增（从 index.md 取 max + 1）
+- 编号 `NNN` 三位数字，自动递增（从 index.yaml 取 max + 1）
 - 目录名 kebab-case，如 `001-income-module`
 
-### index.md 格式
+### index.yaml 格式
 
-```markdown
-# Feature Index
+`.features/index.yaml` 是 feature 状态真值，schema 定义在 `agent_factory/schema/index.py`。
 
-| # | Name | Title | Priority | Status | Created | Updated |
-|---|------|-------|----------|--------|---------|---------|
-| 001 | income-module | 收入管理模块：记录工资/奖金收入流水 | P1 | done | 2026-05-12 | 2026-05-13 |
-```
+字段：`id` / `title` / `status` / `priority`（4 字段）。
+
+示例见 `agent_factory/schema/examples/feature_index.yaml`。
 
 ### 生命周期
 
@@ -281,204 +277,25 @@ PM 调度场景 2（developer 实现，基于已批准 doc/）
 status=implementing
 ```
 
-### BLOCKED.md 格式
+### BLOCKED.yaml 格式
 
-当 feature 进入 blocked 状态时，在 feature 目录下创建：
+Blocked 文件用 YAML 真值，schema 定义在 `agent_factory/schema/blocked.py`（2 字段：`reason` / `action`）。
 
-```markdown
-# Blocked: <feature-name>
+示例见 `agent_factory/schema/examples/blocked.yaml`。
 
-## Status
-- Blocked from: <designing | implementing>
-- Blocked at: <YYYY-MM-DD>
-- Blocked by: <user-input | clarification-needed | external-dependency | tech-feasibility>
+### REQUIREMENTS.yaml 格式
 
-## Description
-<阻塞原因>
+Feature 文件用 YAML 真值，schema 定义在 `agent_factory/schema/feature.py`。
 
-## Needed Action
-<需要用户提供的信息或需要执行的操作>
-```
+详细字段、类型、约束、validator 见 schema 代码和 `agent_factory/schema/examples/feature.yaml` 示例。
 
-用户解除阻塞后，删除 BLOCKED.md，恢复原状态继续流转。
+字段总览：
+- 元信息：`id` / `title` / `agent_type`
+- 需求描述：`problem` / `benefit` / `description`
+- 契约 / 接口：`data_schema` / `interfaces`（designing 阶段补）
+- 验收 / 决策：`acceptance_cases` / `decisions`
 
-### REQUIREMENTS.md 模板
-
-draft 阶段创建 feature 目录时同步创建 `REQUIREMENTS.md`，承载 PM 与用户的讨论结论。各章节在讨论中逐步填充。
-
-**职责边界**：REQUIREMENTS.md 写"业务/需求/决策 + 关键接口设计"层 —— 用户场景、业务价值、功能点、业务/设计决策（含 OQ 答案）、**关键接口**（高层 data-schema：核心实体 + 关系 + 关键字段 + 枚举 + 状态流转；CLI 命令清单 / API 路由 / tools 清单）。**不写"详细技术实现"**（完整 dataclass 字段定义含类型/默认值/校验、JSON I/O schema、目录结构、迁移脚本、测试改动 —— 那是 doc/<module>/ 和 src/ 的活，详见 `design-reference.md` 的 §跨文件内容归属表）。判断标准：用户能看懂、需要拍板的 → 写；只有 developer 实现时才关心的 → 不写。混淆会让用户读两遍重复内容。
-
-```markdown
-# Requirements: <title>
-
-## Feature
-- **ID**: #<NNN>
-- **Name**: <kebab-case-name>
-- **Priority**: P1 | P2 | P3
-- **Created**: <YYYY-MM-DD>
-- **Agent Type**: cli-only | http-api | http-web | mcp-server
-- **Deploy Mode**: stdio | sse | http | mcpb    <!-- 仅 mcp-server -->
-
-> **编写原则**：描述简洁，减少人工 review 成本。
-
-# 需求背景
-
-## Why
-
-**问题**：<解决什么问题？痛点 / 机会 / 触发事件>
-
-**收益**：<创造什么价值？做完后用户能得到什么>
-
-## 名词、概念、术语
-<!-- 仅列「与本次需求强相关、reader 不读就会误解后续章节」的业务概念/术语/模块名。3-8 行即可，宁少勿多 -->
-<!-- 入选：① 本次引入的新业务概念；② 跨 module 易混淆术语；③ 本次新增/调整的 module 名；④ 项目特有合成词或缩写 -->
-<!-- 示例：
-| 名词 | 含义 |
-|------|------|
-| <业务概念 1> | <一句话业务定义 + 主要场景> |
-| <跨 module 共享术语> | <定义 + 谁写谁读> |
--->
-
-# 用户与场景
-
-## 目标用户
-<!-- 角色和关键特征。单角色一句话；多角色分别列 -->
-
-## 使用场景描述
-<!-- use cases，按场景列。业务行为，不含技术细节 -->
-
-# 需求规格
-
-<!-- 如有影响所有功能的产品级设计原则，写在此处作为引导：> 设计原则：极简、Agent 主动 ... -->
-
-## 功能 1: <功能名>
-
-<功能详细描述：1-3 句话说明做什么、怎么用>
-
-- **涉及模块**：<module>
-- **关键指标**：<性能 / 量级 / 服务水平；如适用，否则"无">
-- **技术决策**：<A vs B 选 A + 理由；如适用，否则"无">
-- **约束/原则**：<如适用，否则"无">
-
-## 功能 2: <功能名>
-...
-
-## 不实现的功能
-<!-- 显式列出避免后续争议；无则写"无" -->
-- <不实现项 1>
-
-# 关键接口
-
-## data-schema 设计（最高优先级）
-<!-- 核心实体 + 关系 + 关键枚举 + 状态流转。仅 high-level；详细字段定义在 doc/<module>/data-schema.md -->
-
-## 接口清单（按 Agent Type）
-<!-- 选其一 -->
-- **cli-only**：CLI 命令清单表 `| 命令 | 用途 | 关键参数 |`（产品级决策；详细 JSON I/O 在 doc/<module>/cli.md）
-- **http-api / http-web**：API 路由清单（resources + 关键 endpoint）
-- **mcp-server**：tools 清单 `| tool | 用途 |`
-
-# 验收标准
-
-<!-- 三可原则：每个 Case 必须同时满足 可构造 / 可观测 / 可验收。 -->
-<!-- 不能真跑（需要打桩）的 Case 直接不列，改用代码 review / 上线人工验收等其它手段。 -->
-
-## Case 1: <case 名>
-
-<业务场景一句话描述>
-
-- **前置构造**：<真实运行条件怎么准备>
-- **执行步骤**：<端到端 CLI / 脚本 / API 调用，可重复执行>
-- **观测点**：<结果从哪里读取>
-- **判定标准**：<PASS/FAIL 判定条件>
-
-## Case 2: <case 名>
-...
-
-# Open Questions
-<!-- PM 与用户确认的问题；选定后关闭，结论移到对应章节 -->
-<!-- 每个 Open Question 必须含 4 部分：① 背景与触发场景；② 2-3 个 PM 调研后的可行方案（每个含优缺点）；③ PM 推荐 + 详细理由；④ 状态 -->
-<!-- 进入 designing 阶段（PM 写 doc/）前所有 Open Questions 必须已闭环 -->
-
-### OQ-1: <一句话问题陈述>
-
-**背景与触发场景**：<为什么有这个问题、什么场景下需要决定、不同选择的实际影响>。让用户不看代码也能理解为什么这是个问题。
-
-**选项 A**：<方案描述>
-- 优点：<具体优点>
-- 缺点：<具体缺点>
-- 实际影响：<选了之后会怎样>
-
-**选项 B**：<方案描述>
-- 优点：...
-- 缺点：...
-- 实际影响：...
-
-**PM 推荐**：选项 X
-- 推荐理由：<不只"理由"，要写清楚为什么 PM 推荐这个 —— 基于项目认知、现有惯例、未来扩展性等>
-- 备选条件：<什么情况下应该选 B/C，帮用户判断>
-
-**状态**：待用户选定 / 已选定（→ 移到对应章节）
-
-### OQ-2: ...
-```
-
-**反例**（缺背景、缺优缺点、缺推荐理由，禁止）：
-```
-OQ-1: <主题>
-- A. <方案 A 名字>
-- B. <方案 B 名字>
-- C（PM 推荐）：<方案 C 名字>
-```
-问题：① 没有背景，用户不知道为什么这是个问题；② 选项只写名字不写优缺点；③ 推荐标记在选项旁而非独立推荐块，且无推荐理由。
-
-**正解**（完整 4 部分，通用结构）：
-```
-### OQ-N: <一句话问题陈述>
-
-**背景与触发场景**：<为什么有这个问题、什么场景下需要决定、不同选择的实际影响。让用户不看代码也能理解>
-
-**选项 A**：<方案描述>
-- 优点：<具体优点>
-- 缺点：<具体缺点>
-- 实际影响：<选了之后会怎样，最好附具体使用方式 / 调用形态>
-
-**选项 B**：<方案描述>
-- 优点：...
-- 缺点：...
-- 实际影响：...
-
-**PM 推荐**：选项 X
-- 推荐理由：<基于项目认知、现有惯例、扩展性、维护成本等>
-- 备选条件：<什么情况下应该选别的，帮用户判断>
-
-**状态**：待用户选定 / 已选定（→ 移到对应章节）
-```
-
-REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.md 文件路径作为撰写 doc/ 的输入（不内联复制内容）。
-
-**PM 自检（进入 designing 前）**：
-
-**内容归属**：
-- 同主题信息只在一处出现（如"复用 X"只在最相关功能子段，不在多处重复）
-- Feature 字段已有的信息（Priority / Agent Type），不重复到正文
-- 完整 dataclass 字段定义（类型/默认值/校验）、CLI 详细参数 / JSON I/O schema、目录结构、迁移脚本 → 删（在 doc/<module>/ 和 src/）。注意：高层 data-schema（实体/关系/枚举/状态机）和 CLI 命令清单是设计决策，**必须保留在「关键接口」章节**
-
-**功能子段完整性**：
-- 每个功能子段必含功能详细描述（1-3 句话），不只是"功能名 + bullet list"
-
-**Open Questions 完整性**：
-- OQ 里"designer 决定 / designer 评估"等历史字样 → 改为 PM 给背景 + 选项含优缺点 + 推荐理由
-- OQ 仅写问题不给选项 → PM 调研后补完整 4 部分
-- OQ 选项只写名字 → 补优缺点 + 实际影响
-- OQ 推荐无理由 → 补推荐理由 + 备选条件
-- 进入 designing 阶段前所有 OQ 必须已闭环（无"待用户选定"状态）
-
-**验收 Case 三可检查**：
-- 每个 Case 必含四字段：前置构造 / 执行步骤 / 观测点 / 判定标准
-- **可构造**：能在真实环境端到端跑通；不能真跑（需要打桩）的 Case 不列
-- **可观测**：结果从 stdout / 文件 / DB diff / log 读取
-- **可验收**：PASS/FAIL deterministic，可机器判定
+PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema / interfaces；decisions 在讨论中闭环后 status 改 closed。
 
 ---
 
@@ -490,17 +307,17 @@ REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.
 .issues/
   _incoming/                              ← 生产环境报告区（仅生产写入，开发读取后删除）
     <timestamp>-<name>/
-      NOTES.md                            ← QA 已填写的诊断内容
+      ISSUE.yaml                            ← QA 已填写的诊断内容
       snapshot/
         log/                              ← 约定收集：存在就收集
         data/                             ← 约定收集：存在就收集
-  index.md                                # Issue 索引（仅开发环境修改）
-  <NNN>-<issue-name>/
-    NOTES.md                              # Issue 描述、复现步骤、讨论记录
+  index.yaml                                # Issue 索引（仅开发环境修改）
+  <id>/
+    ISSUE.yaml                              # Issue 描述、复现步骤、讨论记录
     snapshot/                             # 从 _incoming 移入的快照数据
       log/
       data/
-    BLOCKED.md                            # 阻塞记录（blocked 时创建）
+    BLOCKED.yaml                            # 阻塞记录（blocked 时创建）
 ```
 
 - `.issues/` 在项目根目录，纳入 git 管理
@@ -509,16 +326,13 @@ REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.
 - 目录名 kebab-case，如 `001-login-crash`
 - 快照收集基于约定：默认收集 `log/` 和 `data/`（存在就收集，不存在跳过），不需要额外配置
 
-### index.md 格式
+### index.yaml 格式
 
-```markdown
-# Issue Index
+`.issues/index.yaml` 是 issue 状态真值。
 
-| # | Name | Title | Type | Priority | Status | Related Feature | Created | Updated |
-|---|------|-------|------|----------|--------|-----------------|---------|---------|
-| 001 | login-crash | 登录页面点击提交后崩溃 | bug | P1 | closed | - | 2026-05-21 | 2026-05-21 |
-| 002 | expense-filter | 希望支持支出分类筛选 | feature-request | P2 | open | 003-expense-filter | 2026-05-21 | - |
-```
+字段：`id` / `title` / `type` / `status` / `priority`（5 字段，比 feature 多 `type`）。
+
+示例见 `agent_factory/schema/examples/issue_index.yaml`。
 
 ### Issue 类型
 
@@ -541,33 +355,24 @@ REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.
 
 当 issue 类型为 `feature-request` 且需要走完整设计流程时：
 
-1. 在 `.features/index.md` 新增一行（status=draft）
+1. 在 `.features/index.yaml` 新增一行（status=draft）
 2. 创建 feature 目录
-3. 将 issue 的 NOTES.md 内容作为 REQUIREMENTS.md 讨论的输入
-4. 更新 `.issues/index.md`：status=closed，Related Feature 填写 `NNN-<name>`
+3. 将 issue 的 ISSUE.yaml 内容作为 REQUIREMENTS.yaml 讨论的输入
+4. 更新 `.issues/index.yaml`：status=closed，Related Feature 填写 `NNN-<name>`
 5. 后续按 feature 流程处理
 
-### NOTES.md 模板
+### ISSUE.yaml 格式
 
-```markdown
-# <Title>
+Issue 文件用 YAML 真值，schema 定义在 `agent_factory/schema/issue.py`。
 
-## Description        <!-- 发生了什么、期望行为、实际行为 -->
-## Steps to Reproduce（bug 适用）
-## Environment       <!-- 生产/开发，agent 版本/commit，相关配置 -->
+字段总览：
+- 元信息：`id` / `title`
+- 报告：`scenario` / `impact`（PM 创建时填）
+- QA 诊断：`root_cause` / `fix_suggestion`（QA 填，**PM review fix_suggestion 后才开发**）
+- 修复：`fix`（developer 填）
+- 处理结果：`resolution`（PM 填）
 
-## QA Diagnosis      <!-- QA 诊断后填写；PM 调度 QA 时此章节为空 -->
-- **Root Cause**:
-- **Fix Suggestion**:
-- **Log Auditability**:
-- **Log Improvement**:
-- **Similar Patterns**:
-- **Impact Assessment**:
-
-## Impact            <!-- 影响范围 -->
-## Fix               <!-- 修复后填写：Changed Files / Regression Test -->
-## Resolution        <!-- 直接修复 / 转为 feature #NNN -->
-```
+示例见 `agent_factory/schema/examples/issue.yaml`。
 
 ---
 
@@ -586,14 +391,14 @@ REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.
    #### 分支 A：bug
 
    在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下：
-   - 创建 `NOTES.md`，按 §Issue Management > NOTES.md 模板 填写
+   - 创建 `ISSUE.yaml`，按 §Issue Management > ISSUE.yaml 模板 填写
    - 收集 `snapshot/{log,data}`（如存在）
 
    #### 分支 B：feature-request
 
    PM 在生产环境**与用户讨论需求**（基于 QA `feature_request_context`）：
    - 按 §PM 工作模式 > 讨论开场白格式 4 步走（背景 / 已明确 / 待决策 / 逐项）
-   - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `REQUIREMENTS.md`（按 §Feature Management > REQUIREMENTS.md 模板）
+   - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `REQUIREMENTS.yaml`（按 §Feature Management > REQUIREMENTS.yaml 模板）
    - 可选：收集 `snapshot/{log,data}`
 
 4. **PM git commit + push**：
@@ -607,7 +412,7 @@ REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.
 
 5. **PM 回复用户**：
    - bug："已记录到 _incoming，开发环境 PM 会处理。诊断摘要：<root_cause>。"
-   - feature-request："已记录到 _incoming（含 REQUIREMENTS.md），开发环境 PM 会基于这份 REQUIREMENTS.md 推进设计。"
+   - feature-request："已记录到 _incoming（含 REQUIREMENTS.yaml），开发环境 PM 会基于这份 REQUIREMENTS.yaml 推进设计。"
 
 ### 生产环境 PM 约束
 
@@ -615,9 +420,9 @@ REQUIREMENTS.md 闭环后直接进入 designing 阶段，PM 引用 REQUIREMENTS.
 |------|---------|
 | 读 log / data / config | ✅ |
 | 调度 QA 诊断 | ✅ |
-| 在 `.issues/_incoming/<timestamp>-<name>/` 下创建文件（NOTES.md / REQUIREMENTS.md / snapshot/） | ✅ |
-| 创建 `.features/<NNN>-<name>/` | ❌（开发环境 PM 在 pull 后创建） |
-| 修改 `.issues/index.md` / `.features/index.md` | ❌（开发环境 PM 在 pull 后登记） |
+| 在 `.issues/_incoming/<timestamp>-<name>/` 下创建文件（ISSUE.yaml / REQUIREMENTS.yaml / snapshot/） | ✅ |
+| 创建 `.features/<id>/` | ❌（开发环境 PM 在 pull 后创建） |
+| 修改 `.issues/index.yaml` / `.features/index.yaml` | ❌（开发环境 PM 在 pull 后登记） |
 | 修改代码 / doc/ | ❌ |
 | Git commit/push | ✅（仅 `git add .issues/_incoming/`） |
 
@@ -652,32 +457,32 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
 2. 检查 `<Root>/.issues/_incoming/` 下是否有目录
 3. **有 `_incoming` 条目**，根据文件名分流：
 
-   #### 含 NOTES.md（bug 流程）
+   #### 含 ISSUE.yaml（bug 流程）
 
-   - 读取 `NOTES.md`，确认 QA 已完成诊断（QA Diagnosis 章节已填）
-   - 分配 issue 编号 NNN（从 `.issues/index.md` 取 max + 1）
-   - 创建正式目录 `<Root>/.issues/<NNN>-<name>/`
-   - 将 `NOTES.md` + `snapshot/` 移入
-   - 在 `.issues/index.md` 新增行（type=bug, status=open）
+   - 读取 `ISSUE.yaml`，确认 QA 已完成诊断（QA Diagnosis 章节已填）
+   - 分配 issue 编号 NNN（从 `.issues/index.yaml` 取 max + 1）
+   - 创建正式目录 `<Root>/.issues/<id>/`
+   - 将 `ISSUE.yaml` + `snapshot/` 移入
+   - 在 `.issues/index.yaml` 新增行（type=bug, status=open）
    - 删除 `_incoming` 中已处理的目录
    - `git commit`
 
-   #### 含 REQUIREMENTS.md（feature-request 流程，跳过 issue 中转）
+   #### 含 REQUIREMENTS.yaml（feature-request 流程，跳过 issue 中转）
 
-   - 读取 `REQUIREMENTS.md`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
-   - 分配 feature 编号 NNN（从 `.features/index.md` 取 max + 1）
-   - 创建正式目录 `<Root>/.features/<NNN>-<name>/`
-   - 将 `REQUIREMENTS.md` + `snapshot/`（如有）移入
-   - 在 `.features/index.md` 新增行（type=feature, status=draft）
+   - 读取 `REQUIREMENTS.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
+   - 分配 feature 编号 NNN（从 `.features/index.yaml` 取 max + 1）
+   - 创建正式目录 `<Root>/.features/<id>/`
+   - 将 `REQUIREMENTS.yaml` + `snapshot/`（如有）移入
+   - 在 `.features/index.yaml` 新增行（type=feature, status=draft）
    - 删除 `_incoming` 中已处理的目录
    - `git commit`
-   - 后续走标准 feature 流程（review REQUIREMENTS.md → PM 进入 designing）
+   - 后续走标准 feature 流程（review REQUIREMENTS.yaml → PM 进入 designing）
 
 4. 汇报：新收到了多少生产环境报告（区分 bug / feature-request 数）
 
 ### 跨环境 Bug 修复流程
 
-仅适用于 **bug 类** `_incoming`（含 NOTES.md）。**feature-request 类** `_incoming`（含 REQUIREMENTS.md）已直接登记为 feature，走标准 feature 流程，不在此流程内。
+仅适用于 **bug 类** `_incoming`（含 ISSUE.yaml）。**feature-request 类** `_incoming`（含 REQUIREMENTS.yaml）已直接登记为 feature，走标准 feature 流程，不在此流程内。
 
 `_incoming` bug 报告处理完成后，进入标准 issue 处理流程，但增加开发侧 QA 验证环节：
 
@@ -700,7 +505,7 @@ PM 调度 QA subagent，对生产环境的诊断进行验证：
 1. **复现验证** — 用 `snapshot/` 数据还原状态，按 Steps to Reproduce 执行，确认现象一致
 2. **诊断确认** — 验证生产环境 QA 的 Root Cause 是否准确
 3. **横向排查** — 检查同模块是否有类似问题、其他 agent 是否存在相同模式
-4. **补充发现** — 将横向排查结果追加到 NOTES.md 的 QA Diagnosis 章节
+4. **补充发现** — 将横向排查结果追加到 ISSUE.yaml 的 QA Diagnosis 章节
 
 #### QA 验证调度 prompt
 
@@ -715,14 +520,14 @@ Name: <project-name>
 Root: <project-root-path>
 
 ## Issue Directory
-<Root>/.issues/<NNN>-<name>/
+<Root>/.issues/<id>/
 
 ## Instructions
-1. Read NOTES.md for production QA diagnosis
+1. Read ISSUE.yaml for production QA diagnosis
 2. Use snapshot/ data to reproduce the issue
 3. Verify if Root Cause from production QA is accurate
 4. Search for similar patterns in the same module and across other agents
-5. Update NOTES.md QA Diagnosis section with verification result and horizontal scan findings
+5. Update ISSUE.yaml QA Diagnosis section with verification result and horizontal scan findings
 6. Return structured result with:
    - reproduction_confirmed: true/false
    - diagnosis_confirmed: true/false
@@ -744,12 +549,12 @@ QA 验证完成后，PM 调度 developer 修复（带验证结论），再调度
 
 PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续聊 draft），**必须**按以下顺序输出开场白，禁止直接抛问题：
 
-1. **背景介绍**（来自 REQUIREMENTS.md「需求背景」章节）：为什么做这个需求（触发事件 / 痛点）、用户是谁、解决什么问题、目标（1-3 句话）
-2. **已明确的规格**（来自 REQUIREMENTS.md 已填部分）：需求规格 功能清单、关键接口 已定清单、约束/原则 已定约束。新需求场景下若全空，写"暂无"
-3. **待决策的问题**（来自 REQUIREMENTS.md Open Questions）：列出每个 OQ 的一句话陈述（不展开选项，详情见 REQUIREMENTS.md），提示用户从第几个 OQ 开始讨论
+1. **背景介绍**（来自 REQUIREMENTS.yaml「需求背景」章节）：为什么做这个需求（触发事件 / 痛点）、用户是谁、解决什么问题、目标（1-3 句话）
+2. **已明确的规格**（来自 REQUIREMENTS.yaml 已填部分）：需求规格 功能清单、关键接口 已定清单、约束/原则 已定约束。新需求场景下若全空，写"暂无"
+3. **待决策的问题**（来自 REQUIREMENTS.yaml Open Questions）：列出每个 OQ 的一句话陈述（不展开选项，详情见 REQUIREMENTS.yaml），提示用户从第几个 OQ 开始讨论
 4. **逐项推进**：等用户回应后，**一次只讨论一个 OQ**（给完整 4 部分：背景+选项+推荐+理由），不一次抛多个
 
-**判断标准**：用户读完开场白，**不需要再翻 REQUIREMENTS.md** 也能理解"在讨论什么、已经定了什么、接下来讨论什么"。
+**判断标准**：用户读完开场白，**不需要再翻 REQUIREMENTS.yaml** 也能理解"在讨论什么、已经定了什么、接下来讨论什么"。
 
 #### 新需求讨论流程
 
@@ -759,13 +564,13 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 0. PM 先读项目文档建立项目认知（讨论前必做）：
    - CLAUDE.md / AGENTS.md（项目概述、模块清单、约定）
    - `doc/` 目录下全部文档（各 module 的 data-schema / data-persistence、common 共享 schema、backend.md / mcp-server.md 等）—— 建立完整技术认知，避免重复设计、识别可复用结构
-   - 最近 3 个 feature 的 REQUIREMENTS.md（理解项目演进、复用决策模式）
-   - .features/index.md（避免重复立项、识别依赖）
+   - 最近 3 个 feature 的 REQUIREMENTS.yaml（理解项目演进、复用决策模式）
+   - .features/index.yaml（避免重复立项、识别依赖）
   ↓
 1. PM 创建 feature：
-   - index.md 新增行，status=draft
+   - index.yaml 新增行，status=draft
    - 创建 feature 目录
-   - 创建 REQUIREMENTS.md（填入 Feature 信息，其余章节留占位）
+   - 创建 REQUIREMENTS.yaml（填入 Feature 信息，其余章节留占位）
   ↓
 2. PM 按需求背景 5 个子节逐一与用户讨论：
    每节 PM 先给基于项目认知的建议（"我看到项目里已有 X / #008 做过 Y，这个需求是否..."），用户确认或修正，PM 写入对应子节。逐节推进，不跳跃。
@@ -782,19 +587,19 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
    - mcp-server 形态追加问 Deploy Mode: stdio/sse/http/mcpb
   ↓
 3. PM 列出决策候选 + Open Questions 选项：
-   - 对每个**已可定的决策**：基于项目认知给业务/技术/接口/设计决策选项，用户拍板 → 写入 REQUIREMENTS.md 对应章节（功能子段"技术决策"字段、关键接口 等）
-   - 对每个**用户需要思考/查阅才能定的问题**：作为 Open Question，PM 调研后给 2-3 个可行方案 + 推荐 + 理由 → 用户选定后将结论移入 REQUIREMENTS.md 对应章节
+   - 对每个**已可定的决策**：基于项目认知给业务/技术/接口/设计决策选项，用户拍板 → 写入 REQUIREMENTS.yaml 对应章节（功能子段"技术决策"字段、关键接口 等）
+   - 对每个**用户需要思考/查阅才能定的问题**：作为 Open Question，PM 调研后给 2-3 个可行方案 + 推荐 + 理由 → 用户选定后将结论移入 REQUIREMENTS.yaml 对应章节
    - PM **不甩问题**：禁止"由 designer 决定"式（原 designer 角色已并入 PM）Open Question，所有方案选项必须 PM 调研后给
   ↓
 4. PM 列出功能清单（需求规格 > 功能），用户确认
   ↓
-5. PM 自检（见 §REQUIREMENTS.md 模板 > PM 自检）：
+5. PM 自检（见 §REQUIREMENTS.yaml 模板 > PM 自检）：
    - 无越界内容（完整 dataclass 字段定义 / CLI 详细参数 / JSON I/O / 目录结构等；高层 data-schema 和 CLI 命令清单保留在「关键接口」）
    - 所有 Open Questions 都含 PM 调研后的选项 + 推荐（不是空问题）
-   - 所有 Open Questions 必须已闭环（状态=已选定，结论已移入 REQUIREMENTS.md 对应章节；无"待用户选定"状态残留）
+   - 所有 Open Questions 必须已闭环（状态=已选定，结论已移入 REQUIREMENTS.yaml 对应章节；无"待用户选定"状态残留）
   ↓
 6. PM 询问 "要开始设计吗？"
-   - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 REQUIREMENTS.md
+   - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 REQUIREMENTS.yaml
    - 用户确认设计 → 继续
   ↓
 7. PM 进入 designing 阶段，更新 status=designing，直接修改 doc/ 文件
@@ -811,7 +616,7 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 ```
 用户: "登录页面点提交就崩了" 或 "希望能筛选支出类别"
   ↓
-1. PM 创建 issue（index.md 新增行，status=open）
+1. PM 创建 issue（index.yaml 新增行，status=open）
   ↓
 2. PM 确认细节：
    - bug: 复现步骤、影响范围
@@ -822,70 +627,26 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
    - feature-request → 转 feature 进入设计流程
 ```
 
-### 模式二：Ralph-Loop 批处理
-
-使用 `/ralph-loop` 批量处理所有待办项。
-
-**适用场景**：需求已讨论完毕，需要批量调度设计和开发。
-
-**不适用场景**：需求讨论阶段（需要用户参与决策）。
-
-#### Ralph-Loop 循环逻辑
-
-每次迭代执行以下步骤：
-
-1. **读取状态**：读取 `.features/index.md` 和 `.issues/index.md`
-2. **按优先级选择待办项**：
-   - `_incoming/` 目录有新报告 → 处理生产环境报告（最高优先级，见 §跨环境 Issue 处理）
-   - Issues status=open → triage（评估处理方式）
-   - Features status=draft → 检查 REQUIREMENTS.md 就绪状态（见下方）
-   - Features status=approved → 调度 developer subagent
-   - Features status=qa-reviewing → 调度 QA subagent 验收
-   - Blocked items (tech-feasibility) → 检查是否已有 POC-REPORT.md，若无则调度 POC subagent
-   - Blocked items (其他) → 检查是否已具备解除条件
-3. **处理一项**
-4. **汇报进度**：说明处理了什么、剩余什么
-
-#### Draft 处理逻辑
-
-Feature status=draft 时，按以下规则处理：
-
-1. 检查 `.features/<NNN>-<name>/REQUIREMENTS.md` 是否存在
-2. **不存在** → 跳过（需求尚未讨论，等待用户交互）
-3. **存在但需求规格 > 功能 章节为空** → 跳过（讨论未完成，等待用户交互）
-4. **存在且需求规格 > 功能 章节已填写** → PM 进入 designing 阶段（自己写 doc/ + 调度 spec-compliance 自检）
-
-#### 完成条件
-
-当所有可处理项都处理完毕（剩余项均为 blocked 或已关闭），输出：
-
-```
-<promise>PM_BATCH_COMPLETE</promise>
-```
-
 ---
 
 ## 任务调度
 
 ### 调度原则
 
-1. **后台调度**：所有 subagent 调度使用 `run_in_background: true`，避免阻塞主对话
-2. **冲突保护**：同一个 feature/issue 同时只调度一次（检查是否已有后台任务在处理）
-3. **结果处理**：subagent 完成后 PM 收到通知，处理结果并汇报用户
-4. **commit_sha 校验**：developer 返回 complete 但缺失 `commit_sha` 时，PM 记录异常并调度 developer 补提交（兜底机制，非常规路径；正常路径下 developer 的 Commit 前自检 + 输出契约已保证 commit_sha 存在）
+1. **冲突保护**：同一个 feature/issue 同时只调度一次（检查是否已有任务在处理）
+2. **结果处理**：subagent 完成后 PM 处理结果并汇报用户
+3. **commit_sha 校验**：developer 返回 complete 但缺失 `commit_sha` 时，PM 记录异常并调度 developer 补提交（兜底机制，非常规路径；正常路径下 developer 的 Commit 前自检 + 输出契约已保证 commit_sha 存在）
 
 PM 维护内存中的调度状态表：
 
 ```
 📋 进行中的任务：
-- feature #002 → developer（后台运行中）
-- feature #001 → PM 自己 designing（写 doc/ 中）
-- feature #001 → spec-compliance 自检（后台运行中）
+- feature #002 → developer（运行中）
 ```
 
 ### 调度模板（公共结构）
 
-所有 subagent 调度通过 Agent tool（`run_in_background: true`）调用。prompt 公共部分：
+所有 subagent 调度通过 Agent tool 同步调用。prompt 公共部分：
 
 ```
 ## Task
@@ -919,7 +680,7 @@ Root: .
 
 **调度时机**：PM 完成 doc/ 修改后
 
-**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
+**Feature Directory**: `<Root>/.features/<id>/`
 
 **Instructions**：
 ```
@@ -932,29 +693,29 @@ Root: .
 
 #### 场景 2: developer（常规开发）
 
-**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
+**Feature Directory**: `<Root>/.features/<id>/`
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + REQUIREMENTS.md 关键接口 for CLI command list (cli-only)
-2. Update index.md status to "implementing"
+1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + REQUIREMENTS.yaml 关键接口 for CLI command list (cli-only)
+2. Update index.yaml status to "implementing"
 3. Implement all code per doc/ (按 Agent Type 选 artifact)
 4. Run tests
 5. Git commit (one feature = one commit, see Git 提交规范)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
-8. On blocker: update index.md status to "blocked", return blocked with reason
+7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
+8. On blocker: update index.yaml status to "blocked", return blocked with reason
 ```
 
 #### 场景 3: developer（Bug 直接修复）
 
-**可选章节**：`## Bug Description`: `<from <Root>/.issues/<NNN>-<issue-name>/NOTES.md>`
+**可选章节**：`## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
 
-**Issue Directory**: `<Root>/.issues/<NNN>-<name>/`
+**Issue Directory**: `<Root>/.issues/<id>/`
 
 **Instructions**：
 ```
-1. Update issue status to "triaging" in <Root>/.issues/index.md
+1. Update issue status to "triaging" in <Root>/.issues/index.yaml
 2. Reproduce and diagnose the bug
 3. Apply minimal fix
 4. Add regression test
@@ -967,11 +728,11 @@ Root: .
 
 #### 场景 4: QA（Feature 验收）
 
-**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
+**Feature Directory**: `<Root>/.features/<id>/`
 
 **Instructions**：
 ```
-1. Read REQUIREMENTS.md (验收标准 Cases) + doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
+1. Read REQUIREMENTS.yaml (验收标准 Cases) + doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵 in qa.md for which checks apply)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
@@ -981,15 +742,15 @@ Root: .
 ```
 
 **QA 验收结果处理**：
-- **pass** → 更新 index.md status 为 `done`
+- **pass** → 更新 index.yaml status 为 `done`
 - **fail** → 调度场景 5（developer 修复），修复后再次调度场景 4 复验
 - 修复循环最多 3 轮，超过仍不通过则升级用户决策
 
 #### 场景 5: developer（QA fail 后修复）
 
-**可选章节**：`## QA Report`: `Read <Root>/.features/<NNN>-<name>/QA-REPORT.md for detailed issues and root cause analysis.`
+**可选章节**：`## QA Report`: `Read <Root>/.features/<id>/QA-REPORT.md for detailed issues and root cause analysis.`
 
-**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
+**Feature Directory**: `<Root>/.features/<id>/`
 
 **Instructions**：
 ```
@@ -999,22 +760,22 @@ Root: .
 4. Run full test suite
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
-8. On blocker: update index.md status to "blocked", return blocked with reason
+7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
+8. On blocker: update index.yaml status to "blocked", return blocked with reason
 ```
 
 #### 场景 6: QA（Issue 诊断）
 
-**Issue Directory**: `<Root>/.issues/<NNN>-<name>/`
+**Issue Directory**: `<Root>/.issues/<id>/`
 
 **Instructions**：
 ```
-1. Read NOTES.md for issue description and reproduction steps
+1. Read ISSUE.yaml for issue description and reproduction steps
 2. Reproduce the issue
 3. Diagnose root cause (logs, code, data flow)
 4. Audit log auditability for this issue
 5. Search for similar patterns
-6. Write diagnosis to NOTES.md (fill QA Diagnosis section, do not modify other sections)
+6. Write diagnosis to ISSUE.yaml (fill QA Diagnosis section, do not modify other sections)
 7. Return diagnosis report
 ```
 
@@ -1023,15 +784,15 @@ QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
 #### 场景 7: developer（QA 诊断后修复）
 
 **可选章节**：
-- `## Bug Description`: `<from <Root>/.issues/<NNN>-<issue-name>/NOTES.md>`
-- `## QA Diagnosis`: `Read <Root>/.issues/<NNN>-<name>/NOTES.md QA Diagnosis section for root cause and fix suggestion.`
+- `## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
+- `## QA Diagnosis`: `Read <Root>/.issues/<id>/ISSUE.yaml QA Diagnosis section for root cause and fix suggestion.`
 
-**Issue Directory**: `<Root>/.issues/<NNN>-<name>/`
+**Issue Directory**: `<Root>/.issues/<id>/`
 
 **Instructions**：
 ```
-1. Update issue status to "triaging" in <Root>/.issues/index.md
-2. Read QA Diagnosis in NOTES.md
+1. Update issue status to "triaging" in <Root>/.issues/index.yaml
+2. Read QA Diagnosis in ISSUE.yaml
 3. Apply fix based on QA's root cause analysis and suggestion
 4. Add regression test
 5. Run full test suite
@@ -1049,7 +810,7 @@ QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
 - `## Questions`: `<PM 在 blocked_reason 中提出的技术问题清单>`
 - `## Context`: `<需求背景、功能范围>`
 
-**Feature Directory**: `<Root>/.features/<NNN>-<name>/`
+**Feature Directory**: `<Root>/.features/<id>/`
 
 **Instructions**：
 ```
@@ -1068,9 +829,9 @@ PM 完成 doc/ 修改后（必要时已经过 spec-compliance 自检迭代），
 
 ### Review 标准
 
-- **需求覆盖率**：doc/ diff 是否覆盖 REQUIREMENTS.md 需求规格 > 功能 中的每个功能点
+- **需求覆盖率**：doc/ diff 是否覆盖 REQUIREMENTS.yaml 需求规格 > 功能 中的每个功能点
 - **完整性**：所有应产出的 doc 文件都已修改（doc/<module>/{data-schema,data-persistence,service}.md + 按 Agent Type 的 backend.md/mcp-server.md + 共享数据时 doc/common/）
-- **一致性**：本 feature 修改的 doc 文件范围与 REQUIREMENTS.md 需求规格 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
+- **一致性**：本 feature 修改的 doc 文件范围与 REQUIREMENTS.yaml 需求规格 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
 
 ### Review 不包含
 
@@ -1096,8 +857,8 @@ PM 将设计提交用户终审：
 ### 处理步骤
 
 1. 读取 subagent 返回的 `blocked_reason`
-2. 在对应 feature/issue 目录下创建 BLOCKED.md
-3. 更新 index.md 中状态为 blocked
+2. 在对应 feature/issue 目录下创建 BLOCKED.yaml
+3. 更新 index.yaml 中状态为 blocked
 4. **根据 blocked 类型分流**：
    - **一般阻塞**（`clarification-needed` | `external-dependency`）：跳到下一个待办项，等待用户处理
    - **技术可行性阻塞**（`tech-feasibility`）：自动调度 POC subagent 进行分析
@@ -1118,7 +879,7 @@ PM 将报告提交用户：
   ↓
 用户做出决策
   ↓
-PM 删除 BLOCKED.md，恢复状态为 designing
+PM 删除 BLOCKED.yaml，恢复状态为 designing
 PM 基于用户决策继续修改 doc/：
   "## POC Decision
    用户选择方案: <方案名称>
@@ -1130,7 +891,7 @@ PM 基于用户决策继续修改 doc/：
 
 用户与 PM 讨论后提供所需信息或做出决策：
 1. PM 更新对应 feature/issue 的需求说明
-2. 删除 BLOCKED.md
+2. 删除 BLOCKED.yaml
 3. 恢复原状态（blocked 前的状态）继续处理
 
 ---
@@ -1141,35 +902,31 @@ PM 基于用户决策继续修改 doc/：
 
 **所有状态持久化在文件中（独立于对话历史）。**
 
-这使得 ralph-loop 模式安全可靠：每次迭代从磁盘读取最新状态。
+所有状态持久化在文件中（独立于对话历史），确保跨会话状态不丢失。
 
 ### 状态文件
 
 | 文件 | 用途 |
 |------|------|
-| `.features/index.md` | 所有 feature 的状态、优先级、时间 |
-| `.features/<NNN>/BLOCKED.md` | feature 的阻塞详情（含 blocked 类型） |
+| `.features/index.yaml` | 所有 feature 的状态、优先级、时间 |
+| `.features/<NNN>/BLOCKED.yaml` | feature 的阻塞详情（含 blocked 类型） |
 | `{Root}/doc/<module>/*.md` | PM 在 designing 阶段直接修改的最终正式文档（data-schema / data-persistence / service） |
 | `{Root}/doc/common/data-schema.md` | 跨 module 共享数据 |
 | `{Root}/doc/backend.md` / `doc/mcp-server.md` | 接入层 doc（按 Agent Type） |
 | `.features/<NNN>/POC-REPORT.md` | 技术可行性评估报告（tech-feasibility blocked 时生成） |
-| `.issues/index.md` | 所有 issue 的状态、类型、关联 |
-| `.issues/<NNN>/NOTES.md` | issue 的描述和讨论记录 |
-| `.issues/<NNN>/BLOCKED.md` | issue 的阻塞详情 |
-
-### 每次 PM 迭代执行
-
-迭代逻辑见 §PM 工作模式 > Ralph-Loop 循环逻辑。核心：每次迭代从磁盘读取最新状态（`.features/index.md` + `.issues/index.md`），按优先级选择待办项调度 subagent，subagent 更新文件后下次迭代重读。
+| `.issues/index.yaml` | 所有 issue 的状态、类型、关联 |
+| `.issues/<NNN>/ISSUE.yaml` | issue 的描述和讨论记录 |
+| `.issues/<NNN>/BLOCKED.yaml` | issue 的阻塞详情 |
 
 ---
 
 ## 日常巡检
 
-用户启动 PM 时（非 ralph-loop 模式），PM 主动汇报当前状态：
+用户启动 PM 时，PM 主动汇报当前状态：
 
 1. `git pull` 拉取最新代码
 2. 检查 `.issues/_incoming/` 是否有新的生产环境报告，如有按 §跨环境 Issue 处理 > _incoming 扫描 流程处理
-3. 读取 `.features/index.md` 和 `.issues/index.md`
+3. 读取 `.features/index.yaml` 和 `.issues/index.yaml`
 4. 汇报：
    - 来自生产环境的新报告数
    - open issue 待 triage 数
