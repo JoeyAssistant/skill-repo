@@ -346,3 +346,35 @@ def test_feature_unblock_not_blocked(tmp_path, monkeypatch):
     runner = CliRunner()
     result = runner.invoke(main, ["feature", "unblock", "1", "--to", "designing"])
     assert result.exit_code == 1  # not blocked
+
+
+def test_feature_delete_requires_force(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "delete", "1"])
+    assert result.exit_code == 1  # --force required
+
+
+def test_feature_delete_with_force(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "delete", "1", "--force"])
+    assert result.exit_code == 0
+    assert "Deleted feature 1" in result.output
+
+    assert not (tmp_path / ".features" / "1").exists()
+    idx = load_yaml(tmp_path / ".features" / "index.yaml")
+    assert len(idx["features"]) == 0
+
+
+def test_feature_delete_unknown_feature(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "delete", "999", "--force"])
+    assert result.exit_code == 2
