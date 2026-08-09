@@ -2,10 +2,12 @@
 """feature command group."""
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
 import click
+import yaml
 from pydantic import ValidationError
 
 from agent_factory.cli.common import (
@@ -138,3 +140,84 @@ def set_field(feature_id: int, field: str, value: str | None, file_path: Path | 
         dump_yaml(idx_path, idx)
 
     click.echo(f"Updated feature {feature_id}: {field}")
+
+
+@feature_group.command("show")
+@click.argument("feature_id", type=int)
+@click.option("--format", "fmt", type=click.Choice(["markdown", "yaml", "json"]), default="markdown")
+def show(feature_id: int, fmt: str) -> None:
+    """Show feature details."""
+    try:
+        feature_dir = find_feature_dir(feature_id)
+    except FileNotFoundError as exc:
+        click.echo(format_error("NotFound", str(exc), None), err=True)
+        sys.exit(2)
+
+    reqs_path = feature_dir / "REQUIREMENTS.yaml"
+    data = load_yaml(reqs_path)
+    feature = Feature.model_validate(data)
+
+    if fmt == "json":
+        click.echo(json.dumps(feature.model_dump(mode="json"), ensure_ascii=False, indent=2))
+    elif fmt == "yaml":
+        click.echo(yaml.safe_dump(feature.model_dump(mode="json"), allow_unicode=True, sort_keys=False))
+    else:  # markdown
+        click.echo(_render_feature_markdown(feature))
+
+
+def _render_feature_markdown(feature: Feature) -> str:
+    lines = [
+        f"# Feature {feature.id}: {feature.title}",
+        "",
+        f"**Agent Type**: {feature.agent_type.value}",
+        "",
+        "## Problem",
+        feature.problem,
+        "",
+        "## Benefit",
+        feature.benefit,
+        "",
+        "## Description",
+        feature.description,
+        "",
+    ]
+    if feature.data_schema:
+        lines += ["## Data Schema", "```python", feature.data_schema, "```", ""]
+    if feature.interfaces:
+        lines += ["## Interfaces", feature.interfaces, ""]
+    if feature.acceptance_cases:
+        lines += ["## Acceptance Cases", feature.acceptance_cases, ""]
+    if feature.decisions:
+        lines += ["## Decisions", ""]
+        for dec in feature.decisions:
+            lines += [f"### {dec.id}: {dec.question}", f"**Status**: {dec.status.value}", ""]
+            for opt in dec.options:
+                lines += [f"- **{opt.id}**: {opt.name} (pros: {opt.pros}; cons: {opt.cons})"]
+            lines += [f"**Recommendation**: {dec.recommendation}", f"**Rationale**: {dec.rationale}", ""]
+    return "\n".join(lines)
+
+
+@feature_group.command("list")
+@click.option("--status", type=click.Choice([s.value for s in FeatureStatus]), help="Filter by status")
+@click.option("--priority", type=click.Choice([p.value for p in Priority]), help="Filter by priority")
+@click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table")
+def list_features(status: str | None, priority: str | None, fmt: str) -> None:
+    """List features."""
+    idx_path = Path(".features") / "index.yaml"
+    if not idx_path.exists():
+        click.echo("No features found.")
+        return
+
+    idx = FeatureIndex.model_validate(load_yaml(idx_path))
+    items = idx.features
+    if status:
+        items = [i for i in items if i.status.value == status]
+    if priority:
+        items = [i for i in items if i.priority.value == priority]
+
+    if fmt == "json":
+        click.echo(json.dumps([i.model_dump(mode="json") for i in items], ensure_ascii=False, indent=2))
+    else:
+        click.echo(f"{'ID':<5} {'STATUS':<15} {'PRIORITY':<10} TITLE")
+        for item in items:
+            click.echo(f"{item.id:<5} {item.status.value:<15} {item.priority.value:<10} {item.title}")
