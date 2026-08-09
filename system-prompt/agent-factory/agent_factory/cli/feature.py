@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -374,3 +375,31 @@ def unblock(feature_id: int, target: str) -> None:
         dump_yaml(idx_path, idx)
 
     click.echo(f"Unblocked feature {feature_id}: status → {target}")
+
+
+@feature_group.command("delete")
+@click.argument("feature_id", type=int)
+@click.option("--force", is_flag=True, help="Required to actually delete (no interactive confirm)")
+def delete(feature_id: int, force: bool) -> None:
+    """Delete feature (directory + index entry)."""
+    if not force:
+        click.echo(format_error("ForceRequired", "Pass --force to confirm deletion", None), err=True)
+        sys.exit(1)
+
+    try:
+        feature_dir = find_feature_dir(feature_id)
+    except FileNotFoundError as exc:
+        click.echo(format_error("NotFound", str(exc), None), err=True)
+        sys.exit(2)
+
+    # Remove directory
+    shutil.rmtree(feature_dir)
+
+    # Remove from index
+    idx_path = Path(".features") / "index.yaml"
+    if idx_path.exists():
+        idx = FeatureIndex.model_validate(load_yaml(idx_path))
+        idx.features = [i for i in idx.features if i.id != feature_id]
+        dump_yaml(idx_path, idx)
+
+    click.echo(f"Deleted feature {feature_id}")
