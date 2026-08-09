@@ -16,7 +16,7 @@ dev = [
 ]
 
 [project.scripts]
-agent-factory-validate = "agent_factory.schema.validate:main"
+agent-factory = "agent_factory.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["agent_factory/schema/tests"]
