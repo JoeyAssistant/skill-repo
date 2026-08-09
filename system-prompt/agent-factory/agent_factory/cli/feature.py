@@ -221,3 +221,88 @@ def list_features(status: str | None, priority: str | None, fmt: str) -> None:
         click.echo(f"{'ID':<5} {'STATUS':<15} {'PRIORITY':<10} TITLE")
         for item in items:
             click.echo(f"{item.id:<5} {item.status.value:<15} {item.priority.value:<10} {item.title}")
+
+
+# State machine: allowed transitions
+ALLOWED_TRANSITIONS = {
+    FeatureStatus.DRAFT: {FeatureStatus.DESIGNING, FeatureStatus.CANCELLED},
+    FeatureStatus.DESIGNING: {FeatureStatus.APPROVED, FeatureStatus.BLOCKED, FeatureStatus.CANCELLED},
+    FeatureStatus.APPROVED: {FeatureStatus.IMPLEMENTING, FeatureStatus.CANCELLED},
+    FeatureStatus.IMPLEMENTING: {FeatureStatus.QA_REVIEWING, FeatureStatus.BLOCKED},
+    FeatureStatus.QA_REVIEWING: {FeatureStatus.DONE, FeatureStatus.IMPLEMENTING},  # QA fail → implementing
+    FeatureStatus.BLOCKED: set(),  # needs unblock command
+    FeatureStatus.DONE: set(),
+    FeatureStatus.CANCELLED: set(),
+}
+
+
+def _validate_transition_requirements(current: FeatureStatus, target: FeatureStatus, feature: Feature) -> list[str]:
+    """Return list of missing requirements for transition (empty = OK)."""
+    issues = []
+    if current == FeatureStatus.DRAFT and target == FeatureStatus.DESIGNING:
+        if not feature.description.strip():
+            issues.append("description is empty")
+    elif current == FeatureStatus.DESIGNING and target == FeatureStatus.APPROVED:
+        if not (feature.data_schema or "").strip():
+            issues.append("data_schema is empty")
+        if not (feature.interfaces or "").strip():
+            issues.append("interfaces is empty")
+        if not feature.acceptance_cases.strip():
+            issues.append("acceptance_cases is empty")
+    elif current == FeatureStatus.APPROVED and target == FeatureStatus.IMPLEMENTING:
+        from agent_factory.schema.enums import DecisionStatus
+        open_decisions = [d.id for d in feature.decisions if d.status != DecisionStatus.CLOSED]
+        if open_decisions:
+            issues.append(f"open decisions not closed: {open_decisions}")
+    return issues
+
+
+@feature_group.command("transition")
+@click.argument("feature_id", type=int)
+@click.option("--to", "target", required=True, type=click.Choice([s.value for s in FeatureStatus]))
+def transition(feature_id: int, target: str) -> None:
+    """Transition feature status (with cross-field validation)."""
+    try:
+        feature_dir = find_feature_dir(feature_id)
+    except FileNotFoundError as exc:
+        click.echo(format_error("NotFound", str(exc), None), err=True)
+        sys.exit(2)
+
+    target_status = FeatureStatus(target)
+
+    # Load current status from index
+    idx_path = Path(".features") / "index.yaml"
+    idx = FeatureIndex.model_validate(load_yaml(idx_path))
+    current_item = next((i for i in idx.features if i.id == feature_id), None)
+    if not current_item:
+        click.echo(format_error("NotFound", f"Feature {feature_id} not in index", None), err=True)
+        sys.exit(2)
+
+    current_status = current_item.status
+
+    # Validate path
+    if target_status not in ALLOWED_TRANSITIONS.get(current_status, set()):
+        click.echo(format_error(
+            "InvalidTransition",
+            f"Path '{current_status.value} → {target_status.value}' is not allowed",
+            None,
+        ), err=True)
+        sys.exit(3)
+
+    # Cross-field validation (load REQS)
+    reqs_path = feature_dir / "REQUIREMENTS.yaml"
+    feature = Feature.model_validate(load_yaml(reqs_path))
+    issues = _validate_transition_requirements(current_status, target_status, feature)
+    if issues:
+        click.echo(format_error(
+            "ValidationError",
+            f"Cannot transition to {target_status.value}: " + "; ".join(issues),
+            str(reqs_path),
+        ), err=True)
+        sys.exit(1)
+
+    # Update index
+    current_item.status = target_status
+    dump_yaml(idx_path, idx)
+
+    click.echo(f"Transitioned feature {feature_id}: {current_status.value} → {target_status.value}")
