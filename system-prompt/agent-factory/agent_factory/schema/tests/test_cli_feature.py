@@ -236,3 +236,54 @@ def test_feature_list_filter_by_status(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "B" in result.output
     assert "A\n" not in result.output  # filtered out (full line)
+
+
+def test_feature_transition_draft_to_designing_requires_description(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)  # description is "z" (non-empty)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "transition", "1", "--to", "designing"])
+    assert result.exit_code == 0
+    assert "draft → designing" in result.output
+
+    idx = load_yaml(tmp_path / ".features" / "index.yaml")
+    assert idx["features"][0]["status"] == "designing"
+
+
+def test_feature_transition_blocked_when_description_empty(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+    # Set description to empty
+    (tmp_path / ".features" / "1" / "REQUIREMENTS.yaml").write_text(
+        "id: 1\ntitle: 测试\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: ''\n"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "transition", "1", "--to", "designing"])
+    assert result.exit_code == 1  # validation failure
+    # Status unchanged
+    idx = load_yaml(tmp_path / ".features" / "index.yaml")
+    assert idx["features"][0]["status"] == "draft"
+
+
+def test_feature_transition_designing_to_approved_requires_all_fields(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+    # First transition to designing
+    runner = CliRunner()
+    runner.invoke(main, ["feature", "transition", "1", "--to", "designing"])
+
+    # Try transition to approved without data_schema etc.
+    result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
+    assert result.exit_code == 1  # missing data_schema / interfaces / acceptance_cases
+
+
+def test_feature_transition_invalid_path(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    # draft → done is invalid (must go through designing, approved, implementing, qa-reviewing)
+    result = runner.invoke(main, ["feature", "transition", "1", "--to", "done"])
+    assert result.exit_code == 3  # invalid state path
