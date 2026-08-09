@@ -162,3 +162,77 @@ def _setup_feature(tmp_path):
     (tmp_path / ".features" / "index.yaml").write_text(
         "features:\n  - id: 1\n    title: 测试\n    status: draft\n    priority: P2\n"
     )
+
+
+def test_feature_show_markdown_default(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "show", "1"])
+    assert result.exit_code == 0
+    assert "测试" in result.output  # title rendered
+
+
+def test_feature_show_yaml_format(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "show", "1", "--format", "yaml"])
+    assert result.exit_code == 0
+    assert "id: 1" in result.output
+    assert "title: 测试" in result.output
+
+
+def test_feature_show_json_format(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "show", "1", "--format", "json"])
+    assert result.exit_code == 0
+    import json
+    data = json.loads(result.output)
+    assert data["id"] == 1
+    assert data["title"] == "测试"
+
+
+def test_feature_show_unknown_feature(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "show", "999"])
+    assert result.exit_code == 2
+
+
+def test_feature_list_default_table(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "list"])
+    assert result.exit_code == 0
+    assert "1" in result.output
+    assert "测试" in result.output
+
+
+def test_feature_list_filter_by_status(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    # Setup 2 features: one draft, one done
+    (tmp_path / ".features" / "1").mkdir(parents=True)
+    (tmp_path / ".features" / "1" / "REQUIREMENTS.yaml").write_text("id: 1\ntitle: A\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n")
+    (tmp_path / ".features" / "2").mkdir(parents=True)
+    (tmp_path / ".features" / "2" / "REQUIREMENTS.yaml").write_text("id: 2\ntitle: B\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n")
+    (tmp_path / ".features" / "index.yaml").write_text(
+        "features:\n"
+        "  - id: 1\n    title: A\n    status: draft\n    priority: P2\n"
+        "  - id: 2\n    title: B\n    status: done\n    priority: P1\n"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "list", "--status", "done"])
+    assert result.exit_code == 0
+    assert "B" in result.output
+    assert "A\n" not in result.output  # filtered out (full line)
