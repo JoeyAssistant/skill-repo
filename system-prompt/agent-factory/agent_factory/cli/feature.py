@@ -24,7 +24,8 @@ def feature_group() -> None:
 
 
 @feature_group.command("new")
-@click.option("--title", required=True, help="Feature title")
+@click.option("--title", required=True, help="Human-readable title (stored in REQUIREMENTS.yaml)")
+@click.option("--slug", required=True, help="Directory slug (kebab-case, e.g., 'income-module')")
 @click.option(
     "--agent-type",
     type=click.Choice([t.value for t in AgentType]),
@@ -37,19 +38,33 @@ def feature_group() -> None:
     default=Priority.P2.value,
     help="Priority (default: P2)",
 )
-def new(title: str, agent_type: str, priority: str) -> None:
-    """Create new feature (status=draft)."""
+def new(title: str, slug: str, agent_type: str, priority: str) -> None:
+    """Create new feature (status=draft).
+
+    Directory name: <NNN>-<slug> (e.g., 001-income-module).
+    Both REQUIREMENTS.yaml 'title' field and index 'title' field use the directory name.
+    """
+    import re
+    if not re.match(r"^[a-z][a-z0-9-]*$", slug):
+        click.echo(format_error(
+            "InvalidSlug",
+            f"Slug must be kebab-case (lowercase letters/digits/hyphens): {slug}",
+            None,
+        ), err=True)
+        sys.exit(4)
+
     feature_id = next_feature_id()
-    feature_dir = Path(".features") / str(feature_id)
+    dir_name = f"{feature_id:03d}-{slug}"
+    feature_dir = Path(".features") / dir_name
     if feature_dir.exists():
-        click.echo(format_error("FileExists", f"Feature {feature_id} already exists", str(feature_dir)), err=True)
+        click.echo(format_error("FileExists", f"Directory already exists: {feature_dir}", str(feature_dir)), err=True)
         sys.exit(1)
 
     # Build Feature object (validates immediately)
     try:
         feature = Feature(
             id=feature_id,
-            title=title,
+            title=dir_name,  # title field = directory name
             agent_type=AgentType(agent_type),
             problem="",  # placeholder, filled via `set` later
             benefit="",
@@ -69,13 +84,13 @@ def new(title: str, agent_type: str, priority: str) -> None:
     idx = FeatureIndex.model_validate(load_yaml(idx_path)) if idx_path.exists() else FeatureIndex()
     idx.features.append(FeatureIndexItem(
         id=feature_id,
-        title=title,
+        title=dir_name,  # index title = directory name
         status=FeatureStatus.DRAFT,
         priority=Priority(priority),
     ))
     dump_yaml(idx_path, idx)
 
-    click.echo(f"Created feature {feature_id}: {title}")
+    click.echo(f"Created feature {feature_id}: {dir_name}")
 
 
 # Other feature commands will be added in subsequent tasks:
@@ -83,8 +98,9 @@ def new(title: str, agent_type: str, priority: str) -> None:
 
 
 # Fields that route to REQS.yaml
+# Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 REQS_FIELDS = {
-    "title", "agent_type", "problem", "benefit", "description",
+    "agent_type", "problem", "benefit", "description",
     "data_schema", "interfaces", "acceptance_cases", "decisions",
 }
 
@@ -97,7 +113,7 @@ REQS_FIELDS = {
 def set_field(feature_id: int, field: str, value: str | None, file_path: Path | None) -> None:
     """Update a field in REQUIREMENTS.yaml.
 
-    For 'title', also syncs to index.yaml.
+    Title is immutable (equals directory name, set at creation).
     For long fields (description / data_schema / interfaces / acceptance_cases / decisions),
     use --file to read from a file.
     """
@@ -129,16 +145,6 @@ def set_field(feature_id: int, field: str, value: str | None, file_path: Path | 
         sys.exit(1)
 
     dump_yaml(reqs_path, feature)
-
-    # Sync title to index
-    if field == "title":
-        idx_path = Path(".features") / "index.yaml"
-        idx = FeatureIndex.model_validate(load_yaml(idx_path))
-        for item in idx.features:
-            if item.id == feature_id:
-                item.title = new_value
-                break
-        dump_yaml(idx_path, idx)
 
     click.echo(f"Updated feature {feature_id}: {field}")
 

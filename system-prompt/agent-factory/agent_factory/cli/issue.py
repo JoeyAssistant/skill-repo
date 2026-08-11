@@ -22,32 +22,43 @@ def issue_group() -> None:
     """Operate issue ISSUE.yaml."""
 
 
+# Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 ISSUE_FIELDS = {
-    "title", "scenario", "impact",
+    "scenario", "impact",
     "root_cause", "fix_suggestion", "fix", "resolution",
 }
 
 
 @issue_group.command("new")
-@click.option("--title", required=True, help="Issue title")
+@click.option("--title", required=True, help="Human-readable title (stored in ISSUE.yaml)")
+@click.option("--slug", required=True, help="Directory slug (kebab-case)")
 @click.option("--type", "issue_type", required=True,
               type=click.Choice([t.value for t in IssueType]),
               help="Issue type (bug / feature-request)")
 @click.option("--priority", default=Priority.P2.value,
               type=click.Choice([p.value for p in Priority]),
               help="Priority (default: P2)")
-def new(title: str, issue_type: str, priority: str) -> None:
-    """Create new issue (status=open)."""
+def new(title: str, slug: str, issue_type: str, priority: str) -> None:
+    """Create new issue (status=open).
+
+    Directory name: <NNN>-<slug> (e.g., 001-login-crash).
+    """
+    import re
+    if not re.match(r"^[a-z][a-z0-9-]*$", slug):
+        click.echo(format_error("InvalidSlug", f"Slug must be kebab-case: {slug}", None), err=True)
+        sys.exit(4)
+
     issue_id = next_issue_id()
-    issue_dir = Path(".issues") / str(issue_id)
+    dir_name = f"{issue_id:03d}-{slug}"
+    issue_dir = Path(".issues") / dir_name
     if issue_dir.exists():
-        click.echo(format_error("FileExists", f"Issue {issue_id} already exists", str(issue_dir)), err=True)
+        click.echo(format_error("FileExists", f"Directory already exists: {issue_dir}", str(issue_dir)), err=True)
         sys.exit(1)
 
     try:
         issue = Issue(
             id=issue_id,
-            title=title,
+            title=dir_name,
             scenario="",
             impact="",
         )
@@ -62,14 +73,14 @@ def new(title: str, issue_type: str, priority: str) -> None:
     idx = IssueIndex.model_validate(load_yaml(idx_path)) if idx_path.exists() else IssueIndex()
     idx.issues.append(IssueIndexItem(
         id=issue_id,
-        title=title,
+        title=dir_name,
         type=IssueType(issue_type),
         status=IssueStatus.OPEN,
         priority=Priority(priority),
     ))
     dump_yaml(idx_path, idx)
 
-    click.echo(f"Created issue {issue_id}: {title}")
+    click.echo(f"Created issue {issue_id}: {dir_name}")
 
 
 @issue_group.command("set")
@@ -79,7 +90,7 @@ def new(title: str, issue_type: str, priority: str) -> None:
 @click.option("--file", "file_path", type=click.Path(exists=True, path_type=Path),
               help="Read value from file")
 def set_field(issue_id: int, field: str, value: str | None, file_path: Path | None) -> None:
-    """Update a field in ISSUE.yaml. 'title' syncs to index."""
+    """Update a field in ISSUE.yaml. Title is immutable (equals directory name)."""
     if field not in ISSUE_FIELDS:
         click.echo(format_error("InvalidField",
                                 f"Field '{field}' not supported. Valid: {sorted(ISSUE_FIELDS)}",
@@ -110,15 +121,6 @@ def set_field(issue_id: int, field: str, value: str | None, file_path: Path | No
         sys.exit(1)
 
     dump_yaml(issue_path, issue)
-
-    if field == "title":
-        idx_path = Path(".issues") / "index.yaml"
-        idx = IssueIndex.model_validate(load_yaml(idx_path))
-        for item in idx.issues:
-            if item.id == issue_id:
-                item.title = new_value
-                break
-        dump_yaml(idx_path, idx)
 
     click.echo(f"Updated issue {issue_id}: {field}")
 
