@@ -223,6 +223,22 @@ def transition(issue_id: int, target: str) -> None:
         ), err=True)
         sys.exit(3)
 
+    # Cross-field validation: triaging → closed requires fix + resolution (closed = 闭环)
+    if current_status == IssueStatus.TRIAGING and target_status == IssueStatus.CLOSED:
+        issue = Issue.model_validate(load_yaml(issue_dir / "ISSUE.yaml"))
+        missing = []
+        if not (issue.fix or "").strip():
+            missing.append("fix is empty (developer must fill via `agent-factory issue set <id> fix ...`)")
+        if not (issue.resolution or "").strip():
+            missing.append("resolution is empty (PM must fill via `agent-factory issue set <id> resolution ...`)")
+        if missing:
+            click.echo(format_error(
+                "ValidationError",
+                "Cannot close issue: " + "; ".join(missing),
+                str(issue_dir / "ISSUE.yaml"),
+            ), err=True)
+            sys.exit(1)
+
     current_item.status = target_status
     dump_yaml(idx_path, idx)
 
