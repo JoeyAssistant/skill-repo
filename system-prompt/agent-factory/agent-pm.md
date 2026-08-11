@@ -774,15 +774,34 @@ Root: .
 
 **Instructions**：
 ```
-1. Update issue status to "triaging" in <Root>/.issues/index.yaml
-2. Reproduce and diagnose the bug
-3. Apply minimal fix
-4. Add regression test
-5. Run full test suite
-6. Git commit (one issue = one commit, message: fix: <问题描述>)
-7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-8. On success: update issue status to "closed", return complete with commit_sha
-9. On blocker: update issue status to "blocked", return blocked with reason
+1. `agent-factory issue transition <id> --to triaging`（认领 issue）
+2. Read ISSUE.yaml 的 root_cause + fix_suggestion（如果 QA 已诊断）
+3. Reproduce and diagnose the bug
+4. Apply minimal fix
+5. Add regression test
+6. Run full test suite
+7. Git commit (one issue = one commit, message: fix: <问题描述>)
+8. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+9. **`agent-factory issue set <id> fix "Changed Files: <files>; Regression Test: <test>"`**（必填，写回修复记录）
+10. **不要 transition 到 closed**（PM review + 填 resolution 后由 PM 关闭）
+11. On success: return complete with commit_sha
+12. On blocker: `agent-factory issue block <id> --reason "..." --action "..."`, return blocked with reason
+```
+
+**关键约束（developer 必读）**：
+- 第 9 步 `fix` 字段强制写入（schema 状态机会校验）
+- `resolution` 字段由 PM 填，developer 不写
+- developer 不主动 transition closed（PM 负责验收后关闭）
+
+**PM 验收（developer 返回 complete 后）**：
+```
+1. `agent-factory issue show <id>` 检查 fix 字段非空
+   - fix 为空 → 调度场景 3 让 developer 补填
+2. PM 填 resolution:
+   - `agent-factory issue set <id> resolution "direct-fix"`（直接修复）
+   - 或 `agent-factory issue set <id> resolution "converted-to-feature #<NNN>"`（转 feature）
+3. `agent-factory issue transition <id> --to closed`
+   - 失败（exit 1）→ stderr 提示缺哪些字段，补填后重试
 ```
 
 #### 场景 4: QA（Feature 验收）
@@ -850,16 +869,22 @@ QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
 
 **Instructions**：
 ```
-1. Update issue status to "triaging" in <Root>/.issues/index.yaml
-2. Read QA Diagnosis in ISSUE.yaml
+1. `agent-factory issue transition <id> --to triaging`（认领 issue）
+2. Read ISSUE.yaml 的 root_cause + fix_suggestion
 3. Apply fix based on QA's root cause analysis and suggestion
 4. Add regression test
 5. Run full test suite
 6. Git commit (one issue = one commit, message: fix: <问题描述>)
 7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-8. On success: update issue status to "closed", return complete with commit_sha
-9. On blocker: update issue status to "blocked", return blocked with reason
+8. **`agent-factory issue set <id> fix "Changed Files: <files>; Regression Test: <test>"`**（必填，写回修复记录）
+9. **不要 transition 到 closed**（PM review + 填 resolution 后由 PM 关闭）
+10. On success: return complete with commit_sha
+11. On blocker: `agent-factory issue block <id> --reason "..." --action "..."`, return blocked with reason
 ```
+
+**关键约束**：与场景 3 一致（fix 字段强制 + developer 不写 resolution + 不主动 transition closed）
+
+**PM 验收**：与场景 3 PM 验收步骤一致（见上文）
 
 #### 场景 8: POC（技术可行性）
 

@@ -130,3 +130,48 @@ def test_issue_block_unblock(tmp_path, monkeypatch):
     assert not (tmp_path / ".issues" / "001-test-issue" / "BLOCKED.yaml").exists()
     idx = load_yaml(tmp_path / ".issues" / "index.yaml")
     assert idx["issues"][0]["status"] == "triaging"
+
+
+def test_issue_close_requires_fix_and_resolution(tmp_path, monkeypatch):
+    """triaging → closed must have fix + resolution both non-empty (闭环校验)."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    runner = CliRunner()
+    # First transition to triaging
+    runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
+
+    # Try to close without fix + resolution → should fail
+    result = runner.invoke(main, ["issue", "transition", "1", "--to", "closed"])
+    assert result.exit_code == 1  # validation failure
+    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
+    assert idx["issues"][0]["status"] == "triaging"  # unchanged
+
+
+def test_issue_close_with_fix_only_still_fails(tmp_path, monkeypatch):
+    """fix filled but resolution empty → still cannot close."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    runner = CliRunner()
+    runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
+    runner.invoke(main, ["issue", "set", "1", "fix", "Changed Files: x.py"])
+
+    result = runner.invoke(main, ["issue", "transition", "1", "--to", "closed"])
+    assert result.exit_code == 1  # resolution still empty
+
+
+def test_issue_close_succeeds_with_both_fields(tmp_path, monkeypatch):
+    """Both fix and resolution filled → close succeeds."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    runner = CliRunner()
+    runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
+    runner.invoke(main, ["issue", "set", "1", "fix", "Changed Files: x.py"])
+    runner.invoke(main, ["issue", "set", "1", "resolution", "direct-fix"])
+
+    result = runner.invoke(main, ["issue", "transition", "1", "--to", "closed"])
+    assert result.exit_code == 0
+    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
+    assert idx["issues"][0]["status"] == "closed"
