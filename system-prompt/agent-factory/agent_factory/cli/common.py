@@ -40,18 +40,35 @@ def dump_yaml(path: Path, data: Any) -> None:
 
 
 def find_feature_dir(feature_id: int) -> Path:
-    """Find .features/<id>/ directory. Raise FileNotFoundError if missing."""
-    p = Path(".features") / str(feature_id)
+    """Find feature directory by looking up title in index.yaml.
+
+    title field = directory name (e.g., '057-cli-only-data-access').
+    """
+    idx_path = Path(".features") / "index.yaml"
+    if not idx_path.exists():
+        raise FileNotFoundError(f"Index file missing: {idx_path}")
+    idx = FeatureIndex.model_validate(load_yaml(idx_path))
+    item = next((i for i in idx.features if i.id == feature_id), None)
+    if not item:
+        raise FileNotFoundError(f"Feature {feature_id} not in index")
+    p = Path(".features") / item.title
     if not p.exists():
-        raise FileNotFoundError(f"Feature {feature_id} not found: {p}")
+        raise FileNotFoundError(f"Feature {feature_id} directory missing: {p}")
     return p
 
 
 def find_issue_dir(issue_id: int) -> Path:
-    """Find .issues/<id>/ directory."""
-    p = Path(".issues") / str(issue_id)
+    """Find issue directory by looking up title in index.yaml."""
+    idx_path = Path(".issues") / "index.yaml"
+    if not idx_path.exists():
+        raise FileNotFoundError(f"Index file missing: {idx_path}")
+    idx = IssueIndex.model_validate(load_yaml(idx_path))
+    item = next((i for i in idx.issues if i.id == issue_id), None)
+    if not item:
+        raise FileNotFoundError(f"Issue {issue_id} not in index")
+    p = Path(".issues") / item.title
     if not p.exists():
-        raise FileNotFoundError(f"Issue {issue_id} not found: {p}")
+        raise FileNotFoundError(f"Issue {issue_id} directory missing: {p}")
     return p
 
 

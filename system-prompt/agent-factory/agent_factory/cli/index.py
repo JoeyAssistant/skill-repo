@@ -77,7 +77,8 @@ def set_field(resource: str, item_id: int, field: str, value: str) -> None:
 @index_group.command("refresh")
 @click.argument("resource", type=click.Choice(["feature", "issue"]))
 def refresh(resource: str) -> None:
-    """Scan all REQUIREMENTS/ISSUE files and rebuild index.yaml."""
+    """Scan all directories and rebuild index.yaml. title = directory name."""
+    import re
     base_dir = Path(f".{resource}s")
     if not base_dir.exists():
         click.echo(format_error("NotFound", f"Directory missing: {base_dir}", None), err=True)
@@ -86,33 +87,36 @@ def refresh(resource: str) -> None:
     if resource == "feature":
         items = []
         for subdir in sorted(base_dir.iterdir()):
-            if not subdir.is_dir() or not subdir.name.isdigit():
+            if not subdir.is_dir():
                 continue
+            # Match <NNN>-<slug> or pure <id>; extract numeric id
+            m = re.match(r"^(\d+)", subdir.name)
+            if not m:
+                continue
+            feature_id = int(m.group(1))
             reqs_path = subdir / "REQUIREMENTS.yaml"
-            if not reqs_path.exists():
-                continue
-            data = load_yaml(reqs_path)
             items.append(FeatureIndexItem(
-                id=data["id"],
-                title=data["title"],
-                status=FeatureStatus.DRAFT,  # refresh 不能推断 status，默认 draft（PM 用 transition 修正）
-                priority=Priority.P2,  # 同上，默认 P2
+                id=feature_id,
+                title=subdir.name,  # title = directory name
+                status=FeatureStatus.DRAFT,  # can't infer, default
+                priority=Priority.P2,
             ))
         dump_yaml(base_dir / "index.yaml", FeatureIndex(features=items))
         click.echo(f"Refreshed feature index: {len(items)} items")
     else:
         items = []
         for subdir in sorted(base_dir.iterdir()):
-            if not subdir.is_dir() or not subdir.name.isdigit():
+            if not subdir.is_dir():
                 continue
-            issue_path = subdir / "ISSUE.yaml"
-            if not issue_path.exists():
+            import re
+            m = re.match(r"^(\d+)", subdir.name)
+            if not m:
                 continue
-            data = load_yaml(issue_path)
+            issue_id = int(m.group(1))
             items.append(IssueIndexItem(
-                id=data["id"],
-                title=data["title"],
-                type=IssueType.BUG,  # refresh 不能推断 type，默认 bug
+                id=issue_id,
+                title=subdir.name,
+                type=IssueType.BUG,  # can't infer
                 status=IssueStatus.OPEN,
                 priority=Priority.P2,
             ))
