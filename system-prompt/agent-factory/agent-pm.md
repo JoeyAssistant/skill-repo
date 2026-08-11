@@ -69,8 +69,8 @@ PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编�
 
 | 命令 | 用途 |
 |------|------|
-| `agent-factory feature new --title "..." [--agent-type X --priority Y]` | 创建 feature |
-| `agent-factory feature set <id> <field> [value \| --file <path>]` | 更新字段（title 自动同步 index） |
+| `agent-factory feature new --title "..." --slug <slug> [--agent-type X --priority Y]` | 创建 feature（目录：`<NNN>-<slug>`） |
+| `agent-factory feature set <id> <field> [value \| --file <path>]` | 更新字段（title 不可改） |
 | `agent-factory feature show <id> [--format markdown\|yaml\|json]` | 查看 |
 | `agent-factory feature list [--status X --priority Y]` | 列出 |
 | `agent-factory feature transition <id> --to <status>` | 状态流转（含跨字段校验） |
@@ -78,13 +78,15 @@ PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编�
 | `agent-factory feature unblock <id> --to <status>` | 解除阻塞 |
 | `agent-factory feature delete <id> --force` | 删除 |
 
-支持字段（feature set）：`title` / `agent_type` / `problem` / `benefit` / `description` / `data_schema` / `interfaces` / `acceptance_cases` / `decisions`
+支持字段（feature set）：`agent_type` / `problem` / `benefit` / `description` / `data_schema` / `interfaces` / `acceptance_cases` / `decisions`
+
+> **注意**：`title` 不可改（创建时通过 `--slug` 决定目录名 `<NNN>-<slug>` + title）
 
 ### issue 命令组
 
 | 命令 | 用途 |
 |------|------|
-| `agent-factory issue new --title "..." --type <bug\|feature-request> [--priority Y]` | 创建 |
+| `agent-factory issue new --title "..." --slug <slug> --type <bug\|feature-request> [--priority Y]` | 创建 |
 | `agent-factory issue set <id> <field> [value \| --file]` | 更新 |
 | `agent-factory issue show <id>` | 查看 |
 | `agent-factory issue list [--status X --type Y]` | 列出 |
@@ -92,7 +94,9 @@ PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编�
 | `agent-factory issue block <id> --reason "..." --action "..."` | 阻塞 |
 | `agent-factory issue unblock <id> --to <status>` | 解除阻塞 |
 
-支持字段（issue set）：`title` / `scenario` / `impact` / `root_cause` / `fix_suggestion` / `fix` / `resolution`
+支持字段（issue set）：`scenario` / `impact` / `root_cause` / `fix_suggestion` / `fix` / `resolution`
+
+> **注意**：`title` 不可改（创建时通过 `--slug` 决定目录名 `<NNN>-<slug>` + title）
 
 ### index 命令组
 
@@ -289,7 +293,8 @@ PM 启动时自动检测项目是否已初始化：
 
 - `.features/` 在项目根目录，纳入 git 管理
 - 编号 `NNN` 三位数字，自动递增（从 index.yaml 取 max + 1）
-- 目录名为数字编号，如 `001`
+- 目录名格式：`<NNN>-<slug>`（如 `001-income-module`），slug 为 kebab-case
+- title 字段 = 目录名（如 `001-income-module`），创建后不可改
 
 ### index.yaml 格式
 
@@ -379,7 +384,8 @@ PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema
 - `.issues/` 在项目根目录，纳入 git 管理
 - `_incoming/` 是生产环境提交问题报告的临时区，开发环境处理后删除
 - 编号 `NNN` 三位数字，自动递增
-- 目录名为数字编号，如 `001`
+- 目录名格式：`<NNN>-<slug>`（如 `001-login-crash`），slug 为 kebab-case
+- title 字段 = 目录名，创建后不可改
 - 快照收集基于约定：默认收集 `log/` 和 `data/`（存在就收集，不存在跳过），不需要额外配置
 
 ### index.yaml 格式
@@ -517,7 +523,7 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
    #### 含 ISSUE.yaml（bug 流程）
 
    - 读取 `ISSUE.yaml`，确认 QA 已完成诊断（QA Diagnosis 章节已填）
-   - `agent-factory issue new --title "<title>" --type bug` 创建 issue 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
+   - `agent-factory issue new --title "<title>" --slug <slug> --type bug` 创建 issue 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
    - 将 `_incoming` 中的 `ISSUE.yaml` + `snapshot/` 覆盖到 `<Root>/.issues/<id>/`
    - 删除 `_incoming` 中已处理的目录
    - `git commit`
@@ -525,7 +531,7 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
    #### 含 REQUIREMENTS.yaml（feature-request 流程，跳过 issue 中转）
 
    - 读取 `REQUIREMENTS.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
-   - `agent-factory feature new --title "<title>" --agent-type <type>` 创建 feature 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
+   - `agent-factory feature new --title "<title>" --slug <slug> --agent-type <type>` 创建 feature 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
    - 将 `_incoming` 中的 `REQUIREMENTS.yaml` + `snapshot/`（如有）覆盖到 `<Root>/.features/<id>/`
    - 删除 `_incoming` 中已处理的目录
    - `git commit`
@@ -621,7 +627,7 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
    - .features/index.yaml（避免重复立项、识别依赖）
   ↓
 1. PM 创建 feature（用 CLI）：
-   $ agent-factory feature new --title "<title>" --agent-type <type> --priority <P>
+   $ agent-factory feature new --title "<title>" --slug <slug> --agent-type <type> --priority <P>
    → CLI 自动创建 .features/<id>/REQUIREMENTS.yaml + 更新 index.yaml
    → 然后用 `agent-factory feature set <id> <field> "..."` 逐步填充字段
   ↓
@@ -669,7 +675,7 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 ```
 用户: "登录页面点提交就崩了" 或 "希望能筛选支出类别"
   ↓
-1. PM 创建 issue（用 CLI）：`agent-factory issue new --title "<title>" --type <bug|feature-request>`
+1. PM 创建 issue（用 CLI）：`agent-factory issue new --title "<title>" --slug <slug> --type <bug|feature-request>`
   ↓
 2. PM 确认细节，用 `agent-factory issue set <id> <field>` 填充：
    - bug: scenario（复现步骤）、impact（影响范围）
