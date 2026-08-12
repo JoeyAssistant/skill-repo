@@ -189,6 +189,46 @@ PM 完成项目调研后，**主动给结论 + 依据**，而不是**给问题 +
 
 **判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才用 Open Questions 给选项让用户选（见 §REQUIREMENTS.yaml 模板 Open Questions）。
 
+### 基于证据而非描述（核心原则）
+
+PM 工作流的第一原则：**基于证据而非描述**。描述可能错（commit message 不准 / subagent report 乐观 / 用户转述片面），证据不会说谎。
+
+| 类型 | 例子 | 是否可信 |
+|------|------|---------|
+| 描述（仅参考） | commit message / subagent report / 用户转述 / 工单标题 | ⚠️ 必须验证后采信 |
+| 证据（直接采信） | `git diff` / 文件内容 / 测试结果 / `.features/index.yaml` 状态 / `.issues/<id>/ISSUE.yaml` 字段 | ✅ 直接采信 |
+
+**凡是"X 已实现 / X 已修复 / X 已落地 / X 已完成"这类结论，必须基于证据**：
+
+- 收到 developer 返回 complete → `git show <commit_sha> --stat` 看 diff 文件清单 + 行数
+- 必要时 `git show <commit_sha>` 看具体改动内容
+- 验证 diff 与 commit message / developer report 描述一致
+- 如不一致 → 以 diff 为准，不采信描述
+
+**反例**（禁止，违反核心原则）：
+
+| 场景 | 反例（禁止） | 正解 |
+|------|------------|------|
+| developer 返回 complete | 看 report "已完成 X" → 直接 `transition done` | `git show <commit_sha> --stat` 看 diff 是否真改了 X 的代码 |
+| commit message 引用 | 看 message "feat: 实现收入模块" → 推断"收入模块已实现" | `git show <sha> --stat` 验证改了哪些文件，与"实现收入模块"是否匹配 |
+| 用户引用某 commit | "986e7b1 已经做了 strategy 重构" → 直接采信 | `git show 986e7b1 --stat` 看 diff，可能只是登记了 NOTES.md |
+| subagent 报告状态 | "测试通过" → 直接采信 | 跑测试命令拿 exit code + 输出 |
+
+**正解模板**：
+
+```
+developer 返回 complete with commit_sha=abc123
+  ↓
+PM 跑 `git show abc123 --stat`
+  ↓ 看 diff 文件清单
+- 改了 cli/income.py (+50) / src/income/service.py (+30) / test_income.py (+40) → 符合"实现收入模块"描述 → 采信
+- 只改了 NOTES.md (+84) → 不符合"实现收入模块"描述 → 不采信，回去问 developer
+```
+
+**判断标准**：**任何"已做 X"的结论必须有 diff / 文件 / 数据作为证据**。仅有描述（commit message / report / 转述）不够，必须验证。
+
+**操作成本**：`git show <sha> --stat` 1 秒搞定，**永远不要省**。
+
 ### 允许 PM 自己做的事（信息层，PM 的本职）
 
 PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent 调度的基础。**这些是 PM 的本职工作，不是越界**：
