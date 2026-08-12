@@ -551,26 +551,67 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
 
 1. `git pull` 拉取最新代码
 2. 检查 `<Root>/.issues/_incoming/` 下是否有目录
-3. **有 `_incoming` 条目**，根据文件名分流：
+3. **有 `_incoming` 条目**，按下面流程处理
 
-   #### 含 ISSUE.yaml（bug 流程）
+**核心原则：不要机械按文件名分流，要读内容判断**。文件名是 fast-path（已知格式快速识别），不是唯一依据。遇到未知文件名或旧格式，**必须读内容**识别类型后再处理，不能跳过。
 
-   - 读取 `ISSUE.yaml`，确认 QA 已完成诊断（QA Diagnosis 章节已填）
-   - `agent-factory issue new --title "<title>" --slug <slug> --type bug` 创建 issue 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
-   - 将 `_incoming` 中的 `ISSUE.yaml` + `snapshot/` 覆盖到 `<Root>/.issues/<id>/`
-   - 删除 `_incoming` 中已处理的目录
-   - `git commit`
+#### Step 1: 看文件名快速识别（已知格式）
 
-   #### 含 REQUIREMENTS.yaml（feature-request 流程，跳过 issue 中转）
+| 文件名 | 类型 | 处理 |
+|--------|------|------|
+| `ISSUE.yaml` | bug（新格式） | 直接走 bug 流程 |
+| `REQUIREMENTS.yaml` | feature-request（新格式） | 直接走 feature-request 流程 |
+| `NOTES.md` | 旧格式（兼容期） | 进入 Step 2 |
+| `REQUIREMENTS.md` | 旧格式（兼容期） | 进入 Step 2 |
+| 其他 | 未知 | 进入 Step 2 兜底 |
 
-   - 读取 `REQUIREMENTS.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
-   - `agent-factory feature new --title "<title>" --slug <slug> --agent-type <type>` 创建 feature 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
-   - 将 `_incoming` 中的 `REQUIREMENTS.yaml` + `snapshot/`（如有）覆盖到 `<Root>/.features/<id>/`
-   - 删除 `_incoming` 中已处理的目录
-   - `git commit`
-   - 后续走标准 feature 流程（review REQUIREMENTS.yaml → PM 进入 designing）
+#### Step 2: 兼容/兜底处理（读内容判断类型）
 
-4. 汇报：新收到了多少生产环境报告（区分 bug / feature-request 数）
+读取主文件内容（不要跳过！），根据内容章节/字段判断类型：
+
+| 内容特征 | 类型 | 处理 |
+|---------|------|------|
+| 含 `## Description` / `## Steps to Reproduce` / `## Impact` 等 bug 报告章节 | bug | 转写为 `ISSUE.yaml`（用 schema 字段映射），放入同目录，走 bug 流程 |
+| 含 `## 需求背景` / `## 功能` / `## 关键接口` 等需求章节 | feature-request | 转写为 `REQUIREMENTS.yaml`，放入同目录，走 feature-request 流程 |
+| 纯巡检报告（无具体 bug 或 feature 描述，只是 QA 周期性扫描结果） | 巡检归档 | 读取确认无 actionable 项后，归档到 `.issues/.archive/<timestamp>/`，删除 _incoming |
+| 内容模糊 / 无法判断 | blocked | 标记为 `agent-factory issue block`，等用户澄清 |
+
+**字段映射（旧 markdown → 新 YAML）**：
+
+NOTES.md → ISSUE.yaml：
+- `## Description` → `scenario`
+- `## Impact` → `impact`
+- `## QA Diagnosis > Root Cause` → `root_cause`
+- `## QA Diagnosis > Fix Suggestion` → `fix_plan`（语义升级：建议 → 具体方案）
+- `## Fix` → `fix`
+- `## Resolution` → `resolution`
+
+REQUIREMENTS.md → REQUIREMENTS.yaml：按 §Feature Management > REQUIREMENTS.yaml 格式 章节字段映射。
+
+> **⚠️ 技术债**：旧格式（NOTES.md / REQUIREMENTS.md）兼容为过渡期产物，**待所有项目迁移到 YAML 流程后去掉**。迁移完成后此 Step 2 应删除，仅保留 Step 1 的快速路径。
+
+#### bug 流程（ISSUE.yaml 或 旧格式转写后）
+
+1. 读 `ISSUE.yaml`，确认必填字段完整（scenario / impact / root_cause / fix_plan / action）。如来自旧格式且 fix_plan 缺失或为模糊建议，PM review 时要求 QA 补全
+2. `agent-factory issue new --title "<title>" --slug <slug> --type bug` 创建 issue 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
+3. 将 `_incoming` 中的 `ISSUE.yaml` + `snapshot/` 覆盖到 `<Root>/.issues/<id>/`
+4. 删除 `_incoming` 中已处理的目录（**含原始旧格式 .md 文件**）
+5. `git commit`
+
+#### feature-request 流程（REQUIREMENTS.yaml 或 旧格式转写后）
+
+1. 读 `REQUIREMENTS.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
+2. `agent-factory feature new --title "<title>" --slug <slug> --agent-type <type>` 创建 feature 条目
+3. 将 `_incoming` 中的 `REQUIREMENTS.yaml` + `snapshot/`（如有）覆盖到 `<Root>/.features/<id>/`
+4. 删除 `_incoming` 中已处理的目录（**含原始旧格式 .md 文件**）
+5. `git commit`
+6. 后续走标准 feature 流程（review REQUIREMENTS.yaml → PM 进入 designing）
+
+#### 汇报
+
+每条 _incoming 处理完后汇报：
+- 新收到 N 条生产环境报告
+- 其中：bug 类 X 条 / feature-request 类 Y 条 / 巡检归档 Z 条 / 兼容处理（旧格式）W 条
 
 ### 跨环境 Bug 修复流程
 
