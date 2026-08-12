@@ -25,7 +25,8 @@ def issue_group() -> None:
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 ISSUE_FIELDS = {
     "scenario", "impact",
-    "root_cause", "fix_suggestion", "fix", "resolution",
+    "root_cause", "fix_plan", "action",
+    "fix", "resolution",
 }
 
 
@@ -148,8 +149,10 @@ def show(issue_id: int, fmt: str) -> None:
         lines += ["## Impact", issue.impact, ""]
         if issue.root_cause:
             lines += ["## Root Cause", issue.root_cause, ""]
-        if issue.fix_suggestion:
-            lines += ["## Fix Suggestion", issue.fix_suggestion, ""]
+        if issue.fix_plan:
+            lines += ["## Fix Plan", issue.fix_plan, ""]
+        if issue.action:
+            lines += ["## Action", issue.action, ""]
         if issue.fix:
             lines += ["## Fix", issue.fix, ""]
         if issue.resolution:
@@ -222,6 +225,24 @@ def transition(issue_id: int, target: str) -> None:
             None,
         ), err=True)
         sys.exit(3)
+
+    # Cross-field validation: open → triaging requires root_cause + fix_plan + action
+    if current_status == IssueStatus.OPEN and target_status == IssueStatus.TRIAGING:
+        issue = Issue.model_validate(load_yaml(issue_dir / "ISSUE.yaml"))
+        missing = []
+        if not (issue.root_cause or "").strip():
+            missing.append("root_cause is empty (QA must fill via `agent-factory issue set <id> root_cause ...`)")
+        if not (issue.fix_plan or "").strip():
+            missing.append("fix_plan is empty (QA must fill via `agent-factory issue set <id> fix_plan ...`)")
+        if not issue.action:
+            missing.append("action is empty (QA must set via `agent-factory issue set <id> action direct-fix|convert-to-feature`)")
+        if missing:
+            click.echo(format_error(
+                "ValidationError",
+                "Cannot start triaging (调度 developer 前必须 QA 诊断完成): " + "; ".join(missing),
+                str(issue_dir / "ISSUE.yaml"),
+            ), err=True)
+            sys.exit(1)
 
     # Cross-field validation: triaging → closed requires fix + resolution (closed = 闭环)
     if current_status == IssueStatus.TRIAGING and target_status == IssueStatus.CLOSED:

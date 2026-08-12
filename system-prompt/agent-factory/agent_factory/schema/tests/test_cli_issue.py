@@ -103,15 +103,40 @@ def test_issue_list_filter_by_type(tmp_path, monkeypatch):
     assert "001-test-issue" in result.output
 
 
-def test_issue_transition_open_to_triaging(tmp_path, monkeypatch):
+def test_issue_transition_open_to_triaging_requires_qa_fields(tmp_path, monkeypatch):
+    """open → triaging must have root_cause + fix_plan + action filled."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)  # only has scenario + impact
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
+    assert result.exit_code == 1  # validation failure
+    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
+    assert idx["issues"][0]["status"] == "open"  # unchanged
+
+
+def test_issue_transition_open_to_triaging_succeeds_when_qa_fields_filled(tmp_path, monkeypatch):
+    """open → triaging succeeds when root_cause + fix_plan + action all filled."""
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
 
     runner = CliRunner()
+    runner.invoke(main, ["issue", "set", "1", "root_cause", "代码 bug"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan", "改 cli/x.py 加空值校验"])
+    runner.invoke(main, ["issue", "set", "1", "action", "direct-fix"])
+
     result = runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
     assert result.exit_code == 0
-    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
-    assert idx["issues"][0]["status"] == "triaging"
+
+
+def test_issue_set_action_invalid(tmp_path, monkeypatch):
+    """issue set action with invalid value fails."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "set", "1", "action", "invalid"])
+    assert result.exit_code != 0
 
 
 def test_issue_block_unblock(tmp_path, monkeypatch):
@@ -138,7 +163,10 @@ def test_issue_close_requires_fix_and_resolution(tmp_path, monkeypatch):
     _setup_issue(tmp_path)
 
     runner = CliRunner()
-    # First transition to triaging
+    # Fill QA fields then transition to triaging
+    runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
+    runner.invoke(main, ["issue", "set", "1", "action", "direct-fix"])
     runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
 
     # Try to close without fix + resolution → should fail
@@ -154,6 +182,9 @@ def test_issue_close_with_fix_only_still_fails(tmp_path, monkeypatch):
     _setup_issue(tmp_path)
 
     runner = CliRunner()
+    runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
+    runner.invoke(main, ["issue", "set", "1", "action", "direct-fix"])
     runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
     runner.invoke(main, ["issue", "set", "1", "fix", "Changed Files: x.py"])
 
@@ -167,6 +198,9 @@ def test_issue_close_succeeds_with_both_fields(tmp_path, monkeypatch):
     _setup_issue(tmp_path)
 
     runner = CliRunner()
+    runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
+    runner.invoke(main, ["issue", "set", "1", "action", "direct-fix"])
     runner.invoke(main, ["issue", "transition", "1", "--to", "triaging"])
     runner.invoke(main, ["issue", "set", "1", "fix", "Changed Files: x.py"])
     runner.invoke(main, ["issue", "set", "1", "resolution", "direct-fix"])
