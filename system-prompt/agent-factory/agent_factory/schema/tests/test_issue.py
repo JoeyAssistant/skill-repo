@@ -18,7 +18,8 @@ def test_issue_minimal_valid():
     issue = Issue(**_valid_issue_kwargs())
     assert issue.id == 1
     assert issue.root_cause is None
-    assert issue.fix_suggestion is None
+    assert issue.fix_plan is None
+    assert issue.action is None
     assert issue.fix is None
     assert issue.resolution is None
 
@@ -44,20 +45,50 @@ def test_issue_extra_field_forbidden():
 def test_issue_with_qa_diagnosis():
     kw = _valid_issue_kwargs()
     kw["root_cause"] = "login.py L42 未做空值判断。"
-    kw["fix_suggestion"] = "方案 A：前端做 token 存在性判断。"
+    kw["fix_plan"] = "方案 A：前端做 token 存在性判断。"
+    kw["action"] = "direct-fix"
     issue = Issue(**kw)
     assert issue.root_cause.startswith("login.py")
-    assert "方案 A" in issue.fix_suggestion
+    assert "方案 A" in issue.fix_plan
+    assert issue.action == "direct-fix"
 
 
 def test_issue_with_full_lifecycle():
     kw = _valid_issue_kwargs()
     kw["root_cause"] = "..."
-    kw["fix_suggestion"] = "..."
+    kw["fix_plan"] = "..."
+    kw["action"] = "direct-fix"
     kw["fix"] = "Changed Files: cli/login.py (+5)"
     kw["resolution"] = "direct-fix"
     issue = Issue(**kw)
     assert issue.resolution == "direct-fix"
+
+
+def test_issue_action_field_valid_values():
+    """action field accepts direct-fix and convert-to-feature."""
+    issue = Issue(
+        id=1, title="...", scenario="...", impact="...",
+        root_cause="...", fix_plan="...",
+        action="direct-fix",
+    )
+    assert issue.action == "direct-fix"
+
+    issue2 = Issue(
+        id=1, title="...", scenario="...", impact="...",
+        root_cause="...", fix_plan="...",
+        action="convert-to-feature",
+    )
+    assert issue2.action == "convert-to-feature"
+
+
+def test_issue_action_field_invalid_value_rejected():
+    """action field rejects invalid values."""
+    with pytest.raises(ValidationError):
+        Issue(
+            id=1, title="...", scenario="...", impact="...",
+            root_cause="...", fix_plan="...",
+            action="invalid-value",
+        )
 
 
 def test_issue_id_range():

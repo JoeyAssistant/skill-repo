@@ -1,7 +1,7 @@
 # agent_factory/schema/issue.py
 """Issue 模型（对应 .issues/<id>/ISSUE.yaml）."""
 from __future__ import annotations
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,10 +19,13 @@ class Issue(BaseModel):
     impact: str = Field(...,
         description="问题影响：问题点 + 影响范围")
 
-    # QA 诊断（QA 填，PM review fix_suggestion 后才开发）
+    # QA 诊断（QA 填，PM review + 用户确认后才开发）
+    # 字段在 pydantic 层 Optional（创建时为 None），状态机强制 triaging 前必填
     root_cause: Optional[str] = Field(None, description="根因（QA 诊断产出）")
-    fix_suggestion: Optional[str] = Field(None,
-        description="修复方案（PM review 后才开发）")
+    fix_plan: Optional[str] = Field(None,
+        description="修改方案：怎么修改 + 修改哪里（QA 给具体方案，不是建议）")
+    action: Optional[Literal["direct-fix", "convert-to-feature"]] = Field(None,
+        description="QA 建议处理方式：direct-fix=简单修复 / convert-to-feature=复杂需转 feature")
 
     # 修复记录（developer 填）
     fix: Optional[str] = Field(None,

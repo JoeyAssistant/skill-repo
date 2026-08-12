@@ -150,7 +150,7 @@ Root: <project-root-path>
   "root_cause": "<根因描述，含具体 file:line>",
   "reproduction_steps": ["<步骤 1>", "<步骤 2>", "..."],
   "impact": "<影响范围>",
-  "fix_suggestion": "<修复建议>",
+  "fix_plan": "<具体修改方案：怎么修改 + 修改哪里>",
   "log_auditability": "sufficient | insufficient",
   "feature_request_context": {
     "_comment": "仅 issue_type=feature-request 时填",
@@ -259,8 +259,12 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 3. **定位根因**：通过日志、代码分析、数据流追踪定位根本原因（仅在日志充足时）
 4. **举一反三**：全局搜索同类模式，排查同类缺陷
 5. **评估影响**：分析问题的实际影响范围
-6. **写入 NOTES.md**：将诊断结论填入 `QA Diagnosis` 章节（不修改其他章节）
-7. **返回诊断报告**：将结构化结果返回给 PM
+6. **写入 ISSUE.yaml**：将诊断结论填入 `QA Diagnosis` 章节（不修改其他章节）
+7. **通过 CLI 写回**：
+   - `agent-factory issue set <id> root_cause "<根因>"`
+   - `agent-factory issue set <id> fix_plan "<具体修改方案>"`
+   - `agent-factory issue set <id> action <direct-fix|convert-to-feature>`
+8. **返回诊断报告**：将结构化结果返回给 PM
 
 ## QA-REPORT.md 模板
 
@@ -294,7 +298,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 - **Severity**: critical | major | minor
 - **Category**: functional | integration | design-mismatch | log-gap
 - **Root Cause**: ...
-- **Fix Suggestion**: ...
+- **Fix Plan**: ...
 - **Log Auditability**: sufficient | insufficient
 - **Log Improvement**: ...
 - **Similar Patterns**: ...
@@ -314,14 +318,48 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 ```markdown
 ## QA Diagnosis
 - **Root Cause**: <根因描述，包含具体的文件:行号>
-- **Fix Suggestion**: <最小修复范围建议>
+- **Fix Plan**: <具体修改方案：怎么修改 + 修改哪里（不是建议）>
+- **Action**: direct-fix | convert-to-feature
 - **Log Auditability**: sufficient | insufficient
 - **Log Improvement**: <如 insufficient，给出具体的日志补充建议>
 - **Similar Patterns**: <同类问题位置列表，格式: 文件:行号 - 描述>
 - **Impact Assessment**: <影响范围>
 ```
 
-注意：QA 只更新 NOTES.md 中的诊断内容。Issue 在 index.md 中的状态由 PM 管理。
+### fix_plan 必须是具体方案（不是建议）
+
+QA 诊断完成后，通过 CLI 写回诊断结果：
+
+```bash
+agent-factory issue set <id> root_cause "<根因，必填>"
+agent-factory issue set <id> fix_plan "<具体修改方案，必填>"
+agent-factory issue set <id> action <direct-fix|convert-to-feature>
+```
+
+合格 fix_plan 示例：
+```
+## 怎么修改
+在 cli/login.py 的 handle_login 加 token 校验
+
+## 修改哪里
+- 文件：cli/login.py
+- 函数：handle_login (L40-L60)
+- 新增测试：test_login_wrong_password_returns_error
+```
+
+不合格 fix_plan（会被 PM 打回）：
+```
+建议加 token 校验
+考虑加 None 判断
+长期：考虑统一错误处理
+```
+
+### action 字段判断
+
+- `direct-fix`：单文件改动 / 加测试 / 简单 prompt 改动 → 直接 fix
+- `convert-to-feature`：涉及多文件 / 新功能 / 跨模块 / 需要设计文档 → 转 feature
+
+注意：QA 只更新 ISSUE.yaml 中的诊断内容。Issue 在 index.md 中的状态由 PM 管理。
 
 ## 严重度定义
 
@@ -365,7 +403,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
       "scenario": "<哪个场景发现的>",
       "symptom": "<现象>",
       "root_cause": "<根因>",
-      "fix_suggestion": "<修复建议>",
+      "fix_plan": "<具体修改方案：怎么修改 + 修改哪里>",
       "log_auditability": "sufficient | insufficient",
       "log_improvement": "<日志改进建议，如需>",
       "similar_patterns": ["<文件:行号>"]
@@ -384,7 +422,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
   "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "root_cause": "<根因描述>",
   "reproduction_confirmed": true,
-  "fix_suggestion": "<最小修复范围>",
+  "fix_plan": "<具体修改方案：怎么修改 + 修改哪里>",
   "log_auditability": "sufficient | insufficient",
   "log_improvement": "<日志改进建议>",
   "similar_patterns": [

@@ -94,7 +94,7 @@ PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编�
 | `agent-factory issue block <id> --reason "..." --action "..."` | 阻塞 |
 | `agent-factory issue unblock <id> --to <status>` | 解除阻塞 |
 
-支持字段（issue set）：`scenario` / `impact` / `root_cause` / `fix_suggestion` / `fix` / `resolution`
+支持字段（issue set）：`scenario` / `impact` / `root_cause` / `fix_plan` / `action` / `fix` / `resolution`
 
 > **注意**：`title` 不可改（创建时通过 `--slug` 决定目录名 `<NNN>-<slug>` + title）
 
@@ -429,11 +429,44 @@ Issue 文件用 YAML 真值，schema 定义在 `agent_factory/schema/issue.py`�
 字段总览：
 - 元信息：`id` / `title`
 - 报告：`scenario` / `impact`（PM 创建时填）
-- QA 诊断：`root_cause` / `fix_suggestion`（QA 填，**PM review fix_suggestion 后才开发**）
+- QA 诊断：`root_cause` / `fix_plan` / `action`（QA 填，**PM review + 用户确认 fix_plan 后才开发**）
 - 修复：`fix`（developer 填）
 - 处理结果：`resolution`（PM 填）
 
 示例见 `agent_factory/schema/examples/issue.yaml`。
+
+### PM Review Gate（调度 developer 前）
+
+PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方案**，基于 QA 填的 `fix_plan`：
+
+1. **`agent-factory issue show <id>`** 读 `root_cause` + `fix_plan` + `action`
+2. **检查 `action` 字段**：
+   - `convert-to-feature` → 走转 feature 流程（不调度 developer）
+   - `direct-fix` → 继续 review
+3. **与用户讨论修改方案**（基于 fix_plan）：
+   - 怎么修改（实现思路）
+   - 修改哪里（具体文件 / 函数 / 行号）
+4. **用户确认**：
+   - 用户同意方案 → 调度场景 3 或 7
+   - 用户调整方案 → PM 用 `agent-factory issue set <id> fix_plan "新方案"` 更新后重新确认
+   - 用户认为方案不全 → PM 与 QA 沟通补全 fix_plan
+5. **禁止跳过此步骤**直接调度 developer（schema 状态机会校验 root_cause + fix_plan + action 非空，但**用户确认**是行为约束，不靠 schema）
+
+#### 转化为 feature（当 action = convert-to-feature 时）
+
+```
+issue action=convert-to-feature
+  ↓
+PM 调用 `agent-factory feature new --title "..." --slug ...`
+  ↓
+PM 在新 feature 的 REQUIREMENTS.yaml 里引用 issue：
+  - problem: 引用 issue scenario + impact
+  - 在 description 里链接 issue #<NNN>
+  ↓
+PM 填 issue.resolution = "converted-to-feature #<NNN>"
+  ↓
+agent-factory issue transition <id> --to closed
+```
 
 ---
 
@@ -550,7 +583,9 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
   ↓
 QA（开发侧）：复现验证 + 诊断确认 + 横向排查
   ↓
-Developer：基于 QA 验证后的诊断 + 横向排查结果修复
+PM：按 §PM Review Gate 与用户确认 fix_plan
+  ↓
+Developer：基于 QA 验证后的诊断 + fix_plan 修复
   ↓
 QA（验收）：复现确认 + 横向验证 + 测试
   ↓
@@ -594,7 +629,7 @@ Root: <project-root-path>
    - additional_findings: [...]
 ```
 
-QA 验证完成后，PM 调度 developer 修复（带验证结论），再调度 QA 验收。
+QA 验证完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调度 developer 修复（带验证结论），再调度 QA 验收。
 
 ---
 
@@ -682,7 +717,7 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
    - feature-request: scenario（具体期望）、impact（使用场景）
   ↓
 3. PM triage：
-   - bug → 调度 QA 诊断，诊断完成后调度 developer 修复
+   - bug → 调度 QA 诊断，诊断完成后按 §PM Review Gate 与用户确认 fix_plan，再调度 developer 修复
    - feature-request → 转 feature 进入设计流程
 ```
 
@@ -768,6 +803,8 @@ Root: .
 
 #### 场景 3: developer（Bug 直接修复）
 
+**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）。
+
 **可选章节**：`## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
 
 **Issue Directory**: `<Root>/.issues/<id>/`
@@ -775,7 +812,7 @@ Root: .
 **Instructions**：
 ```
 1. `agent-factory issue transition <id> --to triaging`（认领 issue）
-2. Read ISSUE.yaml 的 root_cause + fix_suggestion（如果 QA 已诊断）
+2. Read ISSUE.yaml 的 root_cause + fix_plan + action（PM 已和用户确认 fix_plan）
 3. Reproduce and diagnose the bug
 4. Apply minimal fix
 5. Add regression test
@@ -853,25 +890,30 @@ Root: .
 3. Diagnose root cause (logs, code, data flow)
 4. Audit log auditability for this issue
 5. Search for similar patterns
-6. Write diagnosis to ISSUE.yaml (fill QA Diagnosis section, do not modify other sections)
+6. Write diagnosis to ISSUE.yaml via CLI:
+   - `agent-factory issue set <id> root_cause "<根因>"`
+   - `agent-factory issue set <id> fix_plan "<具体修改方案：怎么修改 + 修改哪里>"`
+   - `agent-factory issue set <id> action <direct-fix|convert-to-feature>`
 7. Return diagnosis report
 ```
 
-QA 诊断完成后调度场景 7（developer 带诊断结论修复）。
+QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调度场景 7（developer 带诊断结论修复）。
 
 #### 场景 7: developer（QA 诊断后修复）
 
+**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）。
+
 **可选章节**：
 - `## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
-- `## QA Diagnosis`: `Read <Root>/.issues/<id>/ISSUE.yaml QA Diagnosis section for root cause and fix suggestion.`
+- `## QA Diagnosis`: `Read <Root>/.issues/<id>/ISSUE.yaml QA Diagnosis section for root cause and fix plan.`
 
 **Issue Directory**: `<Root>/.issues/<id>/`
 
 **Instructions**：
 ```
 1. `agent-factory issue transition <id> --to triaging`（认领 issue）
-2. Read ISSUE.yaml 的 root_cause + fix_suggestion
-3. Apply fix based on QA's root cause analysis and suggestion
+2. Read ISSUE.yaml 的 root_cause + fix_plan + action（PM 已和用户确认 fix_plan）
+3. Apply fix based on QA's root cause analysis and fix plan
 4. Add regression test
 5. Run full test suite
 6. Git commit (one issue = one commit, message: fix: <问题描述>)

@@ -60,7 +60,7 @@ Root: <project-root-path>
 
 ## Instructions
 1. `agent-factory issue transition <NNN> --to triaging`（认领 issue）
-2. Read ISSUE.yaml 的 root_cause + fix_suggestion（如果 QA 已诊断）
+2. Read ISSUE.yaml 的 root_cause + fix_plan + action（PM 已和用户确认 fix_plan）
 3. Reproduce and diagnose the bug
 4. Apply minimal fix
 5. Add regression test
