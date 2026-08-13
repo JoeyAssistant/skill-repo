@@ -9,12 +9,12 @@ import click
 
 from agent_factory.cli.common import dump_yaml, format_error, load_yaml
 from agent_factory.schema import FeatureIndex, FeatureIndexItem, IssueIndex, IssueIndexItem
-from agent_factory.schema.enums import FeatureStatus, IssueStatus, IssueType, Priority
+from agent_factory.schema.enums import FeatureStatus, IssueStatus, Priority
 
 
 # Fields that index set can modify (title NOT included - sync via feature/issue set)
 INDEX_FEATURE_FIELDS = {"priority", "status"}
-INDEX_ISSUE_FIELDS = {"priority", "status", "type"}
+INDEX_ISSUE_FIELDS = {"priority", "status"}
 
 
 @click.group("index")
@@ -28,7 +28,7 @@ def index_group() -> None:
 @click.argument("field")
 @click.argument("value")
 def set_field(resource: str, item_id: int, field: str, value: str) -> None:
-    """Update an index field (priority / status / type for issue). title NOT allowed."""
+    """Update an index field (priority / status). title NOT allowed."""
     allowed = INDEX_FEATURE_FIELDS if resource == "feature" else INDEX_ISSUE_FIELDS
     if field not in allowed:
         click.echo(format_error(
@@ -64,8 +64,6 @@ def set_field(resource: str, item_id: int, field: str, value: str) -> None:
                 item.status = FeatureStatus(value)
             else:
                 item.status = IssueStatus(value)
-        elif field == "type":
-            item.type = IssueType(value)
     except ValueError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
         sys.exit(1)
@@ -94,7 +92,7 @@ def refresh(resource: str) -> None:
             if not m:
                 continue
             feature_id = int(m.group(1))
-            reqs_path = subdir / "REQUIREMENTS.yaml"
+            reqs_path = subdir / "REQUIREMENT.yaml"
             items.append(FeatureIndexItem(
                 id=feature_id,
                 title=subdir.name,  # title = directory name
@@ -116,7 +114,6 @@ def refresh(resource: str) -> None:
             items.append(IssueIndexItem(
                 id=issue_id,
                 title=subdir.name,
-                type=IssueType.BUG,  # can't infer
                 status=IssueStatus.OPEN,
                 priority=Priority.P2,
             ))

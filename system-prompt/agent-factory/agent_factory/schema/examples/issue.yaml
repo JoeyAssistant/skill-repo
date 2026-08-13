@@ -1,48 +1,42 @@
-# agent_factory/schema/examples/issue.yaml
 id: 1
 title: 001-login-crash
+desc: |
+  用户反馈：登录页面点击提交就崩溃了，控制台报错 token undefined。
+
+  用户原话："今天早上想登录查账户，结果一点提交就白屏，刷新也没用。"
 
 scenario: |
-  现象：登录页面点击提交后页面崩溃，控制台报错 "Cannot read property 'token' of undefined"。
-
+  现象：登录页面点击提交后页面崩溃。
   复现步骤：
   1. 打开 /login
   2. 输入 admin / 123456
   3. 点击"登录"
-  4. 观察控制台
-
-  环境：生产环境，Chrome 120，commit abc1234。
+  环境：生产，Chrome 120，commit abc1234。
 
 impact: |
   问题点：login.py L42 取 token 时未做空值判断。
-  后端密码错误时返回的 JSON 没有 token 字段，前端代码假设 token 一定存在。
-
   影响范围：所有用户无法登录，P1。
 
 root_cause: |
-  login.py L42 未做空值判断；后端密码错误时返回的 JSON 没有 token 字段，
-  前端代码假设 token 一定存在。
+  login.py L42 未做空值判断；后端密码错误时返回的 JSON 没有 token 字段。
 
 fix_plan: |
-  ## 怎么修改
-  在 cli/login.py 的 handle_login 函数里，对 response.token 加 None 校验：
-  ```python
-  if not response.get("token"):
-      return error("账号或密码错误")
-  ```
+  ## 问题分析
+  前端假设 token 一定存在，后端在错误响应里省略了 token。
 
-  ## 修改哪里
-  - 文件：cli/login.py
-  - 函数：handle_login (L40-L60)
-  - 新增：L42 后插入 3 行校验
-  - 测试：test_login_failure.py 加 test_login_wrong_password_returns_error
+  ## 处理方向
+  - bugfix 路径：前端加 token 存在性校验（单点修复）
+  - feature 路径：后端规范化错误响应 schema（跨多个调用方）
 
-action: direct-fix
+  ## QA 建议
+  bugfix（影响面小，回滚成本低）。
 
-fix: |
-  Changed Files:
-    - cli/login.py (+5)
-    - src/auth/service.py (+3)
-  Regression Test: test_login_failure.py 新增 test_login_wrong_password_returns_error
-
-resolution: direct-fix
+result:
+  type: bugfix
+  fix_desc: |
+    Changed Files: cli/login.py (+5)
+    Regression Test: test_login_wrong_password_returns_error
+  verification: |
+    git show abc123 --stat: cli/login.py +5 符合描述
+    pytest test_login_failure.py: 8 passed
+    手动验证：错误密码不再崩溃，显示错误提示

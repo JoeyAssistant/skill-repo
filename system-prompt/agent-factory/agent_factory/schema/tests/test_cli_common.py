@@ -29,7 +29,7 @@ def test_find_feature_dir(tmp_path, monkeypatch):
     (tmp_path / ".features").mkdir()
     # Create directory with slug naming + index.yaml
     (tmp_path / ".features" / "001-test-feature").mkdir()
-    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENTS.yaml").write_text("id: 1\n")
+    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENT.yaml").write_text("id: 1\n")
     dump_yaml(tmp_path / ".features" / "index.yaml", FeatureIndex(features=[
         FeatureIndexItem(id=1, title="001-test-feature", status=FeatureStatus.DRAFT, priority=Priority.P2),
     ]))
@@ -58,19 +58,19 @@ def test_find_issue_dir(tmp_path, monkeypatch):
     (tmp_path / ".issues" / "001-test-issue").mkdir()
     (tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml").write_text("id: 1\n")
     from agent_factory.schema import IssueIndex, IssueIndexItem
-    from agent_factory.schema.enums import IssueType, IssueStatus
+    from agent_factory.schema.enums import IssueStatus
     dump_yaml(tmp_path / ".issues" / "index.yaml", IssueIndex(issues=[
-        IssueIndexItem(id=1, title="001-test-issue", type=IssueType.BUG, status=IssueStatus.OPEN, priority=Priority.P2),
+        IssueIndexItem(id=1, title="001-test-issue", status=IssueStatus.OPEN, priority=Priority.P2),
     ]))
     p = find_issue_dir(1)
     assert p.exists()
 
 
 def test_format_error():
-    msg = format_error("ValidationError", "field X missing", ".features/1/REQUIREMENTS.yaml")
+    msg = format_error("ValidationError", "field X missing", ".features/1/REQUIREMENT.yaml")
     assert "ValidationError" in msg
     assert "field X missing" in msg
-    assert ".features/1/REQUIREMENTS.yaml" in msg
+    assert ".features/1/REQUIREMENT.yaml" in msg
 
 
 def test_next_feature_id_empty(tmp_path, monkeypatch):

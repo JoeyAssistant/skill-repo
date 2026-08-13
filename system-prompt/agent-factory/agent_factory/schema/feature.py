@@ -1,5 +1,5 @@
 # agent_factory/schema/feature.py
-"""Feature 模型（对应 .features/<id>/REQUIREMENTS.yaml）."""
+"""Feature 模型（对应 .features/<id>/REQUIREMENT.yaml）."""
 from __future__ import annotations
 from typing import Optional
 
@@ -45,7 +45,7 @@ class Decision(BaseModel):
 
 
 class Feature(BaseModel):
-    """对应 .features/<id>/REQUIREMENTS.yaml."""
+    """对应 .features/<id>/REQUIREMENT.yaml."""
     model_config = ConfigDict(extra="forbid")
 
     id: int = Field(..., ge=1, le=999, description="feature 编号")

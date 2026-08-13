@@ -20,11 +20,11 @@ from agent_factory.schema.enums import AgentType, FeatureStatus, Priority
 
 @click.group("feature")
 def feature_group() -> None:
-    """Operate feature REQUIREMENTS.yaml."""
+    """Operate feature REQUIREMENT.yaml."""
 
 
 @feature_group.command("new")
-@click.option("--title", required=True, help="Human-readable title (stored in REQUIREMENTS.yaml)")
+@click.option("--title", required=True, help="Human-readable title (stored in REQUIREMENT.yaml)")
 @click.option("--slug", required=True, help="Directory slug (kebab-case, e.g., 'income-module')")
 @click.option(
     "--agent-type",
@@ -42,7 +42,7 @@ def new(title: str, slug: str, agent_type: str, priority: str) -> None:
     """Create new feature (status=draft).
 
     Directory name: <NNN>-<slug> (e.g., 001-income-module).
-    Both REQUIREMENTS.yaml 'title' field and index 'title' field use the directory name.
+    Both REQUIREMENT.yaml 'title' field and index 'title' field use the directory name.
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -76,7 +76,7 @@ def new(title: str, slug: str, agent_type: str, priority: str) -> None:
 
     # Create directory + REQS.yaml
     feature_dir.mkdir(parents=True)
-    reqs_path = feature_dir / "REQUIREMENTS.yaml"
+    reqs_path = feature_dir / "REQUIREMENT.yaml"
     dump_yaml(reqs_path, feature)
 
     # Update index.yaml
@@ -111,7 +111,7 @@ REQS_FIELDS = {
 @click.argument("value", required=False)
 @click.option("--file", "file_path", type=click.Path(exists=True, path_type=Path), help="Read value from file")
 def set_field(feature_id: int, field: str, value: str | None, file_path: Path | None) -> None:
-    """Update a field in REQUIREMENTS.yaml.
+    """Update a field in REQUIREMENT.yaml.
 
     Title is immutable (equals directory name, set at creation).
     For long fields (description / data_schema / interfaces / acceptance_cases / decisions),
@@ -135,7 +135,7 @@ def set_field(feature_id: int, field: str, value: str | None, file_path: Path | 
         click.echo(format_error("NotFound", str(exc), None), err=True)
         sys.exit(2)
 
-    reqs_path = feature_dir / "REQUIREMENTS.yaml"
+    reqs_path = feature_dir / "REQUIREMENT.yaml"
     try:
         data = load_yaml(reqs_path)
         data[field] = new_value
@@ -160,7 +160,7 @@ def show(feature_id: int, fmt: str) -> None:
         click.echo(format_error("NotFound", str(exc), None), err=True)
         sys.exit(2)
 
-    reqs_path = feature_dir / "REQUIREMENTS.yaml"
+    reqs_path = feature_dir / "REQUIREMENT.yaml"
     data = load_yaml(reqs_path)
     feature = Feature.model_validate(data)
 
@@ -297,7 +297,7 @@ def transition(feature_id: int, target: str) -> None:
         sys.exit(3)
 
     # Cross-field validation (load REQS)
-    reqs_path = feature_dir / "REQUIREMENTS.yaml"
+    reqs_path = feature_dir / "REQUIREMENT.yaml"
     feature = Feature.model_validate(load_yaml(reqs_path))
     issues = _validate_transition_requirements(current_status, target_status, feature)
     if issues:

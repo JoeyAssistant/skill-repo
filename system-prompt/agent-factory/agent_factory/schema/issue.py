@@ -1,36 +1,52 @@
 # agent_factory/schema/issue.py
 """Issue 模型（对应 .issues/<id>/ISSUE.yaml）."""
 from __future__ import annotations
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class BugfixResult(BaseModel):
+    """bugfix 路径的处理结果."""
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["bugfix"] = "bugfix"
+    fix_desc: str = Field(..., description="修改内容（developer 填）")
+    verification: str = Field(..., description="PM 验收结果（基于 git show diff + 测试）")
+
+
+class FeatureRequestResult(BaseModel):
+    """feature_request 路径的处理结果."""
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["feature_request"] = "feature_request"
+    feature_id: int = Field(..., description="转换到的 feature 编号")
+
+
+# Discriminated union for result
+IssueResult = Annotated[
+    Union[BugfixResult, FeatureRequestResult],
+    Field(discriminator="type"),
+]
+
+
 class Issue(BaseModel):
-    """对应 .issues/<id>/ISSUE.yaml（原 NOTES.md 改名）."""
+    """对应 .issues/<id>/ISSUE.yaml."""
     model_config = ConfigDict(extra="forbid")
 
     id: int = Field(..., ge=1, le=999, description="issue 编号")
-    title: str = Field(..., description="一句话标题")
+    title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
+    desc: str = Field(..., description="用户原始描述（create 时填，保留原话）")
 
-    # 报告字段（PM 创建时填）
-    scenario: str = Field(...,
-        description="问题场景：如何复现（feature-request 则是使用场景）")
-    impact: str = Field(...,
+    # PM 加工后填（信息收集阶段）
+    scenario: Optional[str] = Field(None,
+        description="问题场景：如何复现（PM 与用户讨论后填）")
+    impact: Optional[str] = Field(None,
         description="问题影响：问题点 + 影响范围")
 
-    # QA 诊断（QA 填，PM review + 用户确认后才开发）
-    # 字段在 pydantic 层 Optional（创建时为 None），状态机强制 triaging 前必填
-    root_cause: Optional[str] = Field(None, description="根因（QA 诊断产出）")
+    # QA 诊断产出
+    root_cause: Optional[str] = Field(None, description="根因")
     fix_plan: Optional[str] = Field(None,
-        description="修改方案：怎么修改 + 修改哪里（QA 给具体方案，不是建议）")
-    action: Optional[Literal["direct-fix", "convert-to-feature"]] = Field(None,
-        description="QA 建议处理方式：direct-fix=简单修复 / convert-to-feature=复杂需转 feature")
+        description="QA 给的方案（不预判 bugfix/feature，含问题分析 + 处理方向）")
 
-    # 修复记录（developer 填）
-    fix: Optional[str] = Field(None,
-        description="修复记录：changed files / regression test")
-
-    # 处理结果（PM 填）
-    resolution: Optional[str] = Field(None,
-        description="处理结果：direct-fix / converted-to-feature #NNN")
+    # 处理结果（in_progress → closed 时必填）
+    result: Optional[IssueResult] = Field(None,
+        description="issue 处理结果（bugfix 或 feature_request）")

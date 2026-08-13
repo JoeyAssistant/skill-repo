@@ -13,11 +13,15 @@ from agent_factory.schema.enums import (
     DecisionStatus,
     FeatureStatus,
     IssueStatus,
-    IssueType,
     Priority,
 )
 from agent_factory.schema.feature import Decision, Feature, Option
-from agent_factory.schema.issue import Issue
+from agent_factory.schema.issue import (
+    BugfixResult,
+    FeatureRequestResult,
+    Issue,
+    IssueResult,
+)
 from agent_factory.schema.index import (
     FeatureIndex,
     FeatureIndexItem,
@@ -32,7 +36,6 @@ __all__ = [
     "DecisionStatus",
     "FeatureStatus",
     "IssueStatus",
-    "IssueType",
     "Priority",
     # Feature 系列
     "Feature",
@@ -40,6 +43,9 @@ __all__ = [
     "Option",
     # Issue
     "Issue",
+    "BugfixResult",
+    "FeatureRequestResult",
+    "IssueResult",
     # Index 系列
     "FeatureIndex",
     "FeatureIndexItem",

@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from agent_factory.schema.enums import (
-    FeatureStatus, IssueType, IssueStatus, Priority,
+    FeatureStatus, IssueStatus, Priority,
 )
 from agent_factory.schema.index import (
     FeatureIndex, FeatureIndexItem,
@@ -52,27 +52,26 @@ def test_issue_index_item_valid():
     item = IssueIndexItem(
         id=1,
         title="登录崩溃",
-        type=IssueType.BUG,
         status=IssueStatus.CLOSED,
         priority=Priority.P1,
     )
-    assert item.type == IssueType.BUG
+    assert item.status == IssueStatus.CLOSED
 
 
 def test_issue_index_item_extra_field_forbidden():
     with pytest.raises(ValidationError):
         IssueIndexItem(
-            id=1, title="...", type=IssueType.BUG,
+            id=1, title="...",
             status=IssueStatus.OPEN, priority=Priority.P1, extra="x",
         )
 
 
 def test_issue_index_with_items():
     idx = IssueIndex(issues=[
-        IssueIndexItem(id=1, title="A", type=IssueType.BUG,
+        IssueIndexItem(id=1, title="A",
                        status=IssueStatus.CLOSED, priority=Priority.P1),
-        IssueIndexItem(id=2, title="B", type=IssueType.FEATURE_REQUEST,
+        IssueIndexItem(id=2, title="B",
                        status=IssueStatus.OPEN, priority=Priority.P2),
     ])
     assert len(idx.issues) == 2
-    assert idx.issues[1].type == IssueType.FEATURE_REQUEST
+    assert idx.issues[1].status == IssueStatus.OPEN

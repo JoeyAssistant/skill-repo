@@ -25,7 +25,7 @@ def test_feature_new_creates_files(tmp_path, monkeypatch):
     assert "001-income-module" in result.output
 
     # REQS.yaml created with slug-named directory
-    reqs = tmp_path / ".features" / "001-income-module" / "REQUIREMENTS.yaml"
+    reqs = tmp_path / ".features" / "001-income-module" / "REQUIREMENT.yaml"
     assert reqs.exists()
     data = load_yaml(reqs)
     assert data["id"] == 1
@@ -78,7 +78,7 @@ def test_feature_new_default_agent_type_and_priority(tmp_path, monkeypatch):
     result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x"])
     assert result.exit_code == 0
 
-    reqs = load_yaml(tmp_path / ".features" / "001-x" / "REQUIREMENTS.yaml")
+    reqs = load_yaml(tmp_path / ".features" / "001-x" / "REQUIREMENT.yaml")
     assert reqs["agent_type"] == "cli-only"  # default
     idx = load_yaml(tmp_path / ".features" / "index.yaml")
     assert idx["features"][0]["priority"] == "P2"  # default
@@ -121,7 +121,7 @@ def test_feature_set_simple_field(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert "Updated feature 1: problem" in result.output
 
-    reqs = load_yaml(tmp_path / ".features" / "001-test-feature" / "REQUIREMENTS.yaml")
+    reqs = load_yaml(tmp_path / ".features" / "001-test-feature" / "REQUIREMENT.yaml")
     assert reqs["problem"] == "新问题描述"
 
 
@@ -140,7 +140,7 @@ def test_feature_set_long_field_from_file(tmp_path, monkeypatch):
     ])
     assert result.exit_code == 0, result.output
 
-    reqs = load_yaml(tmp_path / ".features" / "001-test-feature" / "REQUIREMENTS.yaml")
+    reqs = load_yaml(tmp_path / ".features" / "001-test-feature" / "REQUIREMENT.yaml")
     assert reqs["description"] == long_content
 
 
@@ -179,9 +179,9 @@ def test_feature_set_unknown_feature(tmp_path, monkeypatch):
 
 
 def _setup_feature(tmp_path):
-    """Helper: create .features/001-test-feature/REQUIREMENTS.yaml + index.yaml entry."""
+    """Helper: create .features/001-test-feature/REQUIREMENT.yaml + index.yaml entry."""
     (tmp_path / ".features" / "001-test-feature").mkdir(parents=True)
-    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENT.yaml").write_text(
         "id: 1\ntitle: '001-test-feature'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "index.yaml").write_text(
@@ -247,11 +247,11 @@ def test_feature_list_filter_by_status(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     # Setup 2 features: one draft, one done
     (tmp_path / ".features" / "001-a").mkdir(parents=True)
-    (tmp_path / ".features" / "001-a" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "001-a" / "REQUIREMENT.yaml").write_text(
         "id: 1\ntitle: '001-a'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "002-b").mkdir(parents=True)
-    (tmp_path / ".features" / "002-b" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "002-b" / "REQUIREMENT.yaml").write_text(
         "id: 2\ntitle: '002-b'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "index.yaml").write_text(
@@ -284,7 +284,7 @@ def test_feature_transition_blocked_when_description_empty(tmp_path, monkeypatch
     monkeypatch.chdir(tmp_path)
     _setup_feature(tmp_path)
     # Set description to empty
-    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENT.yaml").write_text(
         "id: 1\ntitle: '001-test-feature'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: ''\n"
     )
 
