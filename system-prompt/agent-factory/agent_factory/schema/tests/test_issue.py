@@ -2,100 +2,74 @@
 import pytest
 from pydantic import ValidationError
 
-from agent_factory.schema.issue import Issue
-
-
-def _valid_issue_kwargs():
-    return dict(
-        id=1,
-        title="登录页面点击提交后崩溃",
-        scenario="现象：登录页面点击提交后页面崩溃。\n复现步骤：1. 打开 /login 2. 输入 admin/123456 3. 点击登录",
-        impact="问题点：login.py L42 未做空值判断。\n影响范围：所有用户无法登录，P1。",
-    )
+from agent_factory.schema.issue import (
+    Issue, BugfixResult, FeatureRequestResult,
+)
+from agent_factory.schema.enums import IssueStatus
 
 
 def test_issue_minimal_valid():
-    issue = Issue(**_valid_issue_kwargs())
+    """Minimal Issue: id + title + desc (其他 Optional)."""
+    issue = Issue(id=1, title="001-test", desc="用户原始描述")
     assert issue.id == 1
+    assert issue.desc == "用户原始描述"
+    assert issue.scenario is None
+    assert issue.impact is None
     assert issue.root_cause is None
     assert issue.fix_plan is None
-    assert issue.action is None
-    assert issue.fix is None
-    assert issue.resolution is None
+    assert issue.result is None
 
 
-def test_issue_missing_required_field_fails():
+def test_issue_missing_desc_fails():
     with pytest.raises(ValidationError) as exc:
-        Issue(id=1, title="...")
+        Issue(id=1, title="001-test")
     errors = exc.value.errors()
     missing = [e["loc"][0] for e in errors if e["type"] == "missing"]
-    for field in ["scenario", "impact"]:
-        assert field in missing
+    assert "desc" in missing
 
 
 def test_issue_extra_field_forbidden():
-    kw = _valid_issue_kwargs()
-    kw["unknown_field"] = "value"
-    with pytest.raises(ValidationError) as exc:
-        Issue(**kw)
-    errors = exc.value.errors()
-    assert any(e["type"] == "extra_forbidden" for e in errors)
-
-
-def test_issue_with_qa_diagnosis():
-    kw = _valid_issue_kwargs()
-    kw["root_cause"] = "login.py L42 未做空值判断。"
-    kw["fix_plan"] = "方案 A：前端做 token 存在性判断。"
-    kw["action"] = "direct-fix"
-    issue = Issue(**kw)
-    assert issue.root_cause.startswith("login.py")
-    assert "方案 A" in issue.fix_plan
-    assert issue.action == "direct-fix"
-
-
-def test_issue_with_full_lifecycle():
-    kw = _valid_issue_kwargs()
-    kw["root_cause"] = "..."
-    kw["fix_plan"] = "..."
-    kw["action"] = "direct-fix"
-    kw["fix"] = "Changed Files: cli/login.py (+5)"
-    kw["resolution"] = "direct-fix"
-    issue = Issue(**kw)
-    assert issue.resolution == "direct-fix"
-
-
-def test_issue_action_field_valid_values():
-    """action field accepts direct-fix and convert-to-feature."""
-    issue = Issue(
-        id=1, title="...", scenario="...", impact="...",
-        root_cause="...", fix_plan="...",
-        action="direct-fix",
-    )
-    assert issue.action == "direct-fix"
-
-    issue2 = Issue(
-        id=1, title="...", scenario="...", impact="...",
-        root_cause="...", fix_plan="...",
-        action="convert-to-feature",
-    )
-    assert issue2.action == "convert-to-feature"
-
-
-def test_issue_action_field_invalid_value_rejected():
-    """action field rejects invalid values."""
     with pytest.raises(ValidationError):
-        Issue(
-            id=1, title="...", scenario="...", impact="...",
-            root_cause="...", fix_plan="...",
-            action="invalid-value",
-        )
+        Issue(id=1, title="001-test", desc="x", extra="y")
+
+
+def test_bugfix_result_valid():
+    r = BugfixResult(fix_desc="改了 x.py", verification="git show 通过 + 测试 8 passed")
+    assert r.type == "bugfix"
+
+
+def test_feature_request_result_valid():
+    r = FeatureRequestResult(feature_id=70)
+    assert r.type == "feature_request"
+
+
+def test_issue_with_bugfix_result():
+    issue = Issue(
+        id=1, title="001-test", desc="x",
+        result=BugfixResult(fix_desc="...", verification="..."),
+    )
+    assert issue.result.type == "bugfix"
+    assert issue.result.fix_desc == "..."
+
+
+def test_issue_with_feature_request_result():
+    issue = Issue(
+        id=1, title="001-test", desc="x",
+        result=FeatureRequestResult(feature_id=5),
+    )
+    assert issue.result.type == "feature_request"
+    assert issue.result.feature_id == 5
+
+
+def test_issue_status_enum_renamed():
+    """IssueStatus 不再有 TRIAGING，改为 IN_PROGRESS."""
+    assert IssueStatus.IN_PROGRESS.value == "in_progress"
+    # 验证 TRIAGING 不存在
+    assert not hasattr(IssueStatus, "TRIAGING")
 
 
 def test_issue_id_range():
-    kw = _valid_issue_kwargs()
-    kw["id"] = 0
     with pytest.raises(ValidationError):
-        Issue(**kw)
-    kw["id"] = 1000
+        Issue(id=0, title="...", desc="...")
     with pytest.raises(ValidationError):
-        Issue(**kw)
+        Issue(id=1000, title="...", desc="...")

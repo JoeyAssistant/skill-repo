@@ -59,24 +59,21 @@ Root: <project-root-path>
 <from <Root>/.issues/<NNN>-<issue-name>/ISSUE.yaml>
 
 ## Instructions
-1. `agent-factory issue transition <NNN> --to triaging`（认领 issue）
-2. Read ISSUE.yaml 的 root_cause + fix_plan + action（PM 已和用户确认 fix_plan）
+1. `agent-factory issue transition <NNN> --to in_progress`（认领 issue）
+2. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
 3. Reproduce and diagnose the bug
 4. Apply minimal fix
 5. Add regression test
 6. Run full test suite
 7. Git commit (one issue = one commit, message: fix: <问题描述>)
 8. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-9. **`agent-factory issue set <NNN> fix "Changed Files: <files>; Regression Test: <test>"`**（必填，写回修复记录）
-10. **不要 transition 到 closed**（PM review + 填 resolution 后由 PM 关闭）
-11. On success: return complete with commit_sha
-12. On blocker: `agent-factory issue block <NNN> --reason "..." --action "..."`, return blocked with reason
+9. **不要 transition 到 closed**（PM 使用 `agent-factory issue close` 验收后关闭）
+10. On success: return complete with commit_sha
+11. On blocker: `agent-factory issue block <NNN> --reason "..." --action "..."`, return blocked with reason
 ```
 
 **关键约束**：
-- 第 9 步 `fix` 字段是**强制**写入（不写则后续 `transition closed` 被 schema 拦截）
-- `resolution` 字段不写（PM 负责填）
-- 不主动 `transition closed`（等 PM 验收）
+- 不主动 transition closed（PM 使用 `agent-factory issue close --bugfix` 验收后关闭）
 
 ### QA 修复任务（验收失败后）
 

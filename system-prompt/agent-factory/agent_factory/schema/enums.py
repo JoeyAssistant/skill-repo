@@ -30,16 +30,10 @@ class FeatureStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class IssueType(str, Enum):
-    """Issue 类型."""
-    BUG = "bug"
-    FEATURE_REQUEST = "feature-request"
-
-
 class IssueStatus(str, Enum):
     """Issue 生命周期状态."""
     OPEN = "open"
-    TRIAGING = "triaging"
+    IN_PROGRESS = "in_progress"
     CLOSED = "closed"
 
 

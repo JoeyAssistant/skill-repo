@@ -49,30 +49,28 @@ def test_index_set_title_rejected(tmp_path, monkeypatch):
     assert result.exit_code != 0  # rejected
 
 
-def test_index_set_issue_type(tmp_path, monkeypatch):
+def test_index_set_issue_type_rejected(tmp_path, monkeypatch):
+    """type field no longer exists on IssueIndexItem."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".issues").mkdir()
     (tmp_path / ".issues" / "index.yaml").write_text(
-        "issues:\n  - id: 1\n    title: '001-a'\n    type: bug\n    status: open\n    priority: P2\n"
+        "issues:\n  - id: 1\n    title: '001-a'\n    status: open\n    priority: P2\n"
     )
 
     runner = CliRunner()
-    result = runner.invoke(main, ["index", "set", "issue", "1", "type", "feature-request"])
-    assert result.exit_code == 0
-
-    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
-    assert idx["issues"][0]["type"] == "feature-request"
+    result = runner.invoke(main, ["index", "set", "issue", "1", "type", "bug"])
+    assert result.exit_code != 0  # type not in INDEX_ISSUE_FIELDS
 
 
 def test_index_refresh_rebuilds_feature_index(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     # Create 2 features with slug naming
     (tmp_path / ".features" / "001-alpha").mkdir(parents=True)
-    (tmp_path / ".features" / "001-alpha" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "001-alpha" / "REQUIREMENT.yaml").write_text(
         "id: 1\ntitle: '001-alpha'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "002-beta").mkdir(parents=True)
-    (tmp_path / ".features" / "002-beta" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "002-beta" / "REQUIREMENT.yaml").write_text(
         "id: 2\ntitle: '002-beta'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     # Empty / corrupt index
@@ -93,7 +91,7 @@ def test_index_refresh_issue_index(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".issues" / "001-bug-one").mkdir(parents=True)
     (tmp_path / ".issues" / "001-bug-one" / "ISSUE.yaml").write_text(
-        "id: 1\ntitle: '001-bug-one'\nscenario: x\nimpact: y\n"
+        "id: 1\ntitle: '001-bug-one'\ndesc: 'test'\n"
     )
     (tmp_path / ".issues" / "index.yaml").write_text("issues: []\n")
 
@@ -104,13 +102,15 @@ def test_index_refresh_issue_index(tmp_path, monkeypatch):
     idx = load_yaml(tmp_path / ".issues" / "index.yaml")
     assert len(idx["issues"]) == 1
     assert idx["issues"][0]["title"] == "001-bug-one"
+    # No longer has type field
+    assert "type" not in idx["issues"][0]
 
 
 def test_index_refresh_uses_directory_name_as_title(tmp_path, monkeypatch):
     """refresh uses directory name (not YAML content) as title."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".features" / "057-cli-only-data-access").mkdir(parents=True)
-    (tmp_path / ".features" / "057-cli-only-data-access" / "REQUIREMENTS.yaml").write_text(
+    (tmp_path / ".features" / "057-cli-only-data-access" / "REQUIREMENT.yaml").write_text(
         "id: 57\ntitle: '001-alpha'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "index.yaml").write_text("features: []\n")

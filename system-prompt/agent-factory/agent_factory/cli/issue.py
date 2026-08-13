@@ -14,7 +14,8 @@ from agent_factory.cli.common import (
     dump_yaml, find_issue_dir, format_error, load_yaml, next_issue_id,
 )
 from agent_factory.schema import BlockedRecord, Issue, IssueIndex, IssueIndexItem
-from agent_factory.schema.enums import IssueStatus, IssueType, Priority
+from agent_factory.schema.enums import IssueStatus, Priority
+from agent_factory.schema.issue import BugfixResult, FeatureRequestResult
 
 
 @click.group("issue")
@@ -23,23 +24,21 @@ def issue_group() -> None:
 
 
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
+# Note: 'result' is special — use `issue close` command instead of `set` for it
 ISSUE_FIELDS = {
-    "scenario", "impact",
-    "root_cause", "fix_plan", "action",
-    "fix", "resolution",
+    "desc", "scenario", "impact",
+    "root_cause", "fix_plan",
 }
 
 
 @issue_group.command("new")
 @click.option("--title", required=True, help="Human-readable title (stored in ISSUE.yaml)")
 @click.option("--slug", required=True, help="Directory slug (kebab-case)")
-@click.option("--type", "issue_type", required=True,
-              type=click.Choice([t.value for t in IssueType]),
-              help="Issue type (bug / feature-request)")
+@click.option("--desc", required=True, help="User's original description (preserved verbatim)")
 @click.option("--priority", default=Priority.P2.value,
               type=click.Choice([p.value for p in Priority]),
               help="Priority (default: P2)")
-def new(title: str, slug: str, issue_type: str, priority: str) -> None:
+def new(title: str, slug: str, desc: str, priority: str) -> None:
     """Create new issue (status=open).
 
     Directory name: <NNN>-<slug> (e.g., 001-login-crash).
@@ -60,8 +59,7 @@ def new(title: str, slug: str, issue_type: str, priority: str) -> None:
         issue = Issue(
             id=issue_id,
             title=dir_name,
-            scenario="",
-            impact="",
+            desc=desc,
         )
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
@@ -75,7 +73,6 @@ def new(title: str, slug: str, issue_type: str, priority: str) -> None:
     idx.issues.append(IssueIndexItem(
         id=issue_id,
         title=dir_name,
-        type=IssueType(issue_type),
         status=IssueStatus.OPEN,
         priority=Priority(priority),
     ))
@@ -145,27 +142,31 @@ def show(issue_id: int, fmt: str) -> None:
         click.echo(yaml.safe_dump(issue.model_dump(mode="json"), allow_unicode=True, sort_keys=False))
     else:
         lines = [f"# Issue {issue.id}: {issue.title}", ""]
-        lines += ["## Scenario", issue.scenario, ""]
-        lines += ["## Impact", issue.impact, ""]
+        lines += ["## Description", issue.desc, ""]
+        if issue.scenario:
+            lines += ["## Scenario", issue.scenario, ""]
+        if issue.impact:
+            lines += ["## Impact", issue.impact, ""]
         if issue.root_cause:
             lines += ["## Root Cause", issue.root_cause, ""]
         if issue.fix_plan:
             lines += ["## Fix Plan", issue.fix_plan, ""]
-        if issue.action:
-            lines += ["## Action", issue.action, ""]
-        if issue.fix:
-            lines += ["## Fix", issue.fix, ""]
-        if issue.resolution:
-            lines += ["## Resolution", issue.resolution, ""]
+        if issue.result:
+            if isinstance(issue.result, BugfixResult):
+                lines += ["## Result (bugfix)",
+                          f"**fix_desc**: {issue.result.fix_desc}", "",
+                          f"**verification**: {issue.result.verification}", ""]
+            elif isinstance(issue.result, FeatureRequestResult):
+                lines += ["## Result (feature_request)",
+                          f"**feature_id**: {issue.result.feature_id}", ""]
         click.echo("\n".join(lines))
 
 
 @issue_group.command("list")
-@click.option("--status", type=click.Choice([s.value for s in IssueStatus]), help="Filter by status")
-@click.option("--type", "issue_type", type=click.Choice([t.value for t in IssueType]),
-              help="Filter by type")
+@click.option("--status", type=click.Choice([s.value for s in IssueStatus]),
+              help="Filter by status")
 @click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table")
-def list_issues(status: str | None, issue_type: str | None, fmt: str) -> None:
+def list_issues(status: str | None, fmt: str) -> None:
     """List issues."""
     idx_path = Path(".issues") / "index.yaml"
     if not idx_path.exists():
@@ -176,22 +177,19 @@ def list_issues(status: str | None, issue_type: str | None, fmt: str) -> None:
     items = idx.issues
     if status:
         items = [i for i in items if i.status.value == status]
-    if issue_type:
-        items = [i for i in items if i.type.value == issue_type]
 
     if fmt == "json":
         click.echo(json.dumps([i.model_dump(mode="json") for i in items], ensure_ascii=False, indent=2))
     else:
-        click.echo(f"{'ID':<5} {'TYPE':<18} {'STATUS':<10} {'PRIORITY':<10} TITLE")
+        click.echo(f"{'ID':<5} {'STATUS':<12} {'PRIORITY':<10} TITLE")
         for item in items:
-            click.echo(f"{item.id:<5} {item.type.value:<18} {item.status.value:<10} "
-                       f"{item.priority.value:<10} {item.title}")
+            click.echo(f"{item.id:<5} {item.status.value:<12} {item.priority.value:<10} {item.title}")
 
 
-# Issue state machine: open → triaging → closed
+# Issue state machine: open → in_progress → closed
 ALLOWED_ISSUE_TRANSITIONS = {
-    IssueStatus.OPEN: {IssueStatus.TRIAGING, IssueStatus.CLOSED},
-    IssueStatus.TRIAGING: {IssueStatus.CLOSED, IssueStatus.OPEN},
+    IssueStatus.OPEN: {IssueStatus.IN_PROGRESS, IssueStatus.CLOSED},
+    IssueStatus.IN_PROGRESS: {IssueStatus.CLOSED, IssueStatus.OPEN},
     IssueStatus.CLOSED: set(),
 }
 
@@ -226,32 +224,32 @@ def transition(issue_id: int, target: str) -> None:
         ), err=True)
         sys.exit(3)
 
-    # Cross-field validation: open → triaging requires root_cause + fix_plan + action
-    if current_status == IssueStatus.OPEN and target_status == IssueStatus.TRIAGING:
+    # Cross-field validation: open → in_progress requires scenario + impact
+    if current_status == IssueStatus.OPEN and target_status == IssueStatus.IN_PROGRESS:
         issue = Issue.model_validate(load_yaml(issue_dir / "ISSUE.yaml"))
         missing = []
-        if not (issue.root_cause or "").strip():
-            missing.append("root_cause is empty (QA must fill via `agent-factory issue set <id> root_cause ...`)")
-        if not (issue.fix_plan or "").strip():
-            missing.append("fix_plan is empty (QA must fill via `agent-factory issue set <id> fix_plan ...`)")
-        if not issue.action:
-            missing.append("action is empty (QA must set via `agent-factory issue set <id> action direct-fix|convert-to-feature`)")
+        if not (issue.scenario or "").strip():
+            missing.append("scenario is empty (PM must fill via `agent-factory issue set <id> scenario ...`)")
+        if not (issue.impact or "").strip():
+            missing.append("impact is empty (PM must fill via `agent-factory issue set <id> impact ...`)")
         if missing:
             click.echo(format_error(
                 "ValidationError",
-                "Cannot start triaging (调度 developer 前必须 QA 诊断完成): " + "; ".join(missing),
+                "Cannot start in_progress (PM 信息收集未完成): " + "; ".join(missing),
                 str(issue_dir / "ISSUE.yaml"),
             ), err=True)
             sys.exit(1)
 
-    # Cross-field validation: triaging → closed requires fix + resolution (closed = 闭环)
-    if current_status == IssueStatus.TRIAGING and target_status == IssueStatus.CLOSED:
+    # Cross-field validation: in_progress → closed requires root_cause + fix_plan + result
+    if current_status == IssueStatus.IN_PROGRESS and target_status == IssueStatus.CLOSED:
         issue = Issue.model_validate(load_yaml(issue_dir / "ISSUE.yaml"))
         missing = []
-        if not (issue.fix or "").strip():
-            missing.append("fix is empty (developer must fill via `agent-factory issue set <id> fix ...`)")
-        if not (issue.resolution or "").strip():
-            missing.append("resolution is empty (PM must fill via `agent-factory issue set <id> resolution ...`)")
+        if not (issue.root_cause or "").strip():
+            missing.append("root_cause is empty (QA must fill)")
+        if not (issue.fix_plan or "").strip():
+            missing.append("fix_plan is empty (QA must fill)")
+        if not issue.result:
+            missing.append("result is empty (use `agent-factory issue close` command)")
         if missing:
             click.echo(format_error(
                 "ValidationError",
@@ -266,12 +264,107 @@ def transition(issue_id: int, target: str) -> None:
     click.echo(f"Transitioned issue {issue_id}: {current_status.value} → {target_status.value}")
 
 
+@issue_group.command("close")
+@click.argument("issue_id", type=int)
+@click.option("--bugfix", "is_bugfix", is_flag=True, help="Close as bugfix")
+@click.option("--feature-request", "is_feature_request", is_flag=True, help="Close as feature_request")
+@click.option("--fix-desc", help="(bugfix) modification content")
+@click.option("--verification", help="(bugfix) PM verification result")
+@click.option("--feature-id", type=int, help="(feature_request) target feature id")
+def close(issue_id: int, is_bugfix: bool, is_feature_request: bool,
+          fix_desc: str | None, verification: str | None, feature_id: int | None) -> None:
+    """Close issue with result (one-step: fill result + transition to closed)."""
+    if is_bugfix == is_feature_request:
+        click.echo(format_error(
+            "InvalidArgs",
+            "Must specify exactly one of --bugfix or --feature-request",
+            None,
+        ), err=True)
+        sys.exit(4)
+
+    try:
+        issue_dir = find_issue_dir(issue_id)
+    except FileNotFoundError as exc:
+        click.echo(format_error("NotFound", str(exc), None), err=True)
+        sys.exit(2)
+
+    # Build result object
+    if is_bugfix:
+        if not fix_desc or not verification:
+            click.echo(format_error(
+                "InvalidArgs",
+                "--bugfix requires --fix-desc and --verification",
+                None,
+            ), err=True)
+            sys.exit(4)
+        result = BugfixResult(fix_desc=fix_desc, verification=verification)
+    else:  # feature_request
+        if feature_id is None:
+            click.echo(format_error(
+                "InvalidArgs",
+                "--feature-request requires --feature-id",
+                None,
+            ), err=True)
+            sys.exit(4)
+        result = FeatureRequestResult(feature_id=feature_id)
+
+    # Write result to ISSUE.yaml
+    issue_path = issue_dir / "ISSUE.yaml"
+    try:
+        data = load_yaml(issue_path)
+        data["result"] = result.model_dump(mode="json")
+        issue = Issue.model_validate(data)
+    except ValidationError as exc:
+        click.echo(format_error("ValidationError", str(exc), str(issue_path)), err=True)
+        sys.exit(1)
+    dump_yaml(issue_path, issue)
+
+    # Transition to closed (will run cross-field validation including result)
+    idx_path = Path(".issues") / "index.yaml"
+    idx = IssueIndex.model_validate(load_yaml(idx_path))
+    current_item = next((i for i in idx.issues if i.id == issue_id), None)
+    if not current_item:
+        click.echo(format_error("NotFound", f"Issue {issue_id} not in index", None), err=True)
+        sys.exit(2)
+
+    current_status = current_item.status
+    if IssueStatus.CLOSED not in ALLOWED_ISSUE_TRANSITIONS.get(current_status, set()):
+        click.echo(format_error(
+            "InvalidTransition",
+            f"Path '{current_status.value} → closed' is not allowed",
+            None,
+        ), err=True)
+        sys.exit(3)
+
+    # Cross-field validation (same as transition command)
+    if current_status == IssueStatus.IN_PROGRESS:
+        issue_data = Issue.model_validate(load_yaml(issue_path))
+        missing = []
+        if not (issue_data.root_cause or "").strip():
+            missing.append("root_cause is empty (QA must fill)")
+        if not (issue_data.fix_plan or "").strip():
+            missing.append("fix_plan is empty (QA must fill)")
+        if missing:
+            click.echo(format_error(
+                "ValidationError",
+                "Cannot close issue: " + "; ".join(missing),
+                str(issue_path),
+            ), err=True)
+            sys.exit(1)
+
+    current_item.status = IssueStatus.CLOSED
+    dump_yaml(idx_path, idx)
+
+    result_type = "bugfix" if is_bugfix else "feature_request"
+    click.echo(f"Closed issue {issue_id} as {result_type}")
+
+
 @issue_group.command("block")
 @click.argument("issue_id", type=int)
 @click.option("--reason", required=True, help="Why blocked")
 @click.option("--action", "action_text", required=True, help="What's needed to unblock")
 def block(issue_id: int, reason: str, action_text: str) -> None:
-    """Block issue (creates BLOCKED.yaml, keeps status=triaging)."""
+    """Block issue (creates BLOCKED.yaml, keeps status=in_progress)."""
     try:
         issue_dir = find_issue_dir(issue_id)
     except FileNotFoundError as exc:
@@ -287,12 +380,12 @@ def block(issue_id: int, reason: str, action_text: str) -> None:
 
     dump_yaml(blocked_path, BlockedRecord(reason=reason, action=action_text))
 
-    # Issue has no dedicated blocked status; keep triaging
+    # Issue has no dedicated blocked status; keep in_progress
     idx_path = Path(".issues") / "index.yaml"
     idx = IssueIndex.model_validate(load_yaml(idx_path))
     for item in idx.issues:
         if item.id == issue_id:
-            item.status = IssueStatus.TRIAGING
+            item.status = IssueStatus.IN_PROGRESS
             break
     dump_yaml(idx_path, idx)
 

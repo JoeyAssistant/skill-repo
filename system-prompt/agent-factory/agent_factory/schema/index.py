@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_factory.schema.enums import (
-    FeatureStatus, IssueStatus, IssueType, Priority,
+    FeatureStatus, IssueStatus, Priority,
 )
 
 
@@ -28,12 +28,11 @@ class FeatureIndex(BaseModel):
 
 
 class IssueIndexItem(BaseModel):
-    """issue index 单行（比 feature 多 type 字段）."""
+    """issue index 单行（4 字段，与 FeatureIndexItem 一致）."""
     model_config = ConfigDict(extra="forbid")
 
     id: int = Field(..., description="issue 编号")
     title: str = Field(..., description="人读展示标题")
-    type: IssueType = Field(..., description="PM triage 用：bug / feature-request")
     status: IssueStatus = Field(..., description="调度核心：当前生命周期状态")
     priority: Priority = Field(..., description="调度排序：优先级")
 

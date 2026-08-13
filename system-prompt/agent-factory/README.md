@@ -39,13 +39,13 @@ User ←→ PM (agent-pm.md, system prompt)
   User 报告 → PM 调度 QA 诊断 (仅诊断，输出 JSON)
            → PM 在 .issues/_incoming/<timestamp>-<name>/ 下提交:
              ├─ bug             → ISSUE.yaml (含 QA Diagnosis) + snapshot/
-             └─ feature-request → REQUIREMENTS.yaml (与用户讨论后) + snapshot/
+             └─ feature-request → REQUIREMENT.yaml (与用户讨论后) + snapshot/
            → git push
                 ↓ git pull
 开发环境 (PM 入口)
   PM 扫描 .issues/_incoming/:
     ├─ 含 ISSUE.yaml         → 登记 .issues/<NNN>-<name>/  → 标准 issue 修复流程
-    └─ 含 REQUIREMENTS.yaml  → 登记 .features/<NNN>-<name>/ → 标准 feature 设计流程
+    └─ 含 REQUIREMENT.yaml  → 登记 .features/<NNN>-<name>/ → 标准 feature 设计流程
 ```
 
 ## 安装
@@ -123,7 +123,7 @@ PM 启动时自动检测模式：
 用户: 我想做一个财务日报功能
 PM:   [创建 feature #NNN，引导讨论背景、价值、范围]
 用户: 确认范围
-PM:   [整理 REQUIREMENTS.yaml，自己写 doc/，调度 spec-compliance 自检]
+PM:   [整理 REQUIREMENT.yaml，自己写 doc/，调度 spec-compliance 自检]
 用户: [review git diff]
 PM:   [调度 developer]
 ```
@@ -151,7 +151,7 @@ project-root/
   .features/
     index.yaml
     <id>/
-      REQUIREMENTS.yaml
+      REQUIREMENT.yaml
       BLOCKED.yaml
       POC-REPORT.md
       QA-REPORT.md
@@ -249,6 +249,6 @@ python3 -m agent_factory.schema.validate .
 
 ### Issue
 
-`open` → `triaging` → `closed`
+`open → in_progress → closed`
 
 Issue 类型为 `feature-request` 时，可转化为 feature 进入设计流程。
