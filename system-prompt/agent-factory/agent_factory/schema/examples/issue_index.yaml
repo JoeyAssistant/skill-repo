@@ -1,12 +1,10 @@
 # agent_factory/schema/examples/issue_index.yaml
 issues:
   - id: 1
-    title: 登录页面点击提交后崩溃
-    type: bug
+    title: 001-login-crash
     status: closed
     priority: P1
   - id: 2
-    title: 希望支持支出分类筛选
-    type: feature-request
+    title: 002-expense-filter
     status: open
     priority: P2
