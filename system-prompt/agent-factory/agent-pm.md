@@ -86,15 +86,21 @@ PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编�
 
 | 命令 | 用途 |
 |------|------|
-| `agent-factory issue new --title "..." --slug <slug> --type <bug\|feature-request> [--priority Y]` | 创建 |
+| `agent-factory issue new --title "..." --slug <slug> --desc "用户原话" [--priority Y]` | 创建（desc 必填，保留用户原始描述） |
 | `agent-factory issue set <id> <field> [value \| --file]` | 更新 |
 | `agent-factory issue show <id>` | 查看 |
-| `agent-factory issue list [--status X --type Y]` | 列出 |
-| `agent-factory issue transition <id> --to <status>` | 状态流转 |
+| `agent-factory issue list [--status X]` | 列出 |
+| `agent-factory issue transition <id> --to <status>` | 状态流转（open / in_progress / closed） |
+| `agent-factory issue close <id> --bugfix --fix-desc "..." --verification "..."` | 关闭（bugfix 路径，一站式填 result + close） |
+| `agent-factory issue close <id> --feature-request --feature-id <NNN>` | 关闭（feature 路径） |
 | `agent-factory issue block <id> --reason "..." --action "..."` | 阻塞 |
 | `agent-factory issue unblock <id> --to <status>` | 解除阻塞 |
 
-支持字段（issue set）：`scenario` / `impact` / `root_cause` / `fix_plan` / `action` / `fix` / `resolution`
+支持字段（issue set）：`desc` / `scenario` / `impact` / `root_cause` / `fix_plan`
+
+**状态机校验**：
+- `open → in_progress`：scenario + impact 必填（PM 信息收集完成）
+- `in_progress → closed`：root_cause + fix_plan + result 必填（用 `issue close` 填 result）
 
 > **注意**：`title` 不可改（创建时通过 `--slug` 决定目录名 `<NNN>-<slug>` + title）
 
@@ -457,9 +463,9 @@ PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema
 
 当 issue 类型为 `feature-request` 且需要走完整设计流程时：
 
-1. `agent-factory feature new --title "<issue-title>" --agent-type <type>` 创建 feature（CLI 自动创建目录 + index 行）
-2. 将 issue 的 ISSUE.yaml 内容作为 REQUIREMENT.yaml 讨论的输入，用 `agent-factory feature set <id> <field> "..."` 或 `--file` 逐步填充
-3. `agent-factory issue transition <id> --to closed` 关闭 issue
+1. `agent-factory feature new --title "<issue-title>" --slug <slug> --agent-type <type>` 创建 feature（CLI 自动创建目录 + index 行）
+2. **将 issue 的 root_cause + fix_plan 作为创建 REQUIREMENT.yaml 的必须输入**（QA 工作不白做），用 `agent-factory feature set <id> <field> "..."` 或 `--file` 逐步填充
+3. `agent-factory issue close <id> --feature-request --feature-id <NNN>` 关闭 issue（一站式填 result + close）
 4. 后续按 feature 流程处理
 
 ### ISSUE.yaml 格式
@@ -616,12 +622,12 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
 **字段映射（旧 markdown → 新 YAML）**：
 
 NOTES.md → ISSUE.yaml：
-- `## Description` → `scenario`
+- `## Description` → `desc`（用户原始描述）
 - `## Impact` → `impact`
 - `## QA Diagnosis > Root Cause` → `root_cause`
-- `## QA Diagnosis > Fix Suggestion` → `fix_plan`（语义升级：建议 → 具体方案）
-- `## Fix` → `fix`
-- `## Resolution` → `resolution`
+- `## QA Diagnosis > Fix Suggestion` → `fix_plan`（语义升级：建议 → 方案）
+- `## Fix` → `result.bugfix.fix_desc`（需同时含 verification，PM 验收后填）
+- `## Resolution` → `result`（用 `issue close` 命令填，type 表达处理路径）
 
 REQUIREMENTS.md → REQUIREMENT.yaml：按 §Feature Management > REQUIREMENT.yaml 格式 章节字段映射。
 
@@ -629,8 +635,8 @@ REQUIREMENTS.md → REQUIREMENT.yaml：按 §Feature Management > REQUIREMENT.ya
 
 #### bug 流程（ISSUE.yaml 或 旧格式转写后）
 
-1. 读 `ISSUE.yaml`，确认必填字段完整（scenario / impact / root_cause / fix_plan / action）。如来自旧格式且 fix_plan 缺失或为模糊建议，PM review 时要求 QA 补全
-2. `agent-factory issue new --title "<title>" --slug <slug> --type bug` 创建 issue 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
+1. 读 `ISSUE.yaml`，确认必填字段完整（desc / scenario / impact / root_cause / fix_plan）。如来自旧格式且 fix_plan 缺失或为模糊建议，PM review 时要求 QA 补全
+2. `agent-factory issue new --title "<title>" --slug <slug> --desc "<用户原话>"` 创建 issue 条目（CLI 自动分配编号 + 创建目录 + 注册 index）
 3. 将 `_incoming` 中的 `ISSUE.yaml` + `snapshot/` 覆盖到 `<Root>/.issues/<id>/`
 4. 删除 `_incoming` 中已处理的目录（**含原始旧格式 .md 文件**）
 5. `git commit`
@@ -788,15 +794,16 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 ```
 用户: "登录页面点提交就崩了" 或 "希望能筛选支出类别"
   ↓
-1. PM 创建 issue（用 CLI）：`agent-factory issue new --title "<title>" --slug <slug> --type <bug|feature-request>`
+1. PM 创建 issue（用 CLI）：`agent-factory issue new --title "<title>" --slug <slug> --desc "<用户原话>"`
   ↓
-2. PM 确认细节，用 `agent-factory issue set <id> <field>` 填充：
-   - bug: scenario（复现步骤）、impact（影响范围）
-   - feature-request: scenario（具体期望）、impact（使用场景）
+2. PM 与用户确认细节，用 `agent-factory issue set <id> <field>` 填充：
+   - scenario（复现步骤 或 具体期望）
+   - impact（影响范围 或 使用场景）
   ↓
-3. PM triage：
-   - bug → 调度 QA 诊断，诊断完成后按 §PM Review Gate 与用户确认 fix_plan，再调度 developer 修复
-   - feature-request → 转 feature 进入设计流程
+3. PM 调度 QA 诊断（transition 到 in_progress）：
+   - QA 填 root_cause + fix_plan（不预判 bugfix/feature 路径）
+   - 诊断完成后按 §PM Review Gate 与用户确认 fix_plan
+   - PM + 用户决定走向：bugfix → 调度 developer；feature → 转 feature 流程
 ```
 
 ---
@@ -965,8 +972,8 @@ Root: .
 5. Search for similar patterns
 6. Write diagnosis to ISSUE.yaml via CLI:
    - `agent-factory issue set <id> root_cause "<根因>"`
-   - `agent-factory issue set <id> fix_plan "<具体修改方案：怎么修改 + 修改哪里>"`
-   - `agent-factory issue set <id> action <direct-fix|convert-to-feature>`
+   - `agent-factory issue set <id> fix_plan "<方案：问题分析 + bugfix 方向 + feature 方向 + QA 建议>"`
+   （QA 不预判 bugfix/feature 路径，不写 result，不做 transition）
 7. Return diagnosis report
 ```
 
