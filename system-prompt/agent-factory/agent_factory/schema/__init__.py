@@ -6,7 +6,6 @@
 - Issue：issue 报告
 - FeatureIndex / FeatureIndexItem：feature 索引
 - IssueIndex / IssueIndexItem：issue 索引
-- BlockedRecord：阻塞记录
 """
 from agent_factory.schema.enums import Priority
 from agent_factory.schema.feature import AgentType, FeatureStatus
@@ -24,7 +23,6 @@ from agent_factory.schema.index import (
     IssueIndex,
     IssueIndexItem,
 )
-from agent_factory.schema.blocked import BlockedRecord
 
 __all__ = [
     # 枚举
@@ -47,6 +45,4 @@ __all__ = [
     "FeatureIndexItem",
     "IssueIndex",
     "IssueIndexItem",
-    # Blocked
-    "BlockedRecord",
 ]

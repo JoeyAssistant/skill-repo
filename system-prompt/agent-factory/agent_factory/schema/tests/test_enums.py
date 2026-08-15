@@ -21,7 +21,7 @@ def test_priority_values():
 def test_feature_status_lifecycle():
     """FeatureStatus 覆盖完整生命周期"""
     expected = {"draft", "designing", "approved", "implementing",
-                "qa-reviewing", "done", "blocked", "cancelled"}
+                "qa-reviewing", "done", "cancelled"}
     actual = {s.value for s in FeatureStatus}
     assert actual == expected
 
