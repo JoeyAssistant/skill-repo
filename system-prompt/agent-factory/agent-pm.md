@@ -75,7 +75,9 @@ agent-factory index --help              # index 命令
 agent-factory issue close --help        # 单命令参数详情
 ```
 
-多行长文本统一用 `--file <path>` 传值（先 heredoc 写临时文件）。
+多行长文本统一用 `--file <path>` 传值：先 `cat > /tmp/x.md << 'EOF' ... EOF` 写临时文件，再 `--file /tmp/x.md`。
+
+**为什么不用 inline 参数**：长文本含引号 / `$` / 反引号 / `#` 时（description / data_schema 天然如此），inline 传参的 shell 转义不可靠——不报错但内容**静默截断或损坏**。heredoc 用单引号 `EOF` 界定则内容零转义原样写入，且事后可 `cat` 回看当时传了什么。
 
 退出码：0 成功 / 1 校验失败 / 2 资源不存在 / 3 状态机违规 / 4 参数错误。
 
