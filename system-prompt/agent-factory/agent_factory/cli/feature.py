@@ -20,7 +20,22 @@ from agent_factory.schema.enums import AgentType, FeatureStatus, Priority
 
 @click.group("feature")
 def feature_group() -> None:
-    """Operate feature REQUIREMENT.yaml."""
+    """Operate feature REQUIREMENT.yaml.
+
+    命令：new / set / show / list / transition / block / unblock / delete
+
+    feature set 支持字段：agent_type / problem / benefit / description /
+    data_schema / interfaces / acceptance_cases / decisions
+
+    目录名：<NNN>-<slug>（如 001-income-module）；title = 目录名，不可改
+
+    状态机校验（transition 时）：
+    - draft → designing：description 非空
+    - designing → approved：data_schema + interfaces + acceptance_cases 都非空
+    - approved → implementing：所有 decisions status=closed
+
+    多行文本用 --file：<field> 值从文件读（如 --file /tmp/desc.md）
+    """
 
 
 @feature_group.command("new")
@@ -112,6 +127,9 @@ REQS_FIELDS = {
 @click.option("--file", "file_path", type=click.Path(exists=True, path_type=Path), help="Read value from file")
 def set_field(feature_id: int, field: str, value: str | None, file_path: Path | None) -> None:
     """Update a field in REQUIREMENT.yaml.
+
+    Supported fields: agent_type / problem / benefit / description /
+    data_schema / interfaces / acceptance_cases / decisions.
 
     Title is immutable (equals directory name, set at creation).
     For long fields (description / data_schema / interfaces / acceptance_cases / decisions),
@@ -268,7 +286,13 @@ def _validate_transition_requirements(current: FeatureStatus, target: FeatureSta
 @click.argument("feature_id", type=int)
 @click.option("--to", "target", required=True, type=click.Choice([s.value for s in FeatureStatus]))
 def transition(feature_id: int, target: str) -> None:
-    """Transition feature status (with cross-field validation)."""
+    """Transition feature status (with cross-field validation).
+
+    Cross-field checks:
+    - draft → designing: description must be non-empty
+    - designing → approved: data_schema + interfaces + acceptance_cases must be non-empty
+    - approved → implementing: all decisions must be status=closed
+    """
     try:
         feature_dir = find_feature_dir(feature_id)
     except FileNotFoundError as exc:

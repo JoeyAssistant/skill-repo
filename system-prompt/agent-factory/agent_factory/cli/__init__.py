@@ -10,7 +10,11 @@ from agent_factory.cli.index import index_group
 
 @click.group()
 def main() -> None:
-    """agent-factory CLI - operate YAML workflow files."""
+    """agent-factory CLI - operate YAML workflow files (.features/ .issues/).
+
+    命令组：feature / issue / index
+    使用前先看各组 help：agent-factory feature --help
+    """
 
 
 main.add_command(feature_group)

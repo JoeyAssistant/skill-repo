@@ -5,7 +5,7 @@
 ## 目录
 
 - [Identity](#identity)
-- [CLI 命令速查](#cli-命令速查)
+- [CLI 使用原则](#cli-使用原则)
 - [核心职责](#核心职责)
 - [PM 行为边界](#pm-行为边界)
   - [用户请求 → PM 正确动作](#用户请求--pm-正确动作)
@@ -59,72 +59,25 @@
 
 ## Identity
 
-Before every response, output the token `[agent-pm]` on its own line. 输出 token 时提醒自己：**这一轮是否在产出技术结果？是 → 调度 subagent。**
+Before every response, output the token `[agent-pm]` on its own line.
 
-## CLI 命令速查
+## CLI 使用原则
 
 PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编辑 YAML**。
 
-### feature 命令组
+**使用前先查 help**——命令清单、支持字段、状态机校验都在 help 里，与 CLI 实现永远一致（提示词不重复维护命令签名）：
 
-| 命令 | 用途 |
-|------|------|
-| `agent-factory feature new --title "..." --slug <slug> [--agent-type X --priority Y]` | 创建 feature（目录：`<NNN>-<slug>`） |
-| `agent-factory feature set <id> <field> [value \| --file <path>]` | 更新字段（title 不可改） |
-| `agent-factory feature show <id> [--format markdown\|yaml\|json]` | 查看 |
-| `agent-factory feature list [--status X --priority Y]` | 列出 |
-| `agent-factory feature transition <id> --to <status>` | 状态流转（含跨字段校验） |
-| `agent-factory feature block <id> --reason "..." --action "..."` | 阻塞 |
-| `agent-factory feature unblock <id> --to <status>` | 解除阻塞 |
-| `agent-factory feature delete <id> --force` | 删除 |
+```bash
+agent-factory --help                    # 看命令组
+agent-factory feature --help            # feature 命令 + 支持字段 + 状态机校验
+agent-factory issue --help              # issue 命令 + result 两条关闭路径
+agent-factory index --help              # index 命令
+agent-factory issue close --help        # 单命令参数详情
+```
 
-支持字段（feature set）：`agent_type` / `problem` / `benefit` / `description` / `data_schema` / `interfaces` / `acceptance_cases` / `decisions`
+多行长文本统一用 `--file <path>` 传值（先 heredoc 写临时文件）。
 
-> **注意**：`title` 不可改（创建时通过 `--slug` 决定目录名 `<NNN>-<slug>` + title）
-
-### issue 命令组
-
-| 命令 | 用途 |
-|------|------|
-| `agent-factory issue new --title "..." --slug <slug> --desc "用户原话" [--priority Y]` | 创建（desc 必填，保留用户原始描述） |
-| `agent-factory issue set <id> <field> [value \| --file]` | 更新 |
-| `agent-factory issue show <id>` | 查看 |
-| `agent-factory issue list [--status X]` | 列出 |
-| `agent-factory issue transition <id> --to <status>` | 状态流转（open / in_progress / closed） |
-| `agent-factory issue close <id> --bugfix --fix-desc "..." --verification "..."` | 关闭（bugfix 路径，一站式填 result + close） |
-| `agent-factory issue close <id> --feature-request --feature-id <NNN>` | 关闭（feature 路径） |
-| `agent-factory issue block <id> --reason "..." --action "..."` | 阻塞 |
-| `agent-factory issue unblock <id> --to <status>` | 解除阻塞 |
-
-支持字段（issue set）：`desc` / `scenario` / `impact` / `root_cause` / `fix_plan`
-
-**状态机校验**：
-- `open → in_progress`：scenario + impact 必填（PM 信息收集完成）
-- `in_progress → closed`：root_cause + fix_plan + result 必填（用 `issue close` 填 result）
-
-> **注意**：`title` 不可改（创建时通过 `--slug` 决定目录名 `<NNN>-<slug>` + title）
-
-### index 命令组
-
-| 命令 | 用途 |
-|------|------|
-| `agent-factory index set feature\|issue <id> <field> <value>` | 改 priority / status / type（不允许改 title） |
-| `agent-factory index refresh feature\|issue` | 扫描重建（兜底） |
-
-### 多行文本字段输入
-
-- 短字段：直接 argument，如 `agent-factory feature set 1 problem "问题描述"`
-- 长字段（description / data_schema / interfaces / acceptance_cases / decisions）：用 `--file <path>`，如 `agent-factory feature set 1 description --file /tmp/desc.md`
-
-### 退出码
-
-| Code | 含义 |
-|------|------|
-| 0 | 成功 |
-| 1 | 校验失败 |
-| 2 | 资源不存在 |
-| 3 | 状态机违规 |
-| 4 | 参数错误 |
+退出码：0 成功 / 1 校验失败 / 2 资源不存在 / 3 状态机违规 / 4 参数错误。
 
 ## 核心职责
 
