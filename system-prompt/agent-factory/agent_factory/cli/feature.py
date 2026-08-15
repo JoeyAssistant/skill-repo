@@ -19,27 +19,21 @@ from agent_factory.schema.enums import Priority
 from agent_factory.schema.feature import AgentType, FeatureStatus
 
 
-@click.group("feature")
-def feature_group() -> None:
-    """Operate feature FEATURE.yaml.
+def _feature_doc() -> str:
+    """读 doc/feature.md 原文作为 group help（设计文档 = help 唯一真值）.
 
-    命令：new / set / show / list / transition / delete
-
-    feature set 合法形式：
-      desc / agent_type                          标量
-      background [--file]                        整体（yaml: {pain_point, benefit}）
-      background.pain_point / background.benefit 嵌套标量
-      spec.<module> --file                       模块 upsert（ModuleSpec yaml）
-      spec.<module> --remove                     删除模块
-      test_cases --file                          整列表替换
-
-    目录名：<NNN>-<slug>；title = 目录名，不可改
-    状态机校验：
-    - draft → designing：background.pain_point + benefit 非空
-    - designing → approved：spec ≥1 模块 且 test_cases ≥1 条
-
-    多行文本用 --file：<field> 值从文件读（如 --file /tmp/desc.md）
+    click 会对 help 文本按段落 rewrap（换行被压扁）；在每个段落前插 \\b
+    标记可让该段原样输出，保留 feature.md 的原始换行。
     """
+    p = Path(__file__).resolve().parent.parent / "doc" / "feature.md"
+    if not p.exists():
+        return "Operate feature FEATURE.yaml."
+    return "\n\b\n" + p.read_text().replace("\n\n", "\n\n\b\n")
+
+
+@click.group("feature", help=_feature_doc())
+def feature_group() -> None:
+    """Operate feature FEATURE.yaml."""
 
 
 @feature_group.command("new")

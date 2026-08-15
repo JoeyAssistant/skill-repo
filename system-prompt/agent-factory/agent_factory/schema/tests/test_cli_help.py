@@ -21,14 +21,15 @@ def test_main_help_lists_groups():
 
 
 def test_feature_help_contains_fields_and_state_machine():
+    """feature group help 直接展示 doc/feature.md 原文（schema 字段 + 状态机）."""
     out = _help_output("feature")
-    # 支持字段
+    # schema 字段（feature.md 原文）
     for field in ["desc", "agent_type", "background", "spec", "test_cases"]:
         assert field in out, f"feature help missing field: {field}"
-    # 嵌套路径
-    assert "background.pain_point" in out
-    assert "background.benefit" in out
-    assert "spec.<module>" in out
+    # 嵌套字段（feature.md 用 yaml 风格列表，dot 路径由嵌套层级表达）
+    assert "pain_point" in out
+    assert "benefit" in out
+    assert "<module>" in out  # spec.<module> 占位符
     # 状态机
     assert "designing" in out
     assert "approved" in out

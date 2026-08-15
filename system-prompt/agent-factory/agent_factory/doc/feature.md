@@ -8,7 +8,7 @@
     - pain_point # 解决什么痛点
     - benefit # 带来什么收益
 - spec # 需求规格
-    - model_a # 模块A
+    - <module> # 模块名（按模块 dict 组织）
         - functions # 功能、修改点
             1. function_1 
             2. function_2
