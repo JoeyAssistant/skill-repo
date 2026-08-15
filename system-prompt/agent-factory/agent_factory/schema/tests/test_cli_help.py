@@ -31,13 +31,17 @@ def test_feature_help_contains_fields_and_state_machine():
     assert "approved" in out
 
 
-def test_issue_help_contains_fields_and_state_machine():
+def test_issue_help_shows_design_doc():
+    """issue group help 直接展示 doc/issue.md 原文（schema 字段 + workflow）."""
     out = _help_output("issue")
-    for field in ["desc", "scenario", "impact", "root_cause", "fix_plan"]:
+    # schema 字段（issue.md 原文）
+    for field in ["desc", "scenario", "impact", "root_cause", "fix_plan", "result"]:
         assert field in out, f"issue help missing field: {field}"
-    assert "in_progress" in out
-    assert "--bugfix" in out or "bugfix" in out
-    assert "feature-request" in out or "feature_id" in out
+    # workflow 关键节点（issue.md 原文 mermaid）
+    assert "提一个issue" in out
+    assert "root_cause + fix_plan" in out
+    assert "bugfix" in out
+    assert "feature_id" in out
 
 
 def test_index_help_contains_fields():
