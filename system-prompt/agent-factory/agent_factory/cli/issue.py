@@ -20,7 +20,25 @@ from agent_factory.schema.issue import BugfixResult, FeatureRequestResult
 
 @click.group("issue")
 def issue_group() -> None:
-    """Operate issue ISSUE.yaml."""
+    """Operate issue ISSUE.yaml.
+
+    命令：new / set / show / list / transition / close / block / unblock
+
+    issue set 支持字段：desc / scenario / impact / root_cause / fix_plan
+
+    目录名：<NNN>-<slug>；title = 目录名，不可改
+    desc = 用户原始描述（create 时必填）
+
+    状态机校验（transition 时）：
+    - open → in_progress：scenario + impact 必填（PM 信息收集完成）
+    - in_progress → closed：root_cause + fix_plan + result 必填
+
+    result 用 issue close 填（一站式 result + close）：
+    - bugfix 路径：issue close <id> --bugfix --fix-desc "..." --verification "..."
+    - feature 路径：issue close <id> --feature-request --feature-id <NNN>
+
+    多行文本用 --file：<field> 值从文件读
+    """
 
 
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
@@ -42,6 +60,7 @@ def new(title: str, slug: str, desc: str, priority: str) -> None:
     """Create new issue (status=open).
 
     Directory name: <NNN>-<slug> (e.g., 001-login-crash).
+    --desc preserves user's original description verbatim (required).
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):

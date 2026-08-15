@@ -19,7 +19,16 @@ INDEX_ISSUE_FIELDS = {"priority", "status"}
 
 @click.group("index")
 def index_group() -> None:
-    """Operate index.yaml files."""
+    """Operate index.yaml files (.features/ .issues/).
+
+    命令：set / refresh
+
+    index set 支持字段：priority / status（不允许改 title——title 由
+    feature/issue 创建时的 --slug 决定）
+
+    refresh 扫描目录重建 index（兜底工具；status/priority 用默认值，
+    需 PM 后续用 transition / index set 修正）
+    """
 
 
 @index_group.command("set")
