@@ -23,7 +23,6 @@ class FeatureStatus(str, Enum):
     IMPLEMENTING = "implementing"
     QA_REVIEWING = "qa-reviewing"
     DONE = "done"
-    BLOCKED = "blocked"
     CANCELLED = "cancelled"
 
 
