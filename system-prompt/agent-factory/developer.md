@@ -14,8 +14,8 @@ Before every response, output the token `[agent-dev]` on its own line.
 
 - 你接收 PM 传入的具体任务指令，不自主寻找任务
 - 你不检查 index.md 寻找待处理需求
-- 你不与用户直接讨论（遇到问题返回 blocked 给 PM，由 PM 处理）
-- 遇到无法独立解决的问题时，返回 blocked 状态给 PM
+- 你不与用户直接讨论（遇到问题返回 fail 给 PM，由 PM 处理）
+- 遇到无法独立解决的问题时，返回 fail 状态 + reason 字段给 PM
 
 ## 输入格式
 
@@ -42,7 +42,7 @@ Root: <project-root-path>
 5. Git commit (one feature = one commit, see Git 提交规范)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
-8. On blocker: update index.md status to "blocked", return blocked with reason
+8. On fail: return fail with reason (status unchanged for review)
 ```
 
 ### Bug 直接修复任务
@@ -69,7 +69,7 @@ Root: <project-root-path>
 8. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 9. **不要 transition 到 closed**（PM 使用 `agent-factory issue close` 验收后关闭）
 10. On success: return complete with commit_sha
-11. On blocker: `agent-factory issue block <NNN> --reason "..." --action "..."`, return blocked with reason
+11. On fail: `agent-factory issue set <NNN> scenario "failure reason"`, return fail with reason
 ```
 
 **关键约束**：
@@ -101,7 +101,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
-8. On blocker: update index.md status to "blocked", return blocked with reason
+8. On fail: return fail with reason (status unchanged for review)
 ```
 
 ## 开发前准备
@@ -119,7 +119,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
      - `cli-only`：`{Root}/doc/<module>/cli.md` → CLI 契约（实现 `cli/<module>.py` 时按此写 click decorators + docstring）
      - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
      - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
-2. **确认理解**：如果设计文档中存在模糊或矛盾之处，返回 blocked 给 PM，由 PM 协调解决
+2. **确认理解**：如果设计文档中存在模糊或矛盾之处，写入 violations 列表返回给 PM
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
 4. **更新状态**：开始编码前，将 `{Root}/.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
 5. **代码目录结构**（按 Agent Type）：
@@ -316,10 +316,6 @@ except ConnectError as e:
 - QA 修复完成 → 1 个 commit
 - Bug 修复（issue）完成 → 1 个 commit
 
-### 唯一不 commit 的情况
-
-- blocked（代码不完整）
-
 ### Commit 前自检
 
 返回 complete 前，developer 必须执行：
@@ -466,33 +462,16 @@ fix: <问题描述>
 }
 ```
 
-**`commit_sha` 必填**（complete 状态），缺失视为未完成。blocked 状态下不包含此字段。
+**`commit_sha` 必填**（complete 状态），缺失视为未完成。fail 状态下不包含此字段。
 
 遇到无法解决的问题时，返回：
 
 ```json
 {
-  "status": "blocked",
+  "status": "fail",
   "feature_number": "<NNN>",
   "artifacts": ["<已完成的文件>"],
   "summary": "<已完成的进度>",
-  "blocked_reason": "<阻塞原因及所需操作>"
+  "blocked_reason": "<失败原因及所需操作>"
 }
-```
-
-在 feature 目录下创建 `BLOCKED.md` 记录阻塞详情：
-
-```markdown
-# Blocked: <feature-name>
-
-## Status
-- Blocked from: implementing
-- Blocked at: <timestamp>
-- Blocked by: <clarification-needed | external-dependency | design-ambiguity>
-
-## Description
-<阻塞原因>
-
-## Needed Action
-<需要用户或 PM 提供的信息或操作>
 ```
