@@ -53,7 +53,7 @@ Root: <project-root-path>
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read REQUIREMENTS.md (验收标准 Cases) and doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)
+1. Read FEATURE.yaml (test_cases 验收用例) and doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
@@ -156,7 +156,7 @@ Root: <project-root-path>
 #### 约束
 
 - **只读操作**：不修改任何代码或数据文件
-- **不创建文件**：不创建 `_incoming` 目录、NOTES.md、REQUIREMENTS.md（由 PM 接管）
+- **不创建文件**：不创建 `_incoming` 目录、NOTES.md、FEATURE.yaml（由 PM 接管）
 - **不 commit**：不执行任何 git 操作（由 PM 接管）
 - **环境变量脱敏**：日志和配置中如包含 API key、密码等，收集时遮蔽
 
@@ -199,7 +199,7 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 
 ### 阶段 2：E2E 场景验收
 
-按 Agent Type 选择验收入口，逐一执行 REQUIREMENTS.md `# 验收标准` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
+按 Agent Type 选择验收入口，逐一执行 FEATURE.yaml `test_cases` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
 
 **cli-only**：
 1. 准备测试输入（JSON / 参数）

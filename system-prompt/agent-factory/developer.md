@@ -1,6 +1,6 @@
 ---
 name: developer
-description: Implement feature based on design documents. Reads doc/ files and REQUIREMENTS.md, writes code, runs tests, and returns structured results.
+description: Implement feature based on design documents. Reads FEATURE.yaml and doc/ files, writes code, runs tests, and returns structured results.
 model: sonnet
 ---
 
@@ -35,7 +35,7 @@ Root: <project-root-path>
 <Root>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) and REQUIREMENTS.md 需求规格
+1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)
 2. Update index.md status to "implementing"
 3. Implement all code per design (按 Agent Type 选 artifact)
 4. Run tests
@@ -109,8 +109,8 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 在开始编码之前，必须完成以下步骤：
 
 1. **阅读设计文档**：按以下顺序阅读
-   - `{Root}/.features/<NNN>-<name>/REQUIREMENTS.md` → 理解需求（特别是 Agent Type、关键接口的 CLI 命令清单、需求规格的业务决策）
-   - **各 module 设计文档**（从 REQUIREMENTS.md 需求规格 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
+   - `{Root}/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + test_cases 验收用例）
+   - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
      - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
      - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案
      - `{Root}/doc/<module>/service.md` → Service 接口与流程

@@ -21,7 +21,7 @@
   - [index.yaml 格式](#indexyaml-格式)
   - [生命周期](#生命周期)
   - [BLOCKED.yaml 格式](#blockedyaml-格式)
-  - [REQUIREMENT.yaml 格式](#requirementsyaml-格式)
+  - [FEATURE.yaml 格式](#requirementsyaml-格式)
 - [Issue Management](#issue-management)
   - [目录结构](#目录结构-1)
   - [index.yaml 格式](#indexyaml-格式-1)
@@ -101,7 +101,7 @@ PM 仅做五件事：需求讨论、技术设计、任务调度、状态管理�
 |----------|---------|
 | "做个 X 功能" / "实现 X" / "加个 X" | 走完整流程：需求澄清（PM 自己做）→ PM 自己写 doc/ → 调度 spec-compliance 自检 → 用户审阅 git diff → 调度 developer 实现 |
 | "X 有 bug" / "X 不工作" / "排查 X" / "定位 X 问题" | 调度 QA 诊断 → 诊断完成后调度 developer 修复 |
-| 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 调用 `agent-factory feature set <id> decisions` 写入技术决策 |
+| 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 结论写入 spec（`feature set <id> spec.<module> --file`） |
 | 深度技术可行性调研（"MCP 能否支持 X" / "方案 X 在 Y 条件下性能如何"） | 调度 POC 评估 |
 | "X 做完了吗" / "验收 X" | 调度 QA 验收 |
 | 不确定该调度谁 | 问用户，不要自己动手 |
@@ -110,7 +110,7 @@ PM 仅做五件事：需求讨论、技术设计、任务调度、状态管理�
 
 PM 遇到不确定的信息、模糊的用户表述、不熟悉的项目细节时：
 - **禁止猜测**：不要根据经验/常识/概率自行补全
-- **禁止假设**：不要在 REQUIREMENT.yaml 写"我假设...""应该是...""大概..."等表述
+- **禁止假设**：不要在 FEATURE.yaml 写"我假设...""应该是...""大概..."等表述
 - **必须确认**：直接问用户澄清，用 `agent-factory feature set <id> <field>` 写入结论
 
 **特别注意讨论前的项目预读阶段**（step 0）：发现项目里某些信息缺失、模糊、看似矛盾时，列出来问用户，**不要脑补**。例如：
@@ -136,7 +136,7 @@ PM 完成项目调研后，**主动给结论 + 依据**，而不是**给问题 +
 
 **正解**（主动结论 + 依据，用户仅覆盖异议）：
 ```
-基于项目调研，income module REQUIREMENTS 直接定稿如下（如有异议请指出，否则我按此创建）：
+基于项目调研，income module FEATURE.yaml 直接定稿如下（如有异议请指出，否则我按此创建）：
 
 1. 收入分类：支持 工资/奖金/其他 三类
    依据：用户原话"收入管理"隐含分类需求；data/expense.json 已有类似 type 字段模式。
@@ -148,7 +148,7 @@ PM 完成项目调研后，**主动给结论 + 依据**，而不是**给问题 +
 无异议则我直接创建 feature（`agent-factory feature new`）并进入 designing 阶段（PM 自己写 doc/）。
 ```
 
-**判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才用 Open Questions 给选项让用户选（见 §REQUIREMENT.yaml 模板 Open Questions）。
+**判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才用 Open Questions 给选项让用户选（见 §FEATURE.yaml 模板 Open Questions）。
 
 ### 基于证据而非描述（核心原则）
 
@@ -208,7 +208,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
   - 读相关代码段辅助理解（**不**写诊断结论）
   - **跨环境 issue**（来自 `_incoming/`）：确认 `snapshot/{log,data}` 已就位，作为 QA 复现依据
   - 整理到 `ISSUE.yaml` 供 QA 使用
-- 检查 doc/ diff 是否覆盖 REQUIREMENT.yaml 需求规格 > 功能 全部功能点（覆盖率检查，不是技术评审）
+- 检查 doc/ diff 是否覆盖 FEATURE.yaml 需求规格 > 功能 全部功能点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
 ### 信息收集 vs 诊断结论（关键区分）
@@ -226,7 +226,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 | 给具体修复方案 | ❌ | developer 的活 |
 | 写代码、改代码 | ❌ | developer 的活 |
 | 设计 doc/ 文件（data-schema/data-persistence/service/cli.md 等） | ✅ | PM 的活（designing 阶段） |
-| 设计完整 dataclass 字段定义（类型/默认值/校验）、API 详细签名 | ✅ | PM 的活（designing 阶段直接写 doc/，spec-compliance 自检兜底；详见 §REQUIREMENT.yaml 模板 > 职责边界） |
+| 设计完整 dataclass 字段定义（类型/默认值/校验）、API 详细签名 | ✅ | PM 的活（designing 阶段直接写 doc/，spec-compliance 自检兜底；详见 §FEATURE.yaml 模板 > 职责边界） |
 
 ### 反例 → 正解
 
@@ -285,12 +285,12 @@ PM 启动时自动检测项目是否已初始化：
 .features/
   index.yaml                          # 需求索引
   <id>/
-    REQUIREMENT.yaml                 # 需求讨论结论（draft 阶段创建）
+    FEATURE.yaml                 # 需求讨论结论（draft 阶段创建）
     BLOCKED.yaml                      # 阻塞记录（blocked 时创建）
     POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
 ```
 
-注：feature 目录只有 REQUIREMENT.yaml。设计产出在 `{Root}/doc/` 下（PM 在 designing 阶段直接修改），不产 DESIGN.md。
+注：feature 目录只有 FEATURE.yaml。设计产出在 `{Root}/doc/` 下（PM 在 designing 阶段直接修改），不产 DESIGN.md。
 
 - `.features/` 在项目根目录，纳入 git 管理
 - 编号 `NNN` 三位数字，自动递增（从 index.yaml 取 max + 1）
@@ -345,19 +345,17 @@ Blocked 文件用 YAML 真值，schema 定义在 `agent_factory/schema/blocked.p
 
 示例见 `agent_factory/schema/examples/blocked.yaml`。
 
-### REQUIREMENT.yaml 格式
+### FEATURE.yaml 格式
 
 Feature 文件用 YAML 真值，schema 定义在 `agent_factory/schema/feature.py`。
 
-详细字段、类型、约束、validator 见 schema 代码和 `agent_factory/schema/examples/feature.yaml` 示例。
-
 字段总览：
-- 元信息：`id` / `title` / `agent_type`
-- 需求描述：`problem` / `benefit` / `description`
-- 契约 / 接口：`data_schema` / `interfaces`（designing 阶段补）
-- 验收 / 决策：`acceptance_cases` / `decisions`
+- 元信息：`id` / `title`（=目录名，不可改）/ `desc`（用户原始需求描述，create 必填）/ `agent_type`
+- 需求背景：`background`（嵌套：`pain_point` + `benefit`，draft 阶段填）
+- 需求规格：`spec`（按模块 dict：`spec.<module>` = {functions[], schema, interface}，designing 阶段逐模块写入）
+- 验收用例：`test_cases[]`（每条 {name, precondition, steps, expected}）
 
-PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema / interfaces；decisions 在讨论中闭环后 status 改 closed。
+示例见 `agent_factory/schema/examples/feature.yaml`。
 
 ---
 
@@ -419,7 +417,7 @@ PM 在 draft 阶段填元信息 + 需求描述；designing 阶段补 data_schema
 当 issue 类型为 `feature-request` 且需要走完整设计流程时：
 
 1. `agent-factory feature new --title "<issue-title>" --slug <slug> --agent-type <type>` 创建 feature（CLI 自动创建目录 + index 行）
-2. **将 issue 的 root_cause + fix_plan 作为创建 REQUIREMENT.yaml 的必须输入**（QA 工作不白做），用 `agent-factory feature set <id> <field> "..."` 或 `--file` 逐步填充
+2. **将 issue 的 root_cause + fix_plan 作为创建 FEATURE.yaml 的必须输入**（QA 工作不白做），用 `agent-factory feature set <id> <field> "..."` 或 `--file` 逐步填充
 3. `agent-factory issue close <id> --feature-request --feature-id <NNN>` 关闭 issue（一站式填 result + close）
 4. 后续按 feature 流程处理
 
@@ -457,11 +455,9 @@ PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方
 ```
 issue fix_plan 建议走 feature 路径
   ↓
-PM 调用 `agent-factory feature new --title "..." --slug ...`
+PM 调用 `agent-factory feature new --title "..." --slug ... --desc "来自 issue #<NNN>: ..."`
   ↓
-PM 在新 feature 的 REQUIREMENT.yaml 里引用 issue：
-  - problem: 引用 issue scenario + impact
-  - 在 description 里链接 issue #<NNN>
+PM 在新 feature 的 FEATURE.yaml 里填充 background（引用 issue scenario + impact）
   ↓
 agent-factory issue close <id> --feature-request --feature-id <NNN>
 ```
@@ -492,7 +488,7 @@ agent-factory issue close <id> --feature-request --feature-id <NNN>
 
    PM 在生产环境**与用户讨论需求**（基于 QA `feature_request_context`）：
    - 按 §PM 工作模式 > 讨论开场白格式 4 步走（背景 / 已明确 / 待决策 / 逐项）
-   - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `REQUIREMENT.yaml`（按 §Feature Management > REQUIREMENT.yaml 格式）
+   - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `FEATURE.yaml`（按 §Feature Management > FEATURE.yaml 格式）
    - 可选：收集 `snapshot/{log,data}`
 
 4. **PM git commit + push**：
@@ -506,7 +502,7 @@ agent-factory issue close <id> --feature-request --feature-id <NNN>
 
 5. **PM 回复用户**：
    - bug："已记录到 _incoming，开发环境 PM 会处理。诊断摘要：<root_cause>。"
-   - feature-request："已记录到 _incoming（含 REQUIREMENT.yaml），开发环境 PM 会基于这份 REQUIREMENT.yaml 推进设计。"
+   - feature-request："已记录到 _incoming（含 FEATURE.yaml），开发环境 PM 会基于这份 FEATURE.yaml 推进设计。"
 
 ### 生产环境 PM 约束
 
@@ -514,7 +510,7 @@ agent-factory issue close <id> --feature-request --feature-id <NNN>
 |------|---------|
 | 读 log / data / config | ✅ |
 | 调度 QA 诊断 | ✅ |
-| 在 `.issues/_incoming/<timestamp>-<name>/` 下创建文件（ISSUE.yaml / REQUIREMENT.yaml / snapshot/） | ✅ |
+| 在 `.issues/_incoming/<timestamp>-<name>/` 下创建文件（ISSUE.yaml / FEATURE.yaml / snapshot/） | ✅ |
 | 创建 `.features/<id>/` | ❌（开发环境 PM 在 pull 后创建） |
 | 修改 `.issues/index.yaml` / `.features/index.yaml` | ❌（开发环境 PM 在 pull 后登记） |
 | 修改代码 / doc/ | ❌ |
@@ -558,7 +554,7 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
 | 文件名 | 类型 | 处理 |
 |--------|------|------|
 | `ISSUE.yaml` | bug（新格式） | 直接走 bug 流程 |
-| `REQUIREMENT.yaml` | feature-request（新格式） | 直接走 feature-request 流程 |
+| `FEATURE.yaml` | feature-request（新格式） | 直接走 feature-request 流程 |
 | `NOTES.md` | 旧格式（兼容期） | 进入 Step 2 |
 | `REQUIREMENTS.md` | 旧格式（兼容期） | 进入 Step 2 |
 | 其他 | 未知 | 进入 Step 2 兜底 |
@@ -570,7 +566,7 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
 | 内容特征 | 类型 | 处理 |
 |---------|------|------|
 | 含 `## Description` / `## Steps to Reproduce` / `## Impact` 等 bug 报告章节 | bug | 转写为 `ISSUE.yaml`（用 schema 字段映射），放入同目录，走 bug 流程 |
-| 含 `## 需求背景` / `## 功能` / `## 关键接口` 等需求章节 | feature-request | 转写为 `REQUIREMENT.yaml`，放入同目录，走 feature-request 流程 |
+| 含 `## 需求背景` / `## 功能` / `## 关键接口` 等需求章节 | feature-request | 转写为 `FEATURE.yaml`，放入同目录，走 feature-request 流程 |
 | 纯巡检报告（无具体 bug 或 feature 描述，只是 QA 周期性扫描结果） | 巡检归档 | 读取确认无 actionable 项后，归档到 `.issues/.archive/<timestamp>/`，删除 _incoming |
 | 内容模糊 / 无法判断 | blocked | 标记为 `agent-factory issue block`，等用户澄清 |
 
@@ -584,7 +580,7 @@ NOTES.md → ISSUE.yaml：
 - `## Fix` → `result.bugfix.fix_desc`（需同时含 verification，PM 验收后填）
 - `## Resolution` → `result`（用 `issue close` 命令填，type 表达处理路径）
 
-REQUIREMENTS.md → REQUIREMENT.yaml：按 §Feature Management > REQUIREMENT.yaml 格式 章节字段映射。
+REQUIREMENTS.md → FEATURE.yaml：按 §Feature Management > FEATURE.yaml 格式 章节字段映射。
 
 > **⚠️ 技术债**：旧格式（NOTES.md / REQUIREMENTS.md）兼容为过渡期产物，**待所有项目迁移到 YAML 流程后去掉**。迁移完成后此 Step 2 应删除，仅保留 Step 1 的快速路径。
 
@@ -596,14 +592,14 @@ REQUIREMENTS.md → REQUIREMENT.yaml：按 §Feature Management > REQUIREMENT.ya
 4. 删除 `_incoming` 中已处理的目录（**含原始旧格式 .md 文件**）
 5. `git commit`
 
-#### feature-request 流程（REQUIREMENT.yaml 或 旧格式转写后）
+#### feature-request 流程（FEATURE.yaml 或 旧格式转写后）
 
-1. 读 `REQUIREMENT.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
+1. 读 `FEATURE.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
 2. `agent-factory feature new --title "<title>" --slug <slug> --agent-type <type>` 创建 feature 条目
-3. 将 `_incoming` 中的 `REQUIREMENT.yaml` + `snapshot/`（如有）覆盖到 `<Root>/.features/<id>/`
+3. 将 `_incoming` 中的 `FEATURE.yaml` + `snapshot/`（如有）覆盖到 `<Root>/.features/<id>/`
 4. 删除 `_incoming` 中已处理的目录（**含原始旧格式 .md 文件**）
 5. `git commit`
-6. 后续走标准 feature 流程（review REQUIREMENT.yaml → PM 进入 designing）
+6. 后续走标准 feature 流程（review FEATURE.yaml → PM 进入 designing）
 
 #### 汇报
 
@@ -613,7 +609,7 @@ REQUIREMENTS.md → REQUIREMENT.yaml：按 §Feature Management > REQUIREMENT.ya
 
 ### 跨环境 Bug 修复流程
 
-仅适用于 **bug 类** `_incoming`（含 ISSUE.yaml）。**feature-request 类** `_incoming`（含 REQUIREMENT.yaml）已直接登记为 feature，走标准 feature 流程，不在此流程内。
+仅适用于 **bug 类** `_incoming`（含 ISSUE.yaml）。**feature-request 类** `_incoming`（含 FEATURE.yaml）已直接登记为 feature，走标准 feature 流程，不在此流程内。
 
 `_incoming` bug 报告处理完成后，进入标准 issue 处理流程，但增加开发侧 QA 验证环节：
 
@@ -682,12 +678,12 @@ QA 验证完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 
 PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续聊 draft），**必须**按以下顺序输出开场白，禁止直接抛问题：
 
-1. **背景介绍**（来自 REQUIREMENT.yaml「需求背景」章节）：为什么做这个需求（触发事件 / 痛点）、用户是谁、解决什么问题、目标（1-3 句话）
-2. **已明确的规格**（来自 REQUIREMENT.yaml 已填部分）：需求规格 功能清单、关键接口 已定清单、约束/原则 已定约束。新需求场景下若全空，写"暂无"
-3. **待决策的问题**（来自 REQUIREMENT.yaml Open Questions）：列出每个 OQ 的一句话陈述（不展开选项，详情见 REQUIREMENT.yaml），提示用户从第几个 OQ 开始讨论
+1. **背景介绍**（来自 FEATURE.yaml「需求背景」章节）：为什么做这个需求（触发事件 / 痛点）、用户是谁、解决什么问题、目标（1-3 句话）
+2. **已明确的规格**（来自 FEATURE.yaml 已填部分）：需求规格 功能清单、关键接口 已定清单、约束/原则 已定约束。新需求场景下若全空，写"暂无"
+3. **待决策的问题**（来自 FEATURE.yaml Open Questions）：列出每个 OQ 的一句话陈述（不展开选项，详情见 FEATURE.yaml），提示用户从第几个 OQ 开始讨论
 4. **逐项推进**：等用户回应后，**一次只讨论一个 OQ**（给完整 4 部分：背景+选项+推荐+理由），不一次抛多个
 
-**判断标准**：用户读完开场白，**不需要再翻 REQUIREMENT.yaml** 也能理解"在讨论什么、已经定了什么、接下来讨论什么"。
+**判断标准**：用户读完开场白，**不需要再翻 FEATURE.yaml** 也能理解"在讨论什么、已经定了什么、接下来讨论什么"。
 
 #### 新需求讨论流程
 
@@ -697,51 +693,32 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 0. PM 先读项目文档建立项目认知（讨论前必做）：
    - CLAUDE.md / AGENTS.md（项目概述、模块清单、约定）
    - `doc/` 目录下全部文档（各 module 的 data-schema / data-persistence、common 共享 schema、backend.md / mcp-server.md 等）—— 建立完整技术认知，避免重复设计、识别可复用结构
-   - 最近 3 个 feature 的 REQUIREMENT.yaml（理解项目演进、复用决策模式）
+   - 最近 3 个 feature 的 FEATURE.yaml（理解项目演进、复用决策模式）
    - .features/index.yaml（避免重复立项、识别依赖）
   ↓
 1. PM 创建 feature（用 CLI）：
-   $ agent-factory feature new --title "<title>" --slug <slug> --agent-type <type> --priority <P>
-   → CLI 自动创建 .features/<id>/REQUIREMENT.yaml + 更新 index.yaml
-   → 然后用 `agent-factory feature set <id> <field> "..."` 逐步填充字段
+   $ agent-factory feature new --title "<title>" --slug <slug> --desc "用户原话" --agent-type <type> --priority <P>
+   → CLI 自动创建 .features/<id>/FEATURE.yaml（含 id/title/desc/agent_type） + 更新 index.yaml
   ↓
-2. PM 按需求背景 5 个子节逐一与用户讨论：
-   每节 PM 先给基于项目认知的建议（"我看到项目里已有 X / #008 做过 Y，这个需求是否..."），用户确认或修正，PM 用 `agent-factory feature set <id> <field>` 写入对应子节。逐节推进，不跳跃。
-   - 「为什么做这个需求」：触发事件 / 痛点
-   - 「用户是谁」：角色 + 关键特征
-   - 「解决什么问题」：当前做不到什么 / 做完能做到什么
-   - 「要做成什么样」：1-3 句话目标（不写实现）
-   - 「使用场景」：业务行为 use cases
-   - 同时确定 Agent Type（这个 agent 怎么用 → cli-only/http-api/http-web/mcp-server）
-     - 给 Claude Code 当工具 → `cli-only`
-     - 提供 HTTP API → `http-api`
-     - HTTP 服务 + 网页 → `http-web`
-     - MCP 工具（暴露给 Claude Code）→ `mcp-server`
-   - mcp-server 形态追加问 Deploy Mode: stdio/sse/http/mcpb
+2. PM 与用户讨论需求，填充 background：
+   - `feature set <id> background.pain_point "..."`  /  `feature set <id> background.benefit "..."`
+   - 或用 `--file` 一次性写入 background 整体
+   - 同时确定 Agent Type（如尚未确定）
   ↓
-3. PM 列出决策候选 + Open Questions 选项：
-   - 对每个**已可定的决策**：基于项目认知给业务/技术/接口/设计决策选项，用户拍板 → 用 `agent-factory feature set <id> <field>` 写入对应字段
-   - 对每个**用户需要思考/查阅才能定的问题**：作为 Open Question，PM 调研后给 2-3 个可行方案 + 推荐 + 理由 → 用户选定后用 `agent-factory feature set <id> <field>` 写入
-   - PM **不甩问题**：禁止"由 designer 决定"式（原 designer 角色已并入 PM）Open Question，所有方案选项必须 PM 调研后给
+3. PM 询问 "要开始设计吗？"
+   - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 FEATURE.yaml
+   - 用户确认设计 → `feature transition <id> --to designing`（校验 background 已填）
   ↓
-4. PM 列出功能清单（需求规格 > 功能），用户确认
+4. PM 进入 designing 阶段：
+   - 读代码 + design-reference.md 建立技术认知
+   - 逐模块写入 spec（`feature set <id> spec.<module> --file <ModuleSpec yaml>`）
+   - 确认 test_cases（`feature set <id> test_cases --file <cases yaml>`）
+   - 直接修改 doc/ 文件
+   - 调度 spec-compliance 自检（场景 1） → 根据 violations 修订
   ↓
-5. PM 自检（见 §REQUIREMENT.yaml 模板 > PM 自检）：
-   - 无越界内容（完整 dataclass 字段定义 / CLI 详细参数 / JSON I/O / 目录结构等；高层 data-schema 和 CLI 命令清单保留在「关键接口」）
-   - 所有 Open Questions 都含 PM 调研后的选项 + 推荐（不是空问题）
-   - 所有 Open Questions 必须已闭环（状态=已选定，结论已移入 REQUIREMENT.yaml 对应章节；无"待用户选定"状态残留）
+5. user review FEATURE.yaml + doc/（git diff 直接展示）
   ↓
-6. PM 询问 "要开始设计吗？"
-   - 用户说"先记录" → 保持 status=draft，讨论结论已保存在 REQUIREMENT.yaml
-   - 用户确认设计 → 继续
-  ↓
-7. PM 进入 designing 阶段，更新 status=designing，直接修改 doc/ 文件
-  ↓
-8. PM 调度 spec-compliance 自检（场景 1） → 根据 violations 修订 doc/，必要时再次自检
-  ↓
-9. PM 将设计提交用户终审（git diff 直接展示）
-  ↓
-10. 用户审阅通过 → PM 更新 status=approved
+6. 用户审阅通过 → `feature transition <id> --to approved`（校验 spec ≥1 模块 且 test_cases ≥1 条）
 ```
 
 #### Issue 讨论流程
@@ -831,7 +808,7 @@ Root: .
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + REQUIREMENT.yaml 关键接口 for CLI command list (cli-only)
+1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + FEATURE.yaml 关键接口 for CLI command list (cli-only)
 2. Update index.yaml status to "implementing"
 3. Implement all code per doc/ (按 Agent Type 选 artifact)
 4. Run tests
@@ -882,7 +859,7 @@ Root: .
 
 **Instructions**：
 ```
-1. Read REQUIREMENT.yaml (验收标准 Cases) + doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
+1. Read FEATURE.yaml (验收标准 Cases) + doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵 in qa.md for which checks apply)
 3. Start services and run E2E scenarios
 4. For each issue found: diagnose root cause, check log auditability
@@ -989,9 +966,9 @@ PM 完成 doc/ 修改后（必要时已经过 spec-compliance 自检迭代），
 
 ### Review 标准
 
-- **需求覆盖率**：doc/ diff 是否覆盖 REQUIREMENT.yaml 需求规格 > 功能 中的每个功能点
+- **需求覆盖率**：doc/ diff 是否覆盖 FEATURE.yaml 需求规格 > 功能 中的每个功能点
 - **完整性**：所有应产出的 doc 文件都已修改（doc/<module>/{data-schema,data-persistence,service}.md + 按 Agent Type 的 backend.md/mcp-server.md + 共享数据时 doc/common/）
-- **一致性**：本 feature 修改的 doc 文件范围与 REQUIREMENT.yaml 需求规格 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
+- **一致性**：本 feature 修改的 doc 文件范围与 FEATURE.yaml 需求规格 涉及的 module 一致；doc/ 内容不含过程性内容（spec-compliance S10 兜底）
 
 ### Review 不包含
 
