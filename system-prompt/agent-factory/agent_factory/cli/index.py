@@ -103,7 +103,7 @@ def refresh(resource: str) -> None:
             if not m:
                 continue
             feature_id = int(m.group(1))
-            reqs_path = subdir / "REQUIREMENT.yaml"
+            reqs_path = subdir / "FEATURE.yaml"
             items.append(FeatureIndexItem(
                 id=feature_id,
                 title=subdir.name,  # title = directory name

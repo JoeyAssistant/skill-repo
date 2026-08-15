@@ -21,27 +21,31 @@ from agent_factory.schema.feature import AgentType, FeatureStatus
 
 @click.group("feature")
 def feature_group() -> None:
-    """Operate feature REQUIREMENT.yaml.
+    """Operate feature FEATURE.yaml.
 
     命令：new / set / show / list / transition / block / unblock / delete
 
-    feature set 支持字段：agent_type / problem / benefit / description /
-    data_schema / interfaces / acceptance_cases / decisions
+    feature set 合法形式：
+      desc / agent_type                          标量
+      background [--file]                        整体（yaml: {pain_point, benefit}）
+      background.pain_point / background.benefit 嵌套标量
+      spec.<module> --file                       模块 upsert（ModuleSpec yaml）
+      spec.<module> --remove                     删除模块
+      test_cases --file                          整列表替换
 
-    目录名：<NNN>-<slug>（如 001-income-module）；title = 目录名，不可改
-
-    状态机校验（transition 时）：
-    - draft → designing：description 非空
-    - designing → approved：data_schema + interfaces + acceptance_cases 都非空
-    - approved → implementing：所有 decisions status=closed
+    目录名：<NNN>-<slug>；title = 目录名，不可改
+    状态机校验：
+    - draft → designing：background.pain_point + benefit 非空
+    - designing → approved：spec ≥1 模块 且 test_cases ≥1 条
 
     多行文本用 --file：<field> 值从文件读（如 --file /tmp/desc.md）
     """
 
 
 @feature_group.command("new")
-@click.option("--title", required=True, help="Human-readable title (stored in REQUIREMENT.yaml)")
-@click.option("--slug", required=True, help="Directory slug (kebab-case, e.g., 'income-module')")
+@click.option("--title", required=True, help="Human-readable title")
+@click.option("--slug", required=True, help="Directory slug (kebab-case)")
+@click.option("--desc", required=True, help="User's original request description (preserved verbatim)")
 @click.option(
     "--agent-type",
     type=click.Choice([t.value for t in AgentType]),
@@ -54,11 +58,11 @@ def feature_group() -> None:
     default=Priority.P2.value,
     help="Priority (default: P2)",
 )
-def new(title: str, slug: str, agent_type: str, priority: str) -> None:
+def new(title: str, slug: str, desc: str, agent_type: str, priority: str) -> None:
     """Create new feature (status=draft).
 
     Directory name: <NNN>-<slug> (e.g., 001-income-module).
-    Both REQUIREMENT.yaml 'title' field and index 'title' field use the directory name.
+    Both FEATURE.yaml 'title' field and index 'title' field use the directory name.
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -81,19 +85,17 @@ def new(title: str, slug: str, agent_type: str, priority: str) -> None:
         feature = Feature(
             id=feature_id,
             title=dir_name,  # title field = directory name
+            desc=desc,
             agent_type=AgentType(agent_type),
-            problem="",  # placeholder, filled via `set` later
-            benefit="",
-            description="",
         )
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
         sys.exit(1)
 
-    # Create directory + REQS.yaml
+    # Create directory + FEATURE.yaml
     feature_dir.mkdir(parents=True)
-    reqs_path = feature_dir / "REQUIREMENT.yaml"
-    dump_yaml(reqs_path, feature)
+    feat_path = feature_dir / "FEATURE.yaml"
+    dump_yaml(feat_path, feature)
 
     # Update index.yaml
     idx_path = Path(".features") / "index.yaml"
@@ -109,63 +111,160 @@ def new(title: str, slug: str, agent_type: str, priority: str) -> None:
     click.echo(f"Created feature {feature_id}: {dir_name}")
 
 
-# Other feature commands will be added in subsequent tasks:
-# set / show / list / transition / block / unblock / delete
+# Fields that route to FEATURE.yaml (plain scalars)
+SCALAR_FIELDS = {"desc", "agent_type"}
 
-
-# Fields that route to REQS.yaml
-# Note: 'title' is NOT in this set -- title is immutable (equals directory name)
-REQS_FIELDS = {
-    "agent_type", "problem", "benefit", "description",
-    "data_schema", "interfaces", "acceptance_cases", "decisions",
-}
+# Subfields of background that can be set individually
+BACKGROUND_SUBFIELDS = {"pain_point", "benefit"}
 
 
 @feature_group.command("set")
 @click.argument("feature_id", type=int)
 @click.argument("field")
 @click.argument("value", required=False)
-@click.option("--file", "file_path", type=click.Path(exists=True, path_type=Path), help="Read value from file")
-def set_field(feature_id: int, field: str, value: str | None, file_path: Path | None) -> None:
-    """Update a field in REQUIREMENT.yaml.
+@click.option("--file", "file_path", type=click.Path(exists=True, path_type=Path),
+              help="Read value from file")
+@click.option("--remove", is_flag=False, flag_value=True, default=False,
+              help="Delete spec.<module>（仅对 spec.<module> 路径生效）")
+def set_field(feature_id: int, field: str, value: str | None,
+              file_path: Path | None, remove: bool) -> None:
+    """Update FEATURE.yaml. 支持嵌套路径：background.pain_point / spec.<module>"""
+    # --- parse field path ---
+    head, _, sub = field.partition(".")
 
-    Supported fields: agent_type / problem / benefit / description /
-    data_schema / interfaces / acceptance_cases / decisions.
+    # spec.<module> path
+    if head == "spec":
+        if not sub:
+            _invalid_field(field)
+        if "." in sub:
+            _invalid_field(field)  # field-level spec paths like spec.income.schema NOT supported
+        module = sub
+        if remove:
+            _spec_remove(feature_id, module); return
+        if not file_path:
+            click.echo(format_error("InvalidArgs",
+                f"spec.{module} 需要 --file <path>（ModuleSpec yaml）或 --remove", None), err=True)
+            sys.exit(4)
+        _spec_upsert(feature_id, module, file_path); return
 
-    Title is immutable (equals directory name, set at creation).
-    For long fields (description / data_schema / interfaces / acceptance_cases / decisions),
-    use --file to read from a file.
-    """
-    if field not in REQS_FIELDS:
-        click.echo(format_error("InvalidField", f"Field '{field}' not supported. Valid: {sorted(REQS_FIELDS)}", None), err=True)
+    # --remove only valid for spec.<module>
+    if remove:
+        click.echo(format_error("InvalidArgs", "--remove 仅对 spec.<module> 生效", None), err=True)
         sys.exit(4)
 
+    # Plain scalar fields
+    if head in SCALAR_FIELDS and not sub:
+        new_value = _read_value(value, file_path)
+        _set_plain(feature_id, head, new_value); return
+
+    # Background paths
+    if head == "background":
+        if sub in BACKGROUND_SUBFIELDS:
+            new_value = _read_value(value, file_path)
+            _set_background_sub(feature_id, sub, new_value); return
+        if not sub:
+            if not file_path:
+                click.echo(format_error("InvalidArgs",
+                    "background 整体写入需 --file（yaml: {pain_point, benefit}）", None), err=True)
+                sys.exit(4)
+            _set_background_whole(feature_id, file_path); return
+
+    # test_cases whole list
+    if field == "test_cases":
+        if not file_path:
+            click.echo(format_error("InvalidArgs",
+                "test_cases 整列表替换需 --file（yaml: list of {name, precondition, steps, expected}）",
+                None), err=True)
+            sys.exit(4)
+        _set_test_cases(feature_id, file_path); return
+
+    _invalid_field(field)
+
+
+def _read_value(value: str | None, file_path: Path | None) -> str:
+    """Read value from --file or inline argument."""
     if file_path:
-        new_value = file_path.read_text()
-    elif value is not None:
-        new_value = value
-    else:
-        click.echo(format_error("MissingValue", "Either VALUE or --file required", None), err=True)
-        sys.exit(4)
+        return file_path.read_text()
+    if value is not None:
+        return value
+    click.echo(format_error("MissingValue", "Either VALUE or --file required", None), err=True)
+    sys.exit(4)
 
+
+def _invalid_field(field: str) -> None:
+    """Exit with invalid field error."""
+    click.echo(format_error("InvalidField",
+        f"Field '{field}' not supported. 合法形式：desc / agent_type / background "
+        f"/ background.pain_point / background.benefit / spec.<module> / test_cases",
+        None), err=True)
+    sys.exit(4)
+
+
+def _load_feature(feature_id: int) -> tuple[Path, dict]:
+    """Load feature FEATURE.yaml, returning (path, data dict)."""
     try:
         feature_dir = find_feature_dir(feature_id)
     except FileNotFoundError as exc:
         click.echo(format_error("NotFound", str(exc), None), err=True)
         sys.exit(2)
+    path = feature_dir / "FEATURE.yaml"
+    return path, load_yaml(path)
 
-    reqs_path = feature_dir / "REQUIREMENT.yaml"
+
+def _save(feature_id: int, path: Path, data: dict) -> None:
+    """Validate and save feature data."""
     try:
-        data = load_yaml(reqs_path)
-        data[field] = new_value
-        feature = Feature.model_validate(data)  # validates
+        feature = Feature.model_validate(data)
     except ValidationError as exc:
-        click.echo(format_error("ValidationError", str(exc), str(reqs_path)), err=True)
+        click.echo(format_error("ValidationError", str(exc), str(path)), err=True)
         sys.exit(1)
+    dump_yaml(path, feature)
+    click.echo(f"Updated feature {feature_id}")
 
-    dump_yaml(reqs_path, feature)
 
-    click.echo(f"Updated feature {feature_id}: {field}")
+def _set_plain(feature_id: int, key: str, new_value: str) -> None:
+    path, data = _load_feature(feature_id)
+    data[key] = new_value
+    _save(feature_id, path, data)
+
+
+def _set_background_sub(feature_id: int, sub: str, new_value: str) -> None:
+    path, data = _load_feature(feature_id)
+    bg = data.get("background") or {}
+    bg[sub] = new_value
+    data["background"] = bg
+    _save(feature_id, path, data)
+
+
+def _set_background_whole(feature_id: int, file_path: Path) -> None:
+    path, data = _load_feature(feature_id)
+    data["background"] = yaml.safe_load(file_path.read_text())
+    _save(feature_id, path, data)
+
+
+def _spec_upsert(feature_id: int, module: str, file_path: Path) -> None:
+    path, data = _load_feature(feature_id)
+    spec = data.get("spec") or {}
+    spec[module] = yaml.safe_load(file_path.read_text())
+    data["spec"] = spec
+    _save(feature_id, path, data)
+
+
+def _spec_remove(feature_id: int, module: str) -> None:
+    path, data = _load_feature(feature_id)
+    spec = data.get("spec") or {}
+    if module not in spec:
+        click.echo(format_error("NotFound", f"spec.{module} 不存在", None), err=True)
+        sys.exit(2)
+    del spec[module]
+    data["spec"] = spec
+    _save(feature_id, path, data)
+
+
+def _set_test_cases(feature_id: int, file_path: Path) -> None:
+    path, data = _load_feature(feature_id)
+    data["test_cases"] = yaml.safe_load(file_path.read_text())
+    _save(feature_id, path, data)
 
 
 @feature_group.command("show")
@@ -179,7 +278,7 @@ def show(feature_id: int, fmt: str) -> None:
         click.echo(format_error("NotFound", str(exc), None), err=True)
         sys.exit(2)
 
-    reqs_path = feature_dir / "REQUIREMENT.yaml"
+    reqs_path = feature_dir / "FEATURE.yaml"
     data = load_yaml(reqs_path)
     feature = Feature.model_validate(data)
 
@@ -197,29 +296,39 @@ def _render_feature_markdown(feature: Feature) -> str:
         "",
         f"**Agent Type**: {feature.agent_type.value}",
         "",
-        "## Problem",
-        feature.problem,
-        "",
-        "## Benefit",
-        feature.benefit,
-        "",
-        "## Description",
-        feature.description,
+        f"**Desc**: {feature.desc}",
         "",
     ]
-    if feature.data_schema:
-        lines += ["## Data Schema", "```python", feature.data_schema, "```", ""]
-    if feature.interfaces:
-        lines += ["## Interfaces", feature.interfaces, ""]
-    if feature.acceptance_cases:
-        lines += ["## Acceptance Cases", feature.acceptance_cases, ""]
-    if feature.decisions:
-        lines += ["## Decisions", ""]
-        for dec in feature.decisions:
-            lines += [f"### {dec.id}: {dec.question}", f"**Status**: {dec.status.value}", ""]
-            for opt in dec.options:
-                lines += [f"- **{opt.id}**: {opt.name} (pros: {opt.pros}; cons: {opt.cons})"]
-            lines += [f"**Recommendation**: {dec.recommendation}", f"**Rationale**: {dec.rationale}", ""]
+    if feature.background:
+        lines += [
+            "## Background",
+            f"**痛点**: {feature.background.pain_point}",
+            f"**收益**: {feature.background.benefit}",
+            "",
+        ]
+    if feature.spec:
+        for module_name, module_spec in feature.spec.items():
+            lines += [f"## Spec — {module_name}", ""]
+            if module_spec.functions:
+                lines.append("**Functions**:")
+                for i, fn in enumerate(module_spec.functions, 1):
+                    lines.append(f"{i}. {fn}")
+                lines.append("")
+            if module_spec.schema:
+                lines += ["**Schema**:", "```python", module_spec.schema, "```", ""]
+            if module_spec.interface:
+                lines += ["**Interface**:", module_spec.interface, ""]
+    if feature.test_cases:
+        lines.append("## Test Cases")
+        lines.append("")
+        for tc in feature.test_cases:
+            lines += [
+                f"### {tc.name}",
+                f"- **precondition**: {tc.precondition}",
+                f"- **steps**: {tc.steps}",
+                f"- **expected**: {tc.expected}",
+                "",
+            ]
     return "\n".join(lines)
 
 
@@ -266,20 +375,17 @@ def _validate_transition_requirements(current: FeatureStatus, target: FeatureSta
     """Return list of missing requirements for transition (empty = OK)."""
     issues = []
     if current == FeatureStatus.DRAFT and target == FeatureStatus.DESIGNING:
-        if not feature.description.strip():
-            issues.append("description is empty")
+        bg = feature.background
+        if not bg or not (bg.pain_point or "").strip():
+            issues.append("background.pain_point is empty")
+        if not bg or not (bg.benefit or "").strip():
+            issues.append("background.benefit is empty")
     elif current == FeatureStatus.DESIGNING and target == FeatureStatus.APPROVED:
-        if not (feature.data_schema or "").strip():
-            issues.append("data_schema is empty")
-        if not (feature.interfaces or "").strip():
-            issues.append("interfaces is empty")
-        if not feature.acceptance_cases.strip():
-            issues.append("acceptance_cases is empty")
-    elif current == FeatureStatus.APPROVED and target == FeatureStatus.IMPLEMENTING:
-        from agent_factory.schema.feature import DecisionStatus
-        open_decisions = [d.id for d in feature.decisions if d.status != DecisionStatus.CLOSED]
-        if open_decisions:
-            issues.append(f"open decisions not closed: {open_decisions}")
+        if not feature.spec:
+            issues.append("spec is empty（至少 1 个模块）")
+        if not feature.test_cases:
+            issues.append("test_cases is empty（至少 1 条用例）")
+    # approved→implementing: no check (decisions removed)
     return issues
 
 
@@ -290,9 +396,9 @@ def transition(feature_id: int, target: str) -> None:
     """Transition feature status (with cross-field validation).
 
     Cross-field checks:
-    - draft → designing: description must be non-empty
-    - designing → approved: data_schema + interfaces + acceptance_cases must be non-empty
-    - approved → implementing: all decisions must be status=closed
+    - draft → designing: background.pain_point + benefit must be non-empty
+    - designing → approved: spec >= 1 module AND test_cases >= 1 case
+    - approved → implementing: no extra check
     """
     try:
         feature_dir = find_feature_dir(feature_id)
@@ -321,8 +427,8 @@ def transition(feature_id: int, target: str) -> None:
         ), err=True)
         sys.exit(3)
 
-    # Cross-field validation (load REQS)
-    reqs_path = feature_dir / "REQUIREMENT.yaml"
+    # Cross-field validation (load FEATURE.yaml)
+    reqs_path = feature_dir / "FEATURE.yaml"
     feature = Feature.model_validate(load_yaml(reqs_path))
     issues = _validate_transition_requirements(current_status, target_status, feature)
     if issues:
