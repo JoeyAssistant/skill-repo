@@ -14,6 +14,9 @@
     - feature_request # 转需求
         - feature_id # 需求编号
 
+## state
+open --> in_progress --> closed
+
 ## workflow
 ```mermaid
 sequenceDiagram
@@ -38,7 +41,7 @@ sequenceDiagram
         pm->>pm: 验收
         pm->>ISSUE.yaml: verification + close
     else is feature
-        pm->>REQUIREMENT.yaml: create(root_cause fix_plan)
+        pm->>FEATURE.yaml: create(root_cause fix_plan)
         pm->>ISSUE.yaml: feature_id + close
     end
 ```
