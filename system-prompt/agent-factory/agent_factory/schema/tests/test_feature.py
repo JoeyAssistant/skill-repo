@@ -2,7 +2,7 @@
 import pytest
 from pydantic import ValidationError
 
-from agent_factory.schema.enums import AgentType, DecisionStatus
+from agent_factory.schema.feature import AgentType, DecisionStatus
 from agent_factory.schema.feature import Feature, Decision, Option
 
 

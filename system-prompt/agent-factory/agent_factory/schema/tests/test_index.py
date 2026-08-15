@@ -2,9 +2,9 @@
 import pytest
 from pydantic import ValidationError
 
-from agent_factory.schema.enums import (
-    FeatureStatus, IssueStatus, Priority,
-)
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import FeatureStatus
+from agent_factory.schema.issue import IssueStatus
 from agent_factory.schema.index import (
     FeatureIndex, FeatureIndexItem,
     IssueIndex, IssueIndexItem,

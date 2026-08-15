@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent_factory.schema.enums import (
-    FeatureStatus, IssueStatus, Priority,
-)
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import FeatureStatus
+from agent_factory.schema.issue import IssueStatus
 
 
 class FeatureIndexItem(BaseModel):

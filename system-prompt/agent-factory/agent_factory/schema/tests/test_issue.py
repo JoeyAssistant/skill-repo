@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from agent_factory.schema.issue import (
     Issue, BugfixResult, FeatureRequestResult,
 )
-from agent_factory.schema.enums import IssueStatus
+from agent_factory.schema.issue import IssueStatus
 
 
 def test_issue_minimal_valid():

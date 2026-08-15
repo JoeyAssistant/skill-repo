@@ -1,11 +1,36 @@
 # agent_factory/schema/feature.py
 """Feature 模型（对应 .features/<id>/REQUIREMENT.yaml）."""
 from __future__ import annotations
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from agent_factory.schema.enums import AgentType, DecisionStatus
+
+class AgentType(str, Enum):
+    """Agent 形态."""
+    CLI_ONLY = "cli-only"
+    HTTP_API = "http-api"
+    HTTP_WEB = "http-web"
+    MCP_SERVER = "mcp-server"
+
+
+class FeatureStatus(str, Enum):
+    """Feature 生命周期状态."""
+    DRAFT = "draft"
+    DESIGNING = "designing"
+    APPROVED = "approved"
+    IMPLEMENTING = "implementing"
+    QA_REVIEWING = "qa-reviewing"
+    DONE = "done"
+    BLOCKED = "blocked"
+    CANCELLED = "cancelled"
+
+
+class DecisionStatus(str, Enum):
+    """Decision（决策）状态."""
+    OPEN = "open"
+    CLOSED = "closed"
 
 
 class Option(BaseModel):
