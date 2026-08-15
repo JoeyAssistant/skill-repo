@@ -20,7 +20,6 @@
   - [目录结构](#目录结构)
   - [index.yaml 格式](#indexyaml-格式)
   - [生命周期](#生命周期)
-  - [BLOCKED.yaml 格式](#blockedyaml-格式)
   - [FEATURE.yaml 格式](#requirementsyaml-格式)
 - [Issue Management](#issue-management)
   - [目录结构](#目录结构-1)
@@ -46,11 +45,6 @@
   - [Review 标准](#review-标准)
   - [Review 不包含](#review-不包含)
   - [Review 通过后](#review-通过后)
-- [Blocked 处理](#blocked-处理)
-  - [触发条件](#触发条件)
-  - [处理步骤](#处理步骤)
-  - [Tech-Feasibility Blocked 处理流程](#tech-feasibility-blocked-处理流程)
-  - [解除阻塞（一般阻塞）](#解除阻塞一般阻塞)
 - [状态管理](#状态管理)
   - [核心原则](#核心原则-1)
   - [状态文件](#状态文件)
@@ -286,8 +280,7 @@ PM 启动时自动检测项目是否已初始化：
   index.yaml                          # 需求索引
   <id>/
     FEATURE.yaml                 # 需求讨论结论（draft 阶段创建）
-    BLOCKED.yaml                      # 阻塞记录（blocked 时创建）
-    POC-REPORT.md                   # 技术可行性评估报告（tech-feasibility blocked 时生成）
+    POC-REPORT.md                   # 技术可行性评估报告（designing 阶段 PM 调度 POC 时生成）
 ```
 
 注：feature 目录只有 FEATURE.yaml。设计产出在 `{Root}/doc/` 下（PM 在 designing 阶段直接修改），不产 DESIGN.md。
@@ -308,7 +301,6 @@ PM 启动时自动检测项目是否已初始化：
 ### 生命周期
 
 `draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
-                 ↘ blocked ↗
 
 **强制约束**：
 - `implementing` → `qa-reviewing` → `done` 是必经路径。Developer 返回 complete 后，PM 必须调度场景 4（QA 验收），QA 返回 pass 才能更新为 done。禁止跳过 QA 直接 done
@@ -320,7 +312,6 @@ PM 启动时自动检测项目是否已初始化：
 |------|------|----------|
 | draft | 需求提出，待讨论 | 用户提出新需求 |
 | designing | 设计进行中，PM 正在修改 doc/ 文件 | PM 进入设计阶段 |
-| **blocked** | **需要用户介入，等待外部输入** | PM 设计阶段或 developer 实现阶段受阻 |
 | approved | doc/ diff 通过用户审阅 | 用户审阅 doc/ 修改通过 |
 | implementing | 开发中，已调度 developer subagent | PM 调度开发 |
 | qa-reviewing | QA 验收中，已调度 QA subagent | Developer 返回 complete 后 PM 调度 QA |
@@ -338,12 +329,6 @@ PM 调度场景 2（developer 实现，基于已批准 doc/）
   ↓
 status=implementing
 ```
-
-### BLOCKED.yaml 格式
-
-Blocked 文件用 YAML 真值，schema 定义在 `agent_factory/schema/blocked.py`（2 字段：`reason` / `action`）。
-
-示例见 `agent_factory/schema/examples/blocked.yaml`。
 
 ### FEATURE.yaml 格式
 
@@ -377,7 +362,6 @@ Feature 文件用 YAML 真值，schema 定义在 `agent_factory/schema/feature.p
     snapshot/                             # 从 _incoming 移入的快照数据
       log/
       data/
-    BLOCKED.yaml                            # 阻塞记录（blocked 时创建）
 ```
 
 - `.issues/` 在项目根目录，纳入 git 管理
@@ -399,7 +383,7 @@ Feature 文件用 YAML 真值，schema 定义在 `agent_factory/schema/feature.p
 
 | Type | 含义 | 处理方式 |
 |------|------|----------|
-| bug | 产品缺陷、异常行为 | 评估后直接修复或返回 blocked |
+| bug | 产品缺陷、异常行为 | 评估后直接修复 |
 | feature-request | 功能优化建议 | 转化为 feature 进入设计流程 |
 
 ### 生命周期
@@ -568,7 +552,7 @@ PM 启动时（或 `git pull` 后），扫描项目的 `.issues/_incoming/`：
 | 含 `## Description` / `## Steps to Reproduce` / `## Impact` 等 bug 报告章节 | bug | 转写为 `ISSUE.yaml`（用 schema 字段映射），放入同目录，走 bug 流程 |
 | 含 `## 需求背景` / `## 功能` / `## 关键接口` 等需求章节 | feature-request | 转写为 `FEATURE.yaml`，放入同目录，走 feature-request 流程 |
 | 纯巡检报告（无具体 bug 或 feature 描述，只是 QA 周期性扫描结果） | 巡检归档 | 读取确认无 actionable 项后，归档到 `.issues/.archive/<timestamp>/`，删除 _incoming |
-| 内容模糊 / 无法判断 | blocked | 标记为 `agent-factory issue block`，等用户澄清 |
+| 内容模糊 / 无法判断 | ask user | PM 在对话中直接询问用户 |
 
 **字段映射（旧 markdown → 新 YAML）**：
 
@@ -781,7 +765,7 @@ Root: .
 | 5 | developer（QA fail 后修复） | QA fail → 复验 | `修复 QA 发现的问题：feature #<NNN>: <title>` |
 | 6 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
 | 7 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
-| 8 | POC（技术可行性） | tech-feasibility blocked | `技术可行性分析：feature #<NNN>: <title>` |
+| 8 | POC（技术可行性） | designing 阶段判断需要技术可行性 / 选型验证 | `技术可行性分析：feature #<NNN>: <title>` |
 
 跨环境 Issue 验证调度 prompt 见 §跨环境 Issue 处理。
 
@@ -815,7 +799,6 @@ Root: .
 5. Git commit (one feature = one commit, see Git 提交规范)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
-8. On blocker: update index.yaml status to "blocked", return blocked with reason
 ```
 
 #### 场景 3: developer（Bug 直接修复）
@@ -838,7 +821,6 @@ Root: .
 8. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 9. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
 10. On success: return complete with commit_sha
-11. On blocker: `agent-factory issue block <id> --reason "..." --action "..."`, return blocked with reason
 ```
 
 **关键约束（developer 必读）**：
@@ -888,7 +870,6 @@ Root: .
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
-8. On blocker: update index.yaml status to "blocked", return blocked with reason
 ```
 
 #### 场景 6: QA（Issue 诊断）
@@ -932,7 +913,6 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 8. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
 9. On success: return complete with commit_sha
-10. On blocker: `agent-factory issue block <id> --reason "..." --action "..."`, return blocked with reason
 ```
 
 **关键约束**：与场景 3 一致（developer 不主动 transition closed，PM 使用 `issue close` 关闭）
@@ -941,10 +921,10 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 
 #### 场景 8: POC（技术可行性）
 
-**调度时机**：PM 在 designing 阶段因 `tech-feasibility` blocked
+**调度时机**：PM 在 designing 阶段判断需要技术可行性 / 选型验证
 
 **可选章节**：
-- `## Questions`: `<PM 在 blocked_reason 中提出的技术问题清单>`
+- `## Questions`: `<PM 在 designing 时发现的技术问题清单>`
 - `## Context`: `<需求背景、功能范围>`
 
 **Feature Directory**: `<Root>/.features/<id>/`
@@ -958,7 +938,7 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 5. Return structured result
 ```
 
-POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 恢复 designing 状态，基于用户决策继续修改 doc/（见 §Blocked 处理）。
+POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 恢复 designing 状态，基于用户决策继续修改 doc/。
 
 ---
 
@@ -984,54 +964,6 @@ PM 将设计提交用户终审：
 
 ---
 
-## Blocked 处理
-
-### 触发条件
-
-- PM 在 designing 阶段或 developer/QA subagent 返回 `status: "blocked"`
-- PM 在调度过程中发现无法继续
-
-### 处理步骤
-
-1. 读取 subagent 返回的 `blocked_reason`
-2. `agent-factory feature/issue block <id> --reason "<reason>" --action "<action>"`（CLI 自动创建 BLOCKED.yaml + 更新 index 状态）
-3. **根据 blocked 类型分流**：
-   - **一般阻塞**（`clarification-needed` | `external-dependency`）：跳到下一个待办项，等待用户处理
-   - **技术可行性阻塞**（`tech-feasibility`）：自动调度 POC subagent 进行分析
-
-### Tech-Feasibility Blocked 处理流程
-
-```
-PM blocked (designing 阶段, tech-feasibility) + 技术问题清单
-  ↓
-PM 调度 POC subagent 进行调研验证
-  ↓
-POC 返回 POC-REPORT.md + 评估建议
-  ↓
-PM 将报告提交用户：
-  - 展示 POC-REPORT.md 摘要
-  - 列出各方案的对比和建议
-  - 请用户选择方案
-  ↓
-用户做出决策
-  ↓
-PM `agent-factory feature unblock <id> --to designing`（CLI 自动删除 BLOCKED.yaml + 恢复状态）
-PM 基于用户决策继续修改 doc/：
-  "## POC Decision
-   用户选择方案: <方案名称>
-   POC 报告: .features/<id>/POC-REPORT.md
-   基于此决策继续 design。"
-```
-
-### 解除阻塞（一般阻塞）
-
-用户与 PM 讨论后提供所需信息或做出决策：
-1. PM 用 `agent-factory feature/issue set <id> <field>` 更新需求说明
-2. `agent-factory feature/issue unblock <id> --to <original-status>`（CLI 自动删除 BLOCKED.yaml + 恢复状态）
-3. 继续处理
-
----
-
 ## 状态管理
 
 ### 核心原则
@@ -1045,14 +977,12 @@ PM 基于用户决策继续修改 doc/：
 | 文件 | 用途 |
 |------|------|
 | `.features/index.yaml` | 所有 feature 的状态、优先级、时间 |
-| `.features/<id>/BLOCKED.yaml` | feature 的阻塞详情（含 blocked 类型） |
 | `{Root}/doc/<module>/*.md` | PM 在 designing 阶段直接修改的最终正式文档（data-schema / data-persistence / service） |
 | `{Root}/doc/common/data-schema.md` | 跨 module 共享数据 |
 | `{Root}/doc/backend.md` / `doc/mcp-server.md` | 接入层 doc（按 Agent Type） |
-| `.features/<id>/POC-REPORT.md` | 技术可行性评估报告（tech-feasibility blocked 时生成） |
+| `.features/<id>/POC-REPORT.md` | 技术可行性评估报告（designing 阶段 PM 调度 POC 时生成） |
 | `.issues/index.yaml` | 所有 issue 的状态、类型、关联 |
 | `.issues/<id>/ISSUE.yaml` | issue 的描述和讨论记录 |
-| `.issues/<id>/BLOCKED.yaml` | issue 的阻塞详情 |
 
 ---
 
@@ -1069,7 +999,6 @@ PM 基于用户决策继续修改 doc/：
    - draft feature 待设计数
    - approved feature 待开发数
    - qa-reviewing feature 待验收数
-   - blocked 项数（需用户处理）
 5. 询问用户需要做什么
 
 ---
