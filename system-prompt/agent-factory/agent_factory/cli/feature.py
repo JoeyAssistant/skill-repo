@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from agent_factory.cli.common import (
     dump_yaml, find_feature_dir, format_error, load_yaml, next_feature_id,
 )
-from agent_factory.schema import Feature, FeatureIndex, FeatureIndexItem, BlockedRecord
+from agent_factory.schema import Feature, FeatureIndex, FeatureIndexItem
 from agent_factory.schema.enums import Priority
 from agent_factory.schema.feature import AgentType, FeatureStatus
 
@@ -23,7 +23,7 @@ from agent_factory.schema.feature import AgentType, FeatureStatus
 def feature_group() -> None:
     """Operate feature FEATURE.yaml.
 
-    命令：new / set / show / list / transition / block / unblock / delete
+    命令：new / set / show / list / transition / delete
 
     feature set 合法形式：
       desc / agent_type                          标量
@@ -361,11 +361,10 @@ def list_features(status: str | None, priority: str | None, fmt: str) -> None:
 # State machine: allowed transitions
 ALLOWED_TRANSITIONS = {
     FeatureStatus.DRAFT: {FeatureStatus.DESIGNING, FeatureStatus.CANCELLED},
-    FeatureStatus.DESIGNING: {FeatureStatus.APPROVED, FeatureStatus.BLOCKED, FeatureStatus.CANCELLED},
+    FeatureStatus.DESIGNING: {FeatureStatus.APPROVED, FeatureStatus.CANCELLED},
     FeatureStatus.APPROVED: {FeatureStatus.IMPLEMENTING, FeatureStatus.CANCELLED},
-    FeatureStatus.IMPLEMENTING: {FeatureStatus.QA_REVIEWING, FeatureStatus.BLOCKED},
+    FeatureStatus.IMPLEMENTING: {FeatureStatus.QA_REVIEWING},
     FeatureStatus.QA_REVIEWING: {FeatureStatus.DONE, FeatureStatus.IMPLEMENTING},  # QA fail → implementing
-    FeatureStatus.BLOCKED: set(),  # needs unblock command
     FeatureStatus.DONE: set(),
     FeatureStatus.CANCELLED: set(),
 }
@@ -444,74 +443,6 @@ def transition(feature_id: int, target: str) -> None:
     dump_yaml(idx_path, idx)
 
     click.echo(f"Transitioned feature {feature_id}: {current_status.value} → {target_status.value}")
-
-
-@feature_group.command("block")
-@click.argument("feature_id", type=int)
-@click.option("--reason", required=True, help="Why blocked")
-@click.option("--action", "action_text", required=True, help="What's needed to unblock")
-def block(feature_id: int, reason: str, action_text: str) -> None:
-    """Block feature (creates BLOCKED.yaml + sets status=blocked)."""
-    try:
-        feature_dir = find_feature_dir(feature_id)
-    except FileNotFoundError as exc:
-        click.echo(format_error("NotFound", str(exc), None), err=True)
-        sys.exit(2)
-
-    blocked_path = feature_dir / "BLOCKED.yaml"
-    if blocked_path.exists():
-        click.echo(format_error("AlreadyBlocked", f"Feature {feature_id} already blocked", str(blocked_path)), err=True)
-        sys.exit(1)
-
-    # Create BLOCKED.yaml
-    record = BlockedRecord(reason=reason, action=action_text)
-    dump_yaml(blocked_path, record)
-
-    # Update index status
-    idx_path = Path(".features") / "index.yaml"
-    idx = FeatureIndex.model_validate(load_yaml(idx_path))
-    item = next((i for i in idx.features if i.id == feature_id), None)
-    if item:
-        item.status = FeatureStatus.BLOCKED
-        dump_yaml(idx_path, idx)
-
-    click.echo(f"Blocked feature {feature_id}: {reason[:50]}")
-
-
-@feature_group.command("unblock")
-@click.argument("feature_id", type=int)
-@click.option("--to", "target", required=True, type=click.Choice([s.value for s in FeatureStatus]))
-def unblock(feature_id: int, target: str) -> None:
-    """Unblock feature (removes BLOCKED.yaml + restores status to --to)."""
-    try:
-        feature_dir = find_feature_dir(feature_id)
-    except FileNotFoundError as exc:
-        click.echo(format_error("NotFound", str(exc), None), err=True)
-        sys.exit(2)
-
-    blocked_path = feature_dir / "BLOCKED.yaml"
-    if not blocked_path.exists():
-        click.echo(format_error("NotBlocked", f"Feature {feature_id} is not blocked", None), err=True)
-        sys.exit(1)
-
-    target_status = FeatureStatus(target)
-    # Validate path (blocked → target)
-    if target_status not in {FeatureStatus.DESIGNING, FeatureStatus.IMPLEMENTING,
-                             FeatureStatus.QA_REVIEWING, FeatureStatus.APPROVED,
-                             FeatureStatus.CANCELLED}:
-        click.echo(format_error("InvalidTransition", f"Cannot unblock to {target}", None), err=True)
-        sys.exit(3)
-
-    blocked_path.unlink()
-
-    idx_path = Path(".features") / "index.yaml"
-    idx = FeatureIndex.model_validate(load_yaml(idx_path))
-    item = next((i for i in idx.features if i.id == feature_id), None)
-    if item:
-        item.status = target_status
-        dump_yaml(idx_path, idx)
-
-    click.echo(f"Unblocked feature {feature_id}: status → {target}")
 
 
 @feature_group.command("delete")

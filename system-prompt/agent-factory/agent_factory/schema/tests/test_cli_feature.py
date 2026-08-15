@@ -502,65 +502,6 @@ def test_feature_transition_invalid_path(tmp_path, monkeypatch):
     assert result.exit_code == 3  # invalid state path
 
 
-def test_feature_block_creates_blocked_yaml(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _setup_feature(tmp_path)
-
-    runner = CliRunner()
-    result = runner.invoke(main, [
-        "feature", "block", "1",
-        "--reason", "卡住了",
-        "--action", "等用户决策",
-    ])
-    assert result.exit_code == 0
-    assert "Blocked feature 1" in result.output
-
-    blocked = tmp_path / ".features" / "001-test-feature" / "BLOCKED.yaml"
-    assert blocked.exists()
-    data = load_yaml(blocked)
-    assert data["reason"] == "卡住了"
-    assert data["action"] == "等用户决策"
-
-    idx = load_yaml(tmp_path / ".features" / "index.yaml")
-    assert idx["features"][0]["status"] == "blocked"
-
-
-def test_feature_block_already_blocked(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _setup_feature(tmp_path)
-
-    runner = CliRunner()
-    runner.invoke(main, ["feature", "block", "1", "--reason", "X", "--action", "Y"])
-    result = runner.invoke(main, ["feature", "block", "1", "--reason", "X2", "--action", "Y2"])
-    assert result.exit_code == 1  # already blocked
-
-
-def test_feature_unblock_removes_blocked_yaml_and_restores_status(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _setup_feature(tmp_path)
-    # Block first
-    runner = CliRunner()
-    runner.invoke(main, ["feature", "block", "1", "--reason", "X", "--action", "Y"])
-
-    # Now unblock to designing
-    result = runner.invoke(main, ["feature", "unblock", "1", "--to", "designing"])
-    assert result.exit_code == 0
-    assert "Unblocked feature 1" in result.output
-
-    assert not (tmp_path / ".features" / "001-test-feature" / "BLOCKED.yaml").exists()
-    idx = load_yaml(tmp_path / ".features" / "index.yaml")
-    assert idx["features"][0]["status"] == "designing"
-
-
-def test_feature_unblock_not_blocked(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _setup_feature(tmp_path)
-
-    runner = CliRunner()
-    result = runner.invoke(main, ["feature", "unblock", "1", "--to", "designing"])
-    assert result.exit_code == 1  # not blocked
-
-
 def test_feature_delete_requires_force(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _setup_feature(tmp_path)
