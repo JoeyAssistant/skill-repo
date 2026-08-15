@@ -18,27 +18,21 @@ from agent_factory.schema.enums import IssueStatus, Priority
 from agent_factory.schema.issue import BugfixResult, FeatureRequestResult
 
 
-@click.group("issue")
-def issue_group() -> None:
-    """Operate issue ISSUE.yaml.
+def _issue_doc() -> str:
+    """读 doc/issue.md 原文作为 group help（设计文档 = help 唯一真值）.
 
-    命令：new / set / show / list / transition / close / block / unblock
-
-    issue set 支持字段：desc / scenario / impact / root_cause / fix_plan
-
-    目录名：<NNN>-<slug>；title = 目录名，不可改
-    desc = 用户原始描述（create 时必填）
-
-    状态机校验（transition 时）：
-    - open → in_progress：scenario + impact 必填（PM 信息收集完成）
-    - in_progress → closed：root_cause + fix_plan + result 必填
-
-    result 用 issue close 填（一站式 result + close）：
-    - bugfix 路径：issue close <id> --bugfix --fix-desc "..." --verification "..."
-    - feature 路径：issue close <id> --feature-request --feature-id <NNN>
-
-    多行文本用 --file：<field> 值从文件读
+    click 会对 help 文本按段落 rewrap（换行被压扁）；在每个段落前插 \\b
+    标记可让该段原样输出，保留 issue.md 的原始换行。
     """
+    p = Path(__file__).resolve().parent.parent / "doc" / "issue.md"
+    if not p.exists():
+        return "Operate issue ISSUE.yaml."
+    return "\n\b\n" + p.read_text().replace("\n\n", "\n\n\b\n")
+
+
+@click.group("issue", help=_issue_doc())
+def issue_group() -> None:
+    """Operate issue ISSUE.yaml."""
 
 
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
