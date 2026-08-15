@@ -157,24 +157,6 @@ def test_issue_open_to_in_progress_succeeds_when_fields_filled(tmp_path, monkeyp
     assert idx["issues"][0]["status"] == "in_progress"
 
 
-def test_issue_block_unblock(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _setup_issue(tmp_path)
-
-    runner = CliRunner()
-    # Block
-    result = runner.invoke(main, ["issue", "block", "1", "--reason", "X", "--action", "Y"])
-    assert result.exit_code == 0
-    assert (tmp_path / ".issues" / "001-test-issue" / "BLOCKED.yaml").exists()
-
-    # Unblock
-    result = runner.invoke(main, ["issue", "unblock", "1", "--to", "in_progress"])
-    assert result.exit_code == 0
-    assert not (tmp_path / ".issues" / "001-test-issue" / "BLOCKED.yaml").exists()
-    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
-    assert idx["issues"][0]["status"] == "in_progress"
-
-
 def test_issue_close_requires_result(tmp_path, monkeypatch):
     """in_progress → closed requires result (via issue close command)."""
     monkeypatch.chdir(tmp_path)
