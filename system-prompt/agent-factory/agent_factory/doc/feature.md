@@ -16,6 +16,10 @@
         - interface # API CLI
 - test_cases[]
 
+## state
+  draft → designing → approved → implementing → qa-reviewing → done
+  任意状态 → cancelled
+
 
 ## workflow
 ```mermaid
@@ -32,6 +36,10 @@ sequenceDiagram
     pm->>code: 了解文档 + 代码
     pm->>pm: load design-reference.md + agent-architecture.drawio
     pm->>pm: 分析与设计
+    alt 需要可行性验证
+        pm->>+poc: 技术可行性或选型验证
+        poc->>-pm: poc结果
+    end
     loop for each question
         pm->>+user: ask with prppose and discusses
         user->>-pm: desision
