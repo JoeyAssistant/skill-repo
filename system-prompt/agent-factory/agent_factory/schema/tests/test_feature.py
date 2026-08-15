@@ -145,14 +145,13 @@ def test_feature_agent_type_must_be_enum():
 
 
 def test_feature_status_enum_values():
-    """8 states: draft/designing/approved/implementing/qa-reviewing/done/blocked/cancelled."""
+    """7 states: draft/designing/approved/implementing/qa-reviewing/done/cancelled."""
     from agent_factory.schema.feature import FeatureStatus
-    assert len(FeatureStatus) == 8
+    assert len(FeatureStatus) == 7
     assert FeatureStatus.DRAFT.value == "draft"
     assert FeatureStatus.DESIGNING.value == "designing"
     assert FeatureStatus.APPROVED.value == "approved"
     assert FeatureStatus.IMPLEMENTING.value == "implementing"
     assert FeatureStatus.QA_REVIEWING.value == "qa-reviewing"
     assert FeatureStatus.DONE.value == "done"
-    assert FeatureStatus.BLOCKED.value == "blocked"
     assert FeatureStatus.CANCELLED.value == "cancelled"
