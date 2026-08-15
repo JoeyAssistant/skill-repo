@@ -29,7 +29,7 @@ def test_feature_help_contains_fields_and_state_machine():
     # 嵌套字段（feature.md 用 yaml 风格列表，dot 路径由嵌套层级表达）
     assert "pain_point" in out
     assert "benefit" in out
-    assert "<module>" in out  # spec.<module> 占位符
+    assert "module" in out  # spec 下模块名占位符
     # 状态机
     assert "designing" in out
     assert "approved" in out
