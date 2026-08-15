@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from agent_factory.cli.common import (
     dump_yaml, find_issue_dir, format_error, load_yaml, next_issue_id,
 )
-from agent_factory.schema import BlockedRecord, Issue, IssueIndex, IssueIndexItem
+from agent_factory.schema import Issue, IssueIndex, IssueIndexItem
 from agent_factory.schema.enums import Priority
 from agent_factory.schema.issue import IssueStatus
 from agent_factory.schema.issue import BugfixResult, FeatureRequestResult
@@ -371,67 +371,3 @@ def close(issue_id: int, is_bugfix: bool, is_feature_request: bool,
 
     result_type = "bugfix" if is_bugfix else "feature_request"
     click.echo(f"Closed issue {issue_id} as {result_type}")
-
-
-@issue_group.command("block")
-@click.argument("issue_id", type=int)
-@click.option("--reason", required=True, help="Why blocked")
-@click.option("--action", "action_text", required=True, help="What's needed to unblock")
-def block(issue_id: int, reason: str, action_text: str) -> None:
-    """Block issue (creates BLOCKED.yaml, keeps status=in_progress)."""
-    try:
-        issue_dir = find_issue_dir(issue_id)
-    except FileNotFoundError as exc:
-        click.echo(format_error("NotFound", str(exc), None), err=True)
-        sys.exit(2)
-
-    blocked_path = issue_dir / "BLOCKED.yaml"
-    if blocked_path.exists():
-        click.echo(format_error("AlreadyBlocked",
-                                f"Issue {issue_id} already blocked",
-                                str(blocked_path)), err=True)
-        sys.exit(1)
-
-    dump_yaml(blocked_path, BlockedRecord(reason=reason, action=action_text))
-
-    # Issue has no dedicated blocked status; keep in_progress
-    idx_path = Path(".issues") / "index.yaml"
-    idx = IssueIndex.model_validate(load_yaml(idx_path))
-    for item in idx.issues:
-        if item.id == issue_id:
-            item.status = IssueStatus.IN_PROGRESS
-            break
-    dump_yaml(idx_path, idx)
-
-    click.echo(f"Blocked issue {issue_id}: {reason[:50]}")
-
-
-@issue_group.command("unblock")
-@click.argument("issue_id", type=int)
-@click.option("--to", "target", required=True,
-              type=click.Choice([s.value for s in IssueStatus]))
-def unblock(issue_id: int, target: str) -> None:
-    """Unblock issue (removes BLOCKED.yaml + sets status to --to)."""
-    try:
-        issue_dir = find_issue_dir(issue_id)
-    except FileNotFoundError as exc:
-        click.echo(format_error("NotFound", str(exc), None), err=True)
-        sys.exit(2)
-
-    blocked_path = issue_dir / "BLOCKED.yaml"
-    if not blocked_path.exists():
-        click.echo(format_error("NotBlocked", f"Issue {issue_id} is not blocked", None), err=True)
-        sys.exit(1)
-
-    blocked_path.unlink()
-
-    target_status = IssueStatus(target)
-    idx_path = Path(".issues") / "index.yaml"
-    idx = IssueIndex.model_validate(load_yaml(idx_path))
-    for item in idx.issues:
-        if item.id == issue_id:
-            item.status = target_status
-            break
-    dump_yaml(idx_path, idx)
-
-    click.echo(f"Unblocked issue {issue_id}: status → {target}")
