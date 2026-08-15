@@ -16,18 +16,9 @@
   - [反例 → 正解](#反例--正解)
 - [Agent参考架构](#agent参考架构)
 - [模式检测](#模式检测)
-- [Feature Management](#feature-management)
-  - [目录结构](#目录结构)
-  - [index.yaml 格式](#indexyaml-格式)
-  - [生命周期](#生命周期)
-  - [FEATURE.yaml 格式](#requirementsyaml-格式)
-- [Issue Management](#issue-management)
-  - [目录结构](#目录结构-1)
-  - [index.yaml 格式](#indexyaml-格式-1)
-  - [Issue 类型](#issue-类型)
-  - [生命周期](#生命周期-1)
-  - [Issue 转 Feature 流程](#issue-转-feature-流程)
-  - [ISSUE.yaml 格式](#issueyaml-格式)
+- [Feature / Issue 命令](#feature--issue-命令)
+  - [Issue → Feature 迁移](#issue--feature-迁移)
+  - [PM Review Gate](#pm-review-gate调度-developer-前)
 - [生产环境模式](#生产环境模式)
   - [工作流程](#工作流程)
   - [生产环境 PM 约束](#生产环境-pm-约束)
@@ -271,180 +262,29 @@ PM 启动时自动检测项目是否已初始化：
 
 ---
 
-## Feature Management
+## Feature / Issue 命令
 
-### 目录结构
+所有命令、字段、状态机、关闭方式见 `agent-factory feature/issue --help`（help 自动加载 schema + workflow diagram，比 prompt 永远新）。
 
-```
-.features/
-  index.yaml                          # 需求索引
-  <id>/
-    FEATURE.yaml                 # 需求讨论结论（draft 阶段创建）
-    POC-REPORT.md                   # 技术可行性评估报告（designing 阶段 PM 调度 POC 时生成）
-```
+### Issue → Feature 迁移
 
-注：feature 目录只有 FEATURE.yaml。设计产出在 `{Root}/doc/` 下（PM 在 designing 阶段直接修改），不产 DESIGN.md。
+走 feature 路径时，QA 诊断结论（root_cause + fix_plan）**不自动迁移**到 FEATURE.yaml，PM 必须手动搬运：
 
-- `.features/` 在项目根目录，纳入 git 管理
-- 编号 `NNN` 三位数字，自动递增（从 index.yaml 取 max + 1）
-- 目录名格式：`<NNN>-<slug>`（如 `001-income-module`），slug 为 kebab-case
-- title 字段 = 目录名（如 `001-income-module`），创建后不可改
-
-### index.yaml 格式
-
-`.features/index.yaml` 是 feature 状态真值，schema 定义在 `agent_factory/schema/index.py`。
-
-字段：`id` / `title` / `status` / `priority`（4 字段）。
-
-示例见 `agent_factory/schema/examples/feature_index.yaml`。
-
-### 生命周期
-
-`draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
-
-**强制约束**：
-- `implementing` → `qa-reviewing` → `done` 是必经路径。Developer 返回 complete 后，PM 必须调度场景 4（QA 验收），QA 返回 pass 才能更新为 done。禁止跳过 QA 直接 done
-- `designing` 阶段 PM 直接写 `doc/<module>/` 等最终正式文档（无 DESIGN.md 中间产物），调度 spec-compliance 自检后由用户审批 doc/ diff，通过即可进入 `implementing`
-
-任何阶段均可流转至 `cancelled`。
-
-| 状态 | 含义 | 触发时机 |
-|------|------|----------|
-| draft | 需求提出，待讨论 | 用户提出新需求 |
-| designing | 设计进行中，PM 正在修改 doc/ 文件 | PM 进入设计阶段 |
-| approved | doc/ diff 通过用户审阅 | 用户审阅 doc/ 修改通过 |
-| implementing | 开发中，已调度 developer subagent | PM 调度开发 |
-| qa-reviewing | QA 验收中，已调度 QA subagent | Developer 返回 complete 后 PM 调度 QA |
-| done | 验收通过，功能完成 | QA 返回 pass |
-| cancelled | 需求取消/废弃，不再继续 | 任何阶段用户决定取消 |
-
-**approved → implementing 流转**：
-
-```
-user reviews doc/ diff (git diff)
-  ↓
-approve → status=approved
-  ↓
-PM 调度场景 2（developer 实现，基于已批准 doc/）
-  ↓
-status=implementing
-```
-
-### FEATURE.yaml 格式
-
-Feature 文件用 YAML 真值，schema 定义在 `agent_factory/schema/feature.py`。
-
-字段总览：
-- 元信息：`id` / `title`（=目录名，不可改）/ `desc`（用户原始需求描述，create 必填）/ `agent_type`
-- 需求背景：`background`（嵌套：`pain_point` + `benefit`，draft 阶段填）
-- 需求规格：`spec`（按模块 dict：`spec.<module>` = {functions[], schema, interface}，designing 阶段逐模块写入）
-- 验收用例：`test_cases[]`（每条 {name, precondition, steps, expected}）
-
-示例见 `agent_factory/schema/examples/feature.yaml`。
-
----
-
-## Issue Management
-
-### 目录结构
-
-```
-.issues/
-  _incoming/                              ← 生产环境报告区（仅生产写入，开发读取后删除）
-    <timestamp>-<name>/
-      ISSUE.yaml                            ← QA 已填写的诊断内容
-      snapshot/
-        log/                              ← 约定收集：存在就收集
-        data/                             ← 约定收集：存在就收集
-  index.yaml                                # Issue 索引（仅开发环境修改）
-  <id>/
-    ISSUE.yaml                              # Issue 描述、复现步骤、讨论记录
-    snapshot/                             # 从 _incoming 移入的快照数据
-      log/
-      data/
-```
-
-- `.issues/` 在项目根目录，纳入 git 管理
-- `_incoming/` 是生产环境提交问题报告的临时区，开发环境处理后删除
-- 编号 `NNN` 三位数字，自动递增
-- 目录名格式：`<NNN>-<slug>`（如 `001-login-crash`），slug 为 kebab-case
-- title 字段 = 目录名，创建后不可改
-- 快照收集基于约定：默认收集 `log/` 和 `data/`（存在就收集，不存在跳过），不需要额外配置
-
-### index.yaml 格式
-
-`.issues/index.yaml` 是 issue 状态真值。
-
-字段：`id` / `title` / `type` / `status` / `priority`（5 字段，比 feature 多 `type`）。
-
-示例见 `agent_factory/schema/examples/issue_index.yaml`。
-
-### Issue 类型
-
-| Type | 含义 | 处理方式 |
-|------|------|----------|
-| bug | 产品缺陷、异常行为 | 评估后直接修复 |
-| feature-request | 功能优化建议 | 转化为 feature 进入设计流程 |
-
-### 生命周期
-
-`open` → `in_progress` → `closed`
-
-| 状态 | 含义 | 触发时机 |
-|------|------|----------|
-| open | Issue 已提交，待分类 | 用户提交 issue |
-| in_progress | PM/QA/Developer 正在处理 | PM 开始处理 |
-| closed | 已解决 | 直接修复完成 或 已转为 feature |
-
-### Issue 转 Feature 流程
-
-当 issue 类型为 `feature-request` 且需要走完整设计流程时：
-
-1. `agent-factory feature new --title "<issue-title>" --slug <slug> --agent-type <type>` 创建 feature（CLI 自动创建目录 + index 行）
-2. **将 issue 的 root_cause + fix_plan 作为创建 FEATURE.yaml 的必须输入**（QA 工作不白做），用 `agent-factory feature set <id> <field> "..."` 或 `--file` 逐步填充
-3. `agent-factory issue close <id> --feature-request --feature-id <NNN>` 关闭 issue（一站式填 result + close）
-4. 后续按 feature 流程处理
-
-### ISSUE.yaml 格式
-
-Issue 文件用 YAML 真值，schema 定义在 `agent_factory/schema/issue.py`。
-
-字段总览：
-- 元信息：`id` / `title` / `desc`
-- PM 加工：`scenario` / `impact`（PM 与用户讨论后填）
-- QA 诊断：`root_cause` / `fix_plan`（QA 填，**PM review + 用户确认 fix_plan 后才开发**）
-- 处理结果：`result`（`issue close` 命令填写，bugfix 或 feature_request）
-
-示例见 `agent_factory/schema/examples/issue.yaml`。
+1. `agent-factory feature new --title "..." --slug ...` 创建 entry
+2. 把 issue 的 root_cause + fix_plan 写入新 FEATURE.yaml（用 `agent-factory feature set <id> background.pain_point ...` 等命令；长字段用 `--file`）
+3. `agent-factory issue close <id> --feature-request --feature-id <NNN>` 一站式关闭
 
 ### PM Review Gate（调度 developer 前）
 
 PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方案**，基于 QA 填的 `fix_plan`：
 
-1. **`agent-factory issue show <id>`** 读 `root_cause` + `fix_plan`
-2. **评估处理路径**（基于 QA fix_plan 中的处理方向）：
-   - bugfix 路径（QA 建议直接修复） → 继续 review
-   - feature 路径（QA 建议转为 feature） → 走转 feature 流程
-3. **与用户讨论修改方案**（基于 fix_plan）：
-   - 怎么修改（实现思路）
-   - 修改哪里（具体文件 / 函数 / 行号）
-4. **用户确认**：
-   - 用户同意方案 → 调度场景 3 或 7
-   - 用户调整方案 → PM 用 `agent-factory issue set <id> fix_plan "新方案"` 更新后重新确认
-   - 用户认为方案不全 → PM 与 QA 沟通补全 fix_plan
-5. **禁止跳过此步骤**直接调度 developer（**用户确认**是行为约束，不靠 schema）
-
-#### 转化为 feature
-
-```
-issue fix_plan 建议走 feature 路径
-  ↓
-PM 调用 `agent-factory feature new --title "..." --slug ... --desc "来自 issue #<NNN>: ..."`
-  ↓
-PM 在新 feature 的 FEATURE.yaml 里填充 background（引用 issue scenario + impact）
-  ↓
-agent-factory issue close <id> --feature-request --feature-id <NNN>
-```
+1. `agent-factory issue show <id>` 读 `root_cause` + `fix_plan`
+2. 与用户讨论修改方案（怎么修改、修改哪里 / 具体文件 / 函数 / 行号）
+3. **用户确认**：
+   - 同意 → 调度场景 3 或 7
+   - 调整 → `agent-factory issue set <id> fix_plan "新方案"` 后重确认
+   - 不全 → 与 QA 沟通补全 fix_plan
+4. **禁止跳过**此步骤直接调度 developer（用户确认是行为约束，不靠 schema）
 
 ---
 
@@ -463,7 +303,7 @@ agent-factory issue close <id> --feature-request --feature-id <NNN>
    #### 分支 A：bug
 
    在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下：
-   - 创建 `ISSUE.yaml`，按 §Issue Management > ISSUE.yaml 格式 填写
+   - 创建 `ISSUE.yaml`，字段按 `agent-factory issue --help` 说明填写
    - 收集 `snapshot/{log,data}`（如存在）
 
    > **注**：如果生产环境已安装 `agent-factory` CLI，可直接在 `_incoming/` 外使用 CLI 创建 issue，再用 `--file` 填充字段。但 `_incoming/` 本身是约定目录结构，需要手动创建。
@@ -472,7 +312,7 @@ agent-factory issue close <id> --feature-request --feature-id <NNN>
 
    PM 在生产环境**与用户讨论需求**（基于 QA `feature_request_context`）：
    - 按 §PM 工作模式 > 讨论开场白格式 4 步走（背景 / 已明确 / 待决策 / 逐项）
-   - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `FEATURE.yaml`（按 §Feature Management > FEATURE.yaml 格式）
+   - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `FEATURE.yaml`（字段按 `agent-factory feature --help` 说明）
    - 可选：收集 `snapshot/{log,data}`
 
 4. **PM git commit + push**：
@@ -564,7 +404,7 @@ NOTES.md → ISSUE.yaml：
 - `## Fix` → `result.bugfix.fix_desc`（需同时含 verification，PM 验收后填）
 - `## Resolution` → `result`（用 `issue close` 命令填，type 表达处理路径）
 
-REQUIREMENTS.md → FEATURE.yaml：按 §Feature Management > FEATURE.yaml 格式 章节字段映射。
+REQUIREMENTS.md → FEATURE.yaml：按 `agent-factory feature --help` 字段映射。
 
 > **⚠️ 技术债**：旧格式（NOTES.md / REQUIREMENTS.md）兼容为过渡期产物，**待所有项目迁移到 YAML 流程后去掉**。迁移完成后此 Step 2 应删除，仅保留 Step 1 的快速路径。
 
