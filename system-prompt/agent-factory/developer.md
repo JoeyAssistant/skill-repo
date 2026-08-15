@@ -458,7 +458,7 @@ fix: <问题描述>
   "commit_sha": "<commit hash>",
   "artifacts": ["<list of created/modified files>"],
   "summary": "<简要描述实现了什么>",
-  "blocked_reason": null
+  "reason": null
 }
 ```
 
@@ -472,6 +472,6 @@ fix: <问题描述>
   "feature_number": "<NNN>",
   "artifacts": ["<已完成的文件>"],
   "summary": "<已完成的进度>",
-  "blocked_reason": "<失败原因及所需操作>"
+  "reason": "<失败原因及所需操作>"
 }
 ```
