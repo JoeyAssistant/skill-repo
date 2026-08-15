@@ -147,7 +147,7 @@ POC 代码写在 feature 目录下：
   "summary": "<简要描述分析结论和建议>",
   "questions_analyzed": 2,
   "poc_executed": true,
-  "blocked_reason": null
+  "reason": null
 }
 ```
 
@@ -155,12 +155,12 @@ POC 代码写在 feature 目录下：
 
 ```json
 {
-  "status": "blocked",
+  "status": "fail",
   "feature_number": "<NNN>",
   "artifacts": ["POC-REPORT.md"],
   "summary": "<已完成的进度>",
   "questions_analyzed": 1,
   "poc_executed": false,
-  "blocked_reason": "<阻塞原因及所需操作>"
+  "reason": "<失败原因及所需操作>"
 }
 ```
