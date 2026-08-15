@@ -1,10 +1,10 @@
 # agent_factory/schema/feature.py
-"""Feature 模型（对应 .features/<id>/REQUIREMENT.yaml）."""
+"""Feature 模型（对应 .features/<id>/FEATURE.yaml）."""
 from __future__ import annotations
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AgentType(str, Enum):
@@ -27,66 +27,41 @@ class FeatureStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class DecisionStatus(str, Enum):
-    """Decision（决策）状态."""
-    OPEN = "open"
-    CLOSED = "closed"
-
-
-class Option(BaseModel):
-    """决策选项."""
+class Background(BaseModel):
+    """需求背景（嵌套）."""
     model_config = ConfigDict(extra="forbid")
-
-    id: str = Field(..., pattern=r"^[A-Z]$", description="选项标识，单字母 A-Z（必须大写）")
-    name: str = Field(..., description="选项名称")
-    pros: str = Field(..., description="优点")
-    cons: str = Field(..., description="缺点")
-    impact: Optional[str] = Field(None, description="选了这个选项的实际影响")
+    pain_point: Optional[str] = Field(None, description="解决什么痛点")
+    benefit: Optional[str] = Field(None, description="带来什么收益")
 
 
-class Decision(BaseModel):
-    """PM 与用户的决策记录."""
+class ModuleSpec(BaseModel):
+    """单个模块的需求规格（spec 按模块 dict 的 value）."""
     model_config = ConfigDict(extra="forbid")
+    functions: list[str] = Field(default_factory=list, description="功能、修改点")
+    schema: Optional[str] = Field(None, description="data schema")
+    interface: Optional[str] = Field(None, description="API / CLI 接口")
 
-    id: str = Field(..., pattern=r"^dec-[1-9]\d*$", description="决策标识，如 dec-1（从 1 开始）")
-    question: str = Field(..., description="一句话问题陈述")
-    background: str = Field(..., description="背景与触发场景")
-    options: list[Option] = Field(..., min_length=2, max_length=5,
-                                  description="2-5 个选项")
-    recommendation: str = Field(..., description="推荐的 option id (A/B/C)")
-    rationale: str = Field(..., description="推荐理由")
-    fallback_condition: Optional[str] = Field(None,
-        description="什么情况下应选其他选项")
-    status: DecisionStatus = Field(DecisionStatus.OPEN, description="决策状态（open=待定 / closed=已选定）")
 
-    @model_validator(mode="after")
-    def check_recommendation_in_options(self):
-        ids = [o.id for o in self.options]
-        if self.recommendation not in ids:
-            raise ValueError(
-                f"recommendation '{self.recommendation}' not in option ids: {ids}"
-            )
-        return self
+class FeatureTestCase(BaseModel):
+    """验收用例."""
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(..., description="用例名")
+    precondition: str = Field(..., description="前置构造")
+    steps: str = Field(..., description="可重复执行的步骤")
+    expected: str = Field(..., description="通过判据")
 
 
 class Feature(BaseModel):
-    """对应 .features/<id>/REQUIREMENT.yaml."""
+    """对应 .features/<NNN>-<slug>/FEATURE.yaml."""
     model_config = ConfigDict(extra="forbid")
 
     id: int = Field(..., ge=1, le=999, description="feature 编号")
-    title: str = Field(..., description="一句话标题，人读展示")
-    agent_type: AgentType = Field(..., description="Agent 形态（cli-only/http-api/http-web/mcp-server）")
+    title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
+    desc: str = Field(..., description="用户原始需求描述（create 时必填）")
+    agent_type: AgentType = Field(..., description="Agent 形态")
 
-    problem: str = Field(..., description="解决什么问题")
-    benefit: str = Field(..., description="创造什么价值")
-    description: str = Field(...,
-        description="详细需求描述（含用户、场景、功能），自由文本")
-
-    data_schema: Optional[str] = Field(None,
-        description="数据契约（designing 阶段补，python dataclass + enum 代码块）")
-    interfaces: Optional[str] = Field(None,
-        description="接口清单（按 agent_type 写 CLI / API / MCP 内容）")
-
-    acceptance_cases: str = Field("", description="验收 Case，自由文本")
-    decisions: list[Decision] = Field(default_factory=list,
-        description="PM 与用户的决策记录")
+    background: Optional[Background] = Field(None, description="需求背景（draft 阶段填）")
+    spec: dict[str, ModuleSpec] = Field(default_factory=dict,
+        description="需求规格，按模块组织（designing 阶段逐模块写入）")
+    test_cases: list[FeatureTestCase] = Field(default_factory=list,
+        description="验收用例（designing 阶段填）")
