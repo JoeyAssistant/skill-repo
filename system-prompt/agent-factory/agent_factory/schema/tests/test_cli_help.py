@@ -23,9 +23,12 @@ def test_main_help_lists_groups():
 def test_feature_help_contains_fields_and_state_machine():
     out = _help_output("feature")
     # 支持字段
-    for field in ["agent_type", "problem", "benefit", "description",
-                  "data_schema", "interfaces", "acceptance_cases", "decisions"]:
+    for field in ["desc", "agent_type", "background", "spec", "test_cases"]:
         assert field in out, f"feature help missing field: {field}"
+    # 嵌套路径
+    assert "background.pain_point" in out
+    assert "background.benefit" in out
+    assert "spec.<module>" in out
     # 状态机
     assert "designing" in out
     assert "approved" in out
