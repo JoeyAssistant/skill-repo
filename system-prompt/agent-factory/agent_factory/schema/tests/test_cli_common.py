@@ -30,7 +30,7 @@ def test_find_feature_dir(tmp_path, monkeypatch):
     (tmp_path / ".features").mkdir()
     # Create directory with slug naming + index.yaml
     (tmp_path / ".features" / "001-test-feature").mkdir()
-    (tmp_path / ".features" / "001-test-feature" / "REQUIREMENT.yaml").write_text("id: 1\n")
+    (tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml").write_text("id: 1\n")
     dump_yaml(tmp_path / ".features" / "index.yaml", FeatureIndex(features=[
         FeatureIndexItem(id=1, title="001-test-feature", status=FeatureStatus.DRAFT, priority=Priority.P2),
     ]))
@@ -68,10 +68,10 @@ def test_find_issue_dir(tmp_path, monkeypatch):
 
 
 def test_format_error():
-    msg = format_error("ValidationError", "field X missing", ".features/1/REQUIREMENT.yaml")
+    msg = format_error("ValidationError", "field X missing", ".features/1/FEATURE.yaml")
     assert "ValidationError" in msg
     assert "field X missing" in msg
-    assert ".features/1/REQUIREMENT.yaml" in msg
+    assert ".features/1/FEATURE.yaml" in msg
 
 
 def test_next_feature_id_empty(tmp_path, monkeypatch):

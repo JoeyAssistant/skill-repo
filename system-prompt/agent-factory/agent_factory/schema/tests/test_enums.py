@@ -1,6 +1,6 @@
 # agent-factory/schema/tests/test_enums.py
 from agent_factory.schema.enums import Priority
-from agent_factory.schema.feature import AgentType, DecisionStatus, FeatureStatus
+from agent_factory.schema.feature import AgentType, FeatureStatus
 from agent_factory.schema.issue import IssueStatus
 
 
@@ -32,13 +32,7 @@ def test_issue_status_lifecycle():
     assert actual == expected
 
 
-def test_decision_status_values():
-    assert DecisionStatus.OPEN.value == "open"
-    assert DecisionStatus.CLOSED.value == "closed"
-
-
 def test_enums_are_str_enums():
     """所有枚举应继承 str，便于 JSON 序列化"""
-    for enum_cls in [AgentType, Priority, FeatureStatus,
-                     IssueStatus, DecisionStatus]:
+    for enum_cls in [AgentType, Priority, FeatureStatus, IssueStatus]:
         assert issubclass(enum_cls, str)

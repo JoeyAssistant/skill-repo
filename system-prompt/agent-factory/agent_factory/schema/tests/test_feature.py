@@ -2,91 +2,68 @@
 import pytest
 from pydantic import ValidationError
 
-from agent_factory.schema.feature import AgentType, DecisionStatus
-from agent_factory.schema.feature import Feature, Decision, Option
+from agent_factory.schema.feature import AgentType
+from agent_factory.schema.feature import Background, Feature, ModuleSpec, FeatureTestCase
 
 
-# === Option 测试 ===
+# === Background 测试 ===
 
-def test_option_valid():
-    opt = Option(id="A", name="方案 A", pros="优点", cons="缺点")
-    assert opt.id == "A"
-    assert opt.impact is None
+def test_background_valid():
+    bg = Background(pain_point="痛点", benefit="收益")
+    assert bg.pain_point == "痛点"
+    assert bg.benefit == "收益"
 
 
-def test_option_id_must_be_single_uppercase():
+def test_background_fields_optional():
+    """Background fields are optional (completeness checked at transition time)."""
+    bg = Background()
+    assert bg.pain_point is None
+    assert bg.benefit is None
+    bg2 = Background(pain_point="痛点")
+    assert bg2.benefit is None
+
+
+def test_background_extra_forbidden():
     with pytest.raises(ValidationError):
-        Option(id="AA", name="...", pros="...", cons="...")
+        Background(pain_point="痛点", benefit="收益", extra="x")
+
+
+# === ModuleSpec 测试 ===
+
+def test_module_spec_minimal():
+    ms = ModuleSpec(functions=["fn1"])
+    assert ms.functions == ["fn1"]
+    assert ms.schema is None
+    assert ms.interface is None
+
+
+def test_module_spec_full():
+    ms = ModuleSpec(functions=["fn1", "fn2"], schema="class X:", interface="| cmd |")
+    assert len(ms.functions) == 2
+    assert ms.schema == "class X:"
+    assert ms.interface == "| cmd |"
+
+
+def test_module_spec_extra_forbidden():
     with pytest.raises(ValidationError):
-        Option(id="1", name="...", pros="...", cons="...")
+        ModuleSpec(functions=[], extra="x")
+
+
+# === TestCase 测试 ===
+
+def test_test_case_valid():
+    tc = FeatureTestCase(name="t1", precondition="p", steps="s", expected="e")
+    assert tc.name == "t1"
+
+
+def test_test_case_missing_field_fails():
     with pytest.raises(ValidationError):
-        Option(id="a", name="...", pros="...", cons="...")
+        FeatureTestCase(name="t1", precondition="p", steps="s")  # missing expected
 
 
-def test_option_extra_field_forbidden():
+def test_test_case_extra_forbidden():
     with pytest.raises(ValidationError):
-        Option(id="A", name="...", pros="...", cons="...", extra="x")
-
-
-# === Decision 测试 ===
-
-def _valid_decision_kwargs():
-    return dict(
-        id="dec-1",
-        question="stdio 还是 sse？",
-        background="生产需要远程访问，本地用 stdio 最简。",
-        options=[
-            Option(id="A", name="stdio", pros="本地最简", cons="无法远程"),
-            Option(id="B", name="sse", pros="支持远程", cons="需要部署"),
-        ],
-        recommendation="A",
-        rationale="优先支持本地开发体验，远程访问可后续加。",
-    )
-
-
-def test_decision_valid():
-    dec = Decision(**_valid_decision_kwargs())
-    assert dec.id == "dec-1"
-    assert dec.status == DecisionStatus.OPEN  # 默认值
-
-
-def test_decision_id_pattern():
-    kw = _valid_decision_kwargs()
-    kw["id"] = "oq-1"  # 旧前缀，应拒绝
-    with pytest.raises(ValidationError):
-        Decision(**kw)
-
-    kw["id"] = "dec-abc"  # 非数字
-    with pytest.raises(ValidationError):
-        Decision(**kw)
-
-
-def test_decision_options_min_length_2():
-    kw = _valid_decision_kwargs()
-    kw["options"] = [
-        Option(id="A", name="...", pros="...", cons="..."),
-    ]  # 只 1 个
-    with pytest.raises(ValidationError) as exc:
-        Decision(**kw)
-    assert "too_short" in str(exc.value) or "at least 2" in str(exc.value).lower()
-
-
-def test_decision_options_max_length_5():
-    kw = _valid_decision_kwargs()
-    kw["options"] = [
-        Option(id=letter, name="...", pros="...", cons="...")
-        for letter in "ABCDEF"
-    ]  # 6 个
-    with pytest.raises(ValidationError):
-        Decision(**kw)
-
-
-def test_decision_recommendation_must_be_in_options():
-    kw = _valid_decision_kwargs()
-    kw["recommendation"] = "C"  # 不在 options
-    with pytest.raises(ValidationError) as exc:
-        Decision(**kw)
-    assert "not in option" in str(exc.value).lower()
+        FeatureTestCase(name="t1", precondition="p", steps="s", expected="e", extra="x")
 
 
 # === Feature 测试 ===
@@ -94,31 +71,51 @@ def test_decision_recommendation_must_be_in_options():
 def _valid_feature_kwargs():
     return dict(
         id=1,
-        title="收入管理模块",
+        title="001-income-module",
+        desc="用户原话：收入管理",
         agent_type=AgentType.CLI_ONLY,
-        problem="无法看到完整财务画像。",
-        benefit="集中记录收入流水。",
-        description="个人用户月底复盘月度净收支。",
     )
 
 
 def test_feature_minimal_valid():
     feature = Feature(**_valid_feature_kwargs())
     assert feature.id == 1
+    assert feature.title == "001-income-module"
+    assert feature.desc == "用户原话：收入管理"
     assert feature.agent_type == AgentType.CLI_ONLY
-    assert feature.data_schema is None
-    assert feature.interfaces is None
-    assert feature.acceptance_cases == ""
-    assert feature.decisions == []
+    assert feature.background is None
+    assert feature.spec == {}
+    assert feature.test_cases == []
 
 
-def test_feature_missing_required_field_fails():
+def test_feature_missing_desc_fails():
+    kw = _valid_feature_kwargs()
+    del kw["desc"]
     with pytest.raises(ValidationError) as exc:
-        Feature(id=1, title="...")
+        Feature(**kw)
     errors = exc.value.errors()
     missing = [e["loc"][0] for e in errors if e["type"] == "missing"]
-    for field in ["agent_type", "problem", "benefit", "description"]:
-        assert field in missing
+    assert "desc" in missing
+
+
+def test_feature_with_full_structure():
+    kw = _valid_feature_kwargs()
+    kw["background"] = Background(pain_point="痛点描述", benefit="收益描述")
+    kw["spec"] = {
+        "income": ModuleSpec(functions=["录入"], schema="class X:", interface="add"),
+        "report": ModuleSpec(functions=["汇总"]),
+    }
+    kw["test_cases"] = [
+        FeatureTestCase(name="用例1", precondition="空数据", steps="执行add", expected="有记录"),
+        FeatureTestCase(name="用例2", precondition="有数据", steps="执行list", expected="返回列表"),
+    ]
+    feature = Feature(**kw)
+    assert feature.background is not None
+    assert feature.background.pain_point == "痛点描述"
+    assert len(feature.spec) == 2
+    assert "income" in feature.spec
+    assert "report" in feature.spec
+    assert len(feature.test_cases) == 2
 
 
 def test_feature_extra_field_forbidden():
@@ -140,14 +137,6 @@ def test_feature_id_range():
         Feature(**kw)
 
 
-def test_feature_with_decision():
-    kw = _valid_feature_kwargs()
-    kw["decisions"] = [Decision(**_valid_decision_kwargs())]
-    feature = Feature(**kw)
-    assert len(feature.decisions) == 1
-    assert feature.decisions[0].id == "dec-1"
-
-
 def test_feature_agent_type_must_be_enum():
     kw = _valid_feature_kwargs()
     kw["agent_type"] = "unknown-type"
@@ -155,13 +144,15 @@ def test_feature_agent_type_must_be_enum():
         Feature(**kw)
 
 
-def test_decision_closed_status():
-    kw = _valid_decision_kwargs()
-    kw["status"] = DecisionStatus.CLOSED
-    dec = Decision(**kw)
-    assert dec.status == DecisionStatus.CLOSED
-
-
-def test_option_with_impact():
-    opt = Option(id="A", name="方案 A", pros="优点", cons="缺点", impact="需要部署服务端")
-    assert opt.impact == "需要部署服务端"
+def test_feature_status_enum_values():
+    """8 states: draft/designing/approved/implementing/qa-reviewing/done/blocked/cancelled."""
+    from agent_factory.schema.feature import FeatureStatus
+    assert len(FeatureStatus) == 8
+    assert FeatureStatus.DRAFT.value == "draft"
+    assert FeatureStatus.DESIGNING.value == "designing"
+    assert FeatureStatus.APPROVED.value == "approved"
+    assert FeatureStatus.IMPLEMENTING.value == "implementing"
+    assert FeatureStatus.QA_REVIEWING.value == "qa-reviewing"
+    assert FeatureStatus.DONE.value == "done"
+    assert FeatureStatus.BLOCKED.value == "blocked"
+    assert FeatureStatus.CANCELLED.value == "cancelled"
