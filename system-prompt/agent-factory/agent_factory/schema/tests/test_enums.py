@@ -1,8 +1,7 @@
 # agent-factory/schema/tests/test_enums.py
-from agent_factory.schema.enums import (
-    AgentType, DecisionStatus, FeatureStatus,
-    IssueStatus, Priority,
-)
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import AgentType, DecisionStatus, FeatureStatus
+from agent_factory.schema.issue import IssueStatus
 
 
 def test_agent_type_values():

@@ -15,7 +15,8 @@ from agent_factory.cli.common import (
     dump_yaml, find_feature_dir, format_error, load_yaml, next_feature_id,
 )
 from agent_factory.schema import Feature, FeatureIndex, FeatureIndexItem, BlockedRecord
-from agent_factory.schema.enums import AgentType, FeatureStatus, Priority
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import AgentType, FeatureStatus
 
 
 @click.group("feature")
@@ -275,7 +276,7 @@ def _validate_transition_requirements(current: FeatureStatus, target: FeatureSta
         if not feature.acceptance_cases.strip():
             issues.append("acceptance_cases is empty")
     elif current == FeatureStatus.APPROVED and target == FeatureStatus.IMPLEMENTING:
-        from agent_factory.schema.enums import DecisionStatus
+        from agent_factory.schema.feature import DecisionStatus
         open_decisions = [d.id for d in feature.decisions if d.status != DecisionStatus.CLOSED]
         if open_decisions:
             issues.append(f"open decisions not closed: {open_decisions}")

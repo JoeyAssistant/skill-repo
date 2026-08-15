@@ -1,9 +1,17 @@
 # agent_factory/schema/issue.py
 """Issue 模型（对应 .issues/<id>/ISSUE.yaml）."""
 from __future__ import annotations
+from enum import Enum
 from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class IssueStatus(str, Enum):
+    """Issue 生命周期状态."""
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    CLOSED = "closed"
 
 
 class BugfixResult(BaseModel):

@@ -14,7 +14,8 @@ from agent_factory.cli.common import (
     dump_yaml, find_issue_dir, format_error, load_yaml, next_issue_id,
 )
 from agent_factory.schema import BlockedRecord, Issue, IssueIndex, IssueIndexItem
-from agent_factory.schema.enums import IssueStatus, Priority
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.issue import IssueStatus
 from agent_factory.schema.issue import BugfixResult, FeatureRequestResult
 
 

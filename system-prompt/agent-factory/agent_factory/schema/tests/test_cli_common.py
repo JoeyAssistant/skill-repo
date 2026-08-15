@@ -6,7 +6,8 @@ from agent_factory.cli.common import (
     format_error, next_feature_id, next_issue_id
 )
 from agent_factory.schema import FeatureIndex, FeatureIndexItem
-from agent_factory.schema.enums import FeatureStatus, Priority
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import FeatureStatus
 
 
 def test_load_yaml(tmp_path):
@@ -58,7 +59,7 @@ def test_find_issue_dir(tmp_path, monkeypatch):
     (tmp_path / ".issues" / "001-test-issue").mkdir()
     (tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml").write_text("id: 1\n")
     from agent_factory.schema import IssueIndex, IssueIndexItem
-    from agent_factory.schema.enums import IssueStatus
+    from agent_factory.schema.issue import IssueStatus
     dump_yaml(tmp_path / ".issues" / "index.yaml", IssueIndex(issues=[
         IssueIndexItem(id=1, title="001-test-issue", status=IssueStatus.OPEN, priority=Priority.P2),
     ]))

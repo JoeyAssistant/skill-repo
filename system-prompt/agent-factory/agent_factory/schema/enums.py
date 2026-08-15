@@ -1,14 +1,6 @@
-# agent-factory/schema/enums.py
-"""agent-factory PM 工作流枚举定义."""
+# agent_factory/schema/enums.py
+"""跨资源共享枚举（feature / issue 都用的才放这里；单一资源的放各自资源文件）."""
 from enum import Enum
-
-
-class AgentType(str, Enum):
-    """Agent 形态."""
-    CLI_ONLY = "cli-only"
-    HTTP_API = "http-api"
-    HTTP_WEB = "http-web"
-    MCP_SERVER = "mcp-server"
 
 
 class Priority(str, Enum):
@@ -16,28 +8,3 @@ class Priority(str, Enum):
     P1 = "P1"
     P2 = "P2"
     P3 = "P3"
-
-
-class FeatureStatus(str, Enum):
-    """Feature 生命周期状态."""
-    DRAFT = "draft"
-    DESIGNING = "designing"
-    APPROVED = "approved"
-    IMPLEMENTING = "implementing"
-    QA_REVIEWING = "qa-reviewing"
-    DONE = "done"
-    BLOCKED = "blocked"
-    CANCELLED = "cancelled"
-
-
-class IssueStatus(str, Enum):
-    """Issue 生命周期状态."""
-    OPEN = "open"
-    IN_PROGRESS = "in_progress"
-    CLOSED = "closed"
-
-
-class DecisionStatus(str, Enum):
-    """Decision（决策）状态."""
-    OPEN = "open"
-    CLOSED = "closed"

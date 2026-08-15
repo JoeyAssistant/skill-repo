@@ -8,13 +8,9 @@
 - IssueIndex / IssueIndexItem：issue 索引
 - BlockedRecord：阻塞记录
 """
-from agent_factory.schema.enums import (
-    AgentType,
-    DecisionStatus,
-    FeatureStatus,
-    IssueStatus,
-    Priority,
-)
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import AgentType, DecisionStatus, FeatureStatus
+from agent_factory.schema.issue import IssueStatus
 from agent_factory.schema.feature import Decision, Feature, Option
 from agent_factory.schema.issue import (
     BugfixResult,

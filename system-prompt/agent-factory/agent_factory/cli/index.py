@@ -9,7 +9,9 @@ import click
 
 from agent_factory.cli.common import dump_yaml, format_error, load_yaml
 from agent_factory.schema import FeatureIndex, FeatureIndexItem, IssueIndex, IssueIndexItem
-from agent_factory.schema.enums import FeatureStatus, IssueStatus, Priority
+from agent_factory.schema.enums import Priority
+from agent_factory.schema.feature import FeatureStatus
+from agent_factory.schema.issue import IssueStatus
 
 
 # Fields that index set can modify (title NOT included - sync via feature/issue set)
