@@ -152,7 +152,6 @@ project-root/
     index.yaml
     <id>/
       FEATURE.yaml
-      BLOCKED.yaml
       POC-REPORT.md
       QA-REPORT.md
       poc/
@@ -160,7 +159,6 @@ project-root/
     index.yaml
     <id>/
       ISSUE.yaml
-      BLOCKED.yaml
   .claude/
     agents/
       developer.md
@@ -223,7 +221,6 @@ PM 工作流 YAML 文件的 schema 定义在 `agent_factory/schema/` 目录：
 | `agent_factory/schema/feature.py` | Feature / Decision / Option 模型 |
 | `agent_factory/schema/issue.py` | Issue 模型 |
 | `agent_factory/schema/index.py` | FeatureIndex / IssueIndex 模型 |
-| `agent_factory/schema/blocked.py` | BlockedRecord 模型 |
 | `agent_factory/schema/validate.py` | YAML 校验 CLI |
 | `agent_factory/schema/examples/` | 5 个示例 YAML 文件 |
 
@@ -245,7 +242,7 @@ python3 -m agent_factory.schema.validate .
 
 `draft` → `designing` → `approved` → `implementing` → `qa-reviewing` → `done`
 
-`blocked` 为可逆中间状态，`cancelled` 可从任何状态直接流转。
+`cancelled` 可从任何状态直接流转。
 
 ### Issue
 
