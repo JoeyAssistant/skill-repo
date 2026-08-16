@@ -20,7 +20,11 @@
   - [Feature schema](#feature-schema)
   - [Feature 状态机](#feature-状态机)
   - [Feature 工作流](#feature-工作流)
-  - [工作流 CLI 操作与校验](#工作流-cli-操作与校验)
+  - [Feature 工作流 CLI 操作与校验](#feature-工作流-cli-操作与校验)
+  - [Issue schema](#issue-schema)
+  - [Issue 状态机](#issue-状态机)
+  - [Issue 工作流](#issue-工作流)
+  - [Issue 工作流 CLI 操作与校验](#issue-工作流-cli-操作与校验)
   - [Issue → Feature 迁移](#issue--feature-迁移)
   - [PM Review Gate](#pm-review-gate调度-developer-前)
 - [生产环境模式](#生产环境模式)
@@ -265,7 +269,7 @@ PM 启动时自动检测项目是否已初始化：
 
 ## Feature / Issue 命令
 
-以下三节（schema / 状态机 / 工作流）与 `agent-factory feature --help` 同源（doc/feature.md）。
+以下各节与 `agent-factory feature/issue --help` 同源（doc/feature.md、doc/issue.md）。
 
 ### Feature schema
 
@@ -340,9 +344,9 @@ sequenceDiagram
     pm->>feat: set done
 ```
 
-### 工作流 CLI 操作与校验
+### Feature 工作流 CLI 操作与校验
 
-mermaid 各环节对应的具体命令与校验（help 可查全部命令签名）：
+Feature 工作流各环节对应的具体命令与校验（help 可查全部命令签名）：
 
 - **讨论前预读（必做）**：CLAUDE.md / AGENTS.md、`doc/` 全部文档（各 module 的 data-schema / data-persistence、common 共享 schema、backend.md / mcp-server.md）、最近 3 个 feature 的 FEATURE.yaml、`.features/index.yaml`——建立项目认知，避免重复设计、识别可复用结构
 - **创建 feature**：`agent-factory feature new --title "<title>" --slug <slug> --desc "用户原话" --agent-type <type> --priority <P>`（CLI 自动创建 `.features/<id>/FEATURE.yaml` + 更新 index.yaml）
@@ -352,7 +356,66 @@ mermaid 各环节对应的具体命令与校验（help 可查全部命令签名�
 - **designing 期间写入 spec / test_cases**：`feature set <id> spec.<module> --file <ModuleSpec yaml>`；`feature set <id> test_cases --file <cases yaml>`
 - **`transition --to approved`**：校验 spec ≥1 模块 且 test_cases ≥1 条；终审通过 git diff 展示（`git status --short -- doc/` + 每个 file 的关键改动）
 
-issue 字段、关闭方式、单命令参数见 `agent-factory issue --help`。
+### Issue schema
+
+- id # issue编号
+- title # issue标题，与目录一致
+- desc # 问题描述
+- scenario # 场景
+- impact # 问题影响
+- root_cause # 问题根因
+- fix_plan # 修改方案
+- result # issue处理结果
+    - bugfix
+        - fix_desc # 修改内容
+        - verification # 验证结果
+    - feature_request # 转需求
+        - feature_id # 需求编号
+
+### Issue 状态机
+
+open --> in_progress --> closed
+
+### Issue 工作流
+
+```mermaid
+sequenceDiagram
+    actor user
+    
+    user->>pm: 提一个issue + desc
+    pm->>ISSUE.yaml: create(id + title + desc)
+    pm->>user: 信息收集 + 疑问确认
+    user->>pm: 
+    pm->>ISSUE.yaml: scenario + impact
+    pm->>+qa: 开始问题定位
+    qa->>ISSUE.yaml: root_cause + fix_plan
+    qa->>-pm:
+    pm->>+user: review 确认
+    user->>-pm: ok
+    alt is bugfix
+    participant dev as developer
+        pm->>+dev: fix this bug
+        dev->>dev: bugfix
+        dev->>ISSUE.yaml: fix_desc
+        dev->>-pm:
+        pm->>pm: 验收
+        pm->>ISSUE.yaml: verification + close
+    else is feature
+        pm->>FEATURE.yaml: create(root_cause fix_plan)
+        pm->>ISSUE.yaml: feature_id + close
+    end
+```
+
+### Issue 工作流 CLI 操作与校验
+
+Issue 工作流各环节对应的具体命令与校验：
+
+- **创建 issue**：`agent-factory issue new --title "<title>" --slug <slug> --desc "<用户原话>"`
+- **填充细节**：`issue set <id> scenario "复现步骤 或 具体期望"`；`issue set <id> impact "影响范围 或 使用场景"`
+- **调度 QA 诊断**：`issue transition <id> --to in_progress`（场景 5；QA 填 root_cause + fix_plan，不预判 bugfix/feature 路径）
+- **走向决策**（诊断完成 + §PM Review Gate 用户确认 fix_plan 后）：bugfix → 调度场景 2 / 6，PM 验收后 `issue close <id> --bugfix --fix-desc ... --verification ...`；feature → 按 §Issue → Feature 迁移，`issue close <id> --feature-request --feature-id <NNN>`
+
+单命令参数详情见各子命令 `--help`。
 
 ### Issue → Feature 迁移
 
@@ -596,23 +659,6 @@ PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续�
 4. **逐项推进**：等用户回应后，**一次只讨论一个 OQ**（给完整 4 部分：背景+选项+推荐+理由），不一次抛多个
 
 **判断标准**：用户读完开场白，**不需要再翻 FEATURE.yaml** 也能理解"在讨论什么、已经定了什么、接下来讨论什么"。
-
-#### Issue 讨论流程
-
-```
-用户: "登录页面点提交就崩了" 或 "希望能筛选支出类别"
-  ↓
-1. PM 创建 issue（用 CLI）：`agent-factory issue new --title "<title>" --slug <slug> --desc "<用户原话>"`
-  ↓
-2. PM 与用户确认细节，用 `agent-factory issue set <id> <field>` 填充：
-   - scenario（复现步骤 或 具体期望）
-   - impact（影响范围 或 使用场景）
-  ↓
-3. PM 调度 QA 诊断（transition 到 in_progress）：
-   - QA 填 root_cause + fix_plan（不预判 bugfix/feature 路径）
-   - 诊断完成后按 §PM Review Gate 与用户确认 fix_plan
-   - PM + 用户决定走向：bugfix → 调度 developer；feature → 转 feature 流程
-```
 
 ---
 
