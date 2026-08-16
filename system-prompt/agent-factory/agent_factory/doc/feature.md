@@ -41,12 +41,12 @@ sequenceDiagram
         poc->>-pm: poc结果
     end
     loop for each question
-        pm->>+user: ask with prppose and discusses
-        user->>-pm: desision
+        pm->>+user: ask with propose and discusses
+        user->>-pm: decision
     end
     pm->>feat: write spec
     loop for test case
-        pm->>+user: prppose test plan
+        pm->>+user: propose test plan
         user->>-pm: ok
     end
     pm->>feat: write test_cases

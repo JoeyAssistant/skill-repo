@@ -10,10 +10,9 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 User ←→ PM (agent-pm.md, system prompt)
             ├── developer (subagent, .claude/agents/developer.md)
             ├── qa (subagent, .claude/agents/qa.md)
-            ├── poc (subagent, .claude/agents/poc.md)
-            └── spec-compliance (subagent, .claude/agents/spec-compliance.md)
+            └── poc (subagent, .claude/agents/poc.md)
 
-PM 在 designing 阶段直接修改 doc/，调度 spec-compliance 自检，向用户展示 git diff 终审。
+PM 在 designing 阶段直接修改 doc/ 并自检，向用户展示 git diff 终审。
 ```
 
 ### 多项目模式
@@ -24,10 +23,9 @@ User ←→ PM (agent-pm.md, system prompt)
             ├── Project A (独立 git 仓) ──┐
             ├── Project B (独立 git 仓) ──┤── 共享 subagents
             └── ...                       │
-            ├── developer (subagent) ──────┤
-            ├── qa (subagent)              │
-            ├── poc (subagent)             │
-            └── spec-compliance (subagent) ┘
+            ├── developer (subagent) ──┤
+            ├── qa (subagent)           │
+            └── poc (subagent)          ┘
 ```
 
 ### 生产 ↔ 开发协作
@@ -59,14 +57,13 @@ User ←→ PM (agent-pm.md, system prompt)
 
 ### 2. 安装 subagents
 
-将四个 subagent 复制到项目的 `.claude/agents/` 目录：
+将三个 subagent 复制到项目的 `.claude/agents/` 目录：
 
 ```bash
 mkdir -p <project-root>/.claude/agents
 cp developer.md <project-root>/.claude/agents/developer.md
 cp qa.md <project-root>/.claude/agents/qa.md
 cp poc.md <project-root>/.claude/agents/poc.md
-cp spec-compliance.md <project-root>/.claude/agents/spec-compliance.md
 
 # Optional: copy design-reference.md to project root for PM's on-demand reference
 cp design-reference.md <project-root>/design-reference.md
@@ -96,7 +93,6 @@ mkdir -p .claude/agents
 cp <agent-factory>/developer.md .claude/agents/
 cp <agent-factory>/qa.md .claude/agents/
 cp <agent-factory>/poc.md .claude/agents/
-cp <agent-factory>/spec-compliance.md .claude/agents/
 
 # 初始化 workspace
 mkdir -p .workspace
@@ -123,7 +119,7 @@ PM 启动时自动检测模式：
 用户: 我想做一个财务日报功能
 PM:   [创建 feature #NNN，引导讨论背景、价值、范围]
 用户: 确认范围
-PM:   [整理 FEATURE.yaml，自己写 doc/，调度 spec-compliance 自检]
+PM:   [整理 FEATURE.yaml，自己写 doc/ 并自检]
 用户: [review git diff]
 PM:   [调度 developer]
 ```
@@ -164,7 +160,6 @@ project-root/
       developer.md
       qa.md
       poc.md
-      spec-compliance.md
   agent/
   cli/
   doc/
@@ -182,8 +177,7 @@ agent-workspace/
 │   └── agents/
 │       ├── developer.md
 │       ├── qa.md
-│       ├── poc.md
-│       └── spec-compliance.md
+│       └── poc.md
 ├── .workspace/
 │   └── projects.md
 ├── football-agent/         ← 独立 git 仓
@@ -209,7 +203,6 @@ agent-workspace/
 | `developer.md` | Developer subagent 定义，负责代码实现 |
 | `qa.md` | QA subagent 定义，负责功能验收和问题诊断 |
 | `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
-| `spec-compliance.md` | 规范合规检查 subagent（PM 内部调用） |
 
 ## Schema 模块
 
