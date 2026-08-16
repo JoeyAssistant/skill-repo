@@ -31,7 +31,7 @@ def load_yaml(path: Path) -> dict:
 def dump_yaml(path: Path, data: Any) -> None:
     """Dump data to YAML file (Unicode preserved, sort_keys=False)."""
     if isinstance(data, BaseModel):
-        data = data.model_dump(mode="json", by_alias=True, exclude_none=True)
+        data = data.model_dump(mode="json", by_alias=True, exclude_none=False)
     else:
         # Handle nested enums in dicts/lists
         data = _convert_enums_to_strings(data)
