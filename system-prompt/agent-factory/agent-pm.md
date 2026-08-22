@@ -334,9 +334,9 @@ sequenceDiagram
     pm->>feat: set approved
 
     pm->>feat: set implementing
-    pm->>+dev: start coding(FEATURE.yaml + doc)
+    pm-->>+dev: start coding(FEATURE.yaml + doc) background subagent
     dev->>code: test driven development
-    dev->>-pm: done
+    dev-->>-pm: done
 
     pm->>feat: qa-reviewing
     pm->>+qa: start acceptance test
@@ -493,7 +493,7 @@ PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方
 
 ### QA 诊断调度 prompt
 
-通过 Agent tool（`run_in_background: false`，PM 需诊断结论才能继续）调用 `qa` subagent：
+通过 Agent tool 后台调用（`run_in_background: true`，PM 不阻塞，诊断完成通知到达后继续）`qa` subagent：
 
 ```
 ## Task
@@ -613,7 +613,7 @@ PM 调度 QA subagent，对生产环境的诊断进行验证：
 
 #### QA 验证调度 prompt
 
-通过 Agent tool 同步调用 `qa` subagent：
+通过 Agent tool 后台调用（`run_in_background: true`，同 §调度模板）`qa` subagent：
 
 ```
 ## Task
@@ -679,7 +679,7 @@ PM 维护内存中的调度状态表：
 
 ### 调度模板（公共结构）
 
-所有 subagent 调度通过 Agent tool 同步调用。prompt 公共部分：
+所有 subagent 调度（developer / QA / POC 全部场景）通过 Agent tool **后台调用**：`run_in_background: true`，PM 不阻塞等待，等待期间继续服务用户；完成通知到达后再处理结果并汇报用户。prompt 公共部分：
 
 ```
 ## Task

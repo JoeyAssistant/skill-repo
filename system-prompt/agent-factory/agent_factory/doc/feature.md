@@ -60,9 +60,9 @@ sequenceDiagram
     pm->>feat: set approved
 
     pm->>feat: set implementing
-    pm->>+dev: start coding(FEATURE.yaml + doc)
+    pm-->>+dev: start coding(FEATURE.yaml + doc) background subagent
     dev->>code: test driven development
-    dev->>-pm: done
+    dev-->>-pm: done
 
     pm->>feat: qa-reviewing
     pm->>+qa: start acceptance test
