@@ -41,13 +41,22 @@ class ModuleSpec(BaseModel):
     interface: Optional[str] = Field(None, description="API / CLI 接口")
 
 
-class FeatureTestCase(BaseModel):
-    """验收用例."""
+class Observation(BaseModel):
+    """E2E 观测点（可观测的断言）。"""
+    model_config = ConfigDict(extra="forbid")
+    check: str = Field(..., description="测试验证点（可 grep / 可查的观测）")
+    expect: str = Field(..., description="预期结果（断言）")
+
+
+class E2ETestCase(BaseModel):
+    """E2E 验收用例（可构造、可观测、可运行）。"""
     model_config = ConfigDict(extra="forbid")
     name: str = Field(..., description="用例名")
-    precondition: str = Field(..., description="前置构造")
-    steps: str = Field(..., description="可重复执行的步骤")
-    expected: str = Field(..., description="通过判据")
+    precondition: str = Field(..., description="前置条件")
+    inputs: dict = Field(default_factory=dict, description="测试输入（可构造参数 key: value）")
+    steps: list[str] = Field(default_factory=list, description="测试步骤（可运行，逐步）")
+    observations: list[Observation] = Field(default_factory=list,
+        description="观测点列表（可观测，每条 {check, expect}）")
 
 
 class Feature(BaseModel):
@@ -62,5 +71,5 @@ class Feature(BaseModel):
     background: Optional[Background] = Field(None, description="需求背景（draft 阶段填）")
     spec: dict[str, ModuleSpec] = Field(default_factory=dict,
         description="需求规格，按模块组织（designing 阶段逐模块写入）")
-    test_cases: list[FeatureTestCase] = Field(default_factory=list,
-        description="验收用例（designing 阶段填）")
+    e2e_test_cases: list[E2ETestCase] = Field(default_factory=list,
+        description="E2E 验收用例（designing 阶段逐条与用户讨论后填入）")

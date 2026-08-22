@@ -14,7 +14,15 @@
             2. function_2
         - schema # data schema
         - interface # API CLI
-- test_cases[]
+- e2e_test_cases # E2E 验收用例（可构造、可观测、可运行）
+  1. test_case_1 # 端到端测试用例
+    - name
+    - precondition # 前置条件
+    - inputs # 测试输入
+    - steps # 测试步骤
+    - observations
+      - check  # 测试验证点
+      - expect  # 预期结果
 
 ## state
   draft → designing → approved → implementing → qa-reviewing → done
@@ -45,11 +53,11 @@ sequenceDiagram
         user->>-pm: decision
     end
     pm->>feat: write spec
-    loop for test case
-        pm->>+user: propose test plan
+    loop for E2E test case（逐个与用户讨论）
+        pm->>+user: propose E2E test case（inputs + observations）
         user->>-pm: ok
     end
-    pm->>feat: write test_cases
+    pm->>feat: write e2e_test_cases
     participant dev as developer
     pm->>+user: ask for review FEATURE.yaml
     user->>-pm: review ok

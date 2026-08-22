@@ -36,10 +36,15 @@ spec:
       | add | 录入单条收入 | --type, --amount, --date |
       | list | 按月查询收入 | --month |
 
-test_cases:
+e2e_test_cases:
   - name: 录入并查询
     precondition: data/income.json 为空数组
-    steps: |
-      python3 cli/income.py add --type salary --amount 5000 --date 2026-08-08
-      python3 cli/income.py list --month 2026-08
-    expected: list 输出含 amount=5000、type=salary 的条目
+    inputs:
+      amount: 5000
+      date: 2026-08-08
+    steps:
+      - "python3 cli/income.py add --type salary --amount 5000 --date 2026-08-08"
+      - "python3 cli/income.py list --month 2026-08"
+    observations:
+      - check: "list 输出"
+        expect: "含 amount=5000、type=salary 的条目"

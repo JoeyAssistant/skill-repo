@@ -109,7 +109,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 在开始编码之前，必须完成以下步骤：
 
 1. **阅读设计文档**：按以下顺序阅读
-   - `{Root}/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + test_cases 验收用例）
+   - `{Root}/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
    - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
      - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
      - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案

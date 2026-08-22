@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from agent_factory.schema.feature import AgentType
-from agent_factory.schema.feature import Background, Feature, ModuleSpec, FeatureTestCase
+from agent_factory.schema.feature import Background, E2ETestCase, Feature, ModuleSpec, Observation
 
 
 # === Background 测试 ===
@@ -49,21 +49,28 @@ def test_module_spec_extra_forbidden():
         ModuleSpec(functions=[], extra="x")
 
 
-# === TestCase 测试 ===
+# === E2ETestCase 测试 ===
 
-def test_test_case_valid():
-    tc = FeatureTestCase(name="t1", precondition="p", steps="s", expected="e")
+def test_e2e_test_case_valid():
+    tc = E2ETestCase(
+        name="t1", precondition="p",
+        inputs={"device_name": "XYANGS-RT-AS5PR-008"},
+        steps=["step1", "step2"],
+        observations=[Observation(check="日志行", expect="含 xxx")],
+    )
     assert tc.name == "t1"
+    assert isinstance(tc.steps, list) and len(tc.steps) == 2
+    assert len(tc.observations) == 1
 
 
-def test_test_case_missing_field_fails():
+def test_observation_missing_expect_fails():
     with pytest.raises(ValidationError):
-        FeatureTestCase(name="t1", precondition="p", steps="s")  # missing expected
+        Observation(check="x")  # missing expect
 
 
-def test_test_case_extra_forbidden():
+def test_e2e_test_case_extra_forbidden():
     with pytest.raises(ValidationError):
-        FeatureTestCase(name="t1", precondition="p", steps="s", expected="e", extra="x")
+        E2ETestCase(name="t1", precondition="p", steps=["s"], observations=[], extra="x")
 
 
 # === Feature 测试 ===
@@ -85,7 +92,7 @@ def test_feature_minimal_valid():
     assert feature.agent_type == AgentType.CLI_ONLY
     assert feature.background is None
     assert feature.spec == {}
-    assert feature.test_cases == []
+    assert feature.e2e_test_cases == []
 
 
 def test_feature_missing_desc_fails():
@@ -105,9 +112,9 @@ def test_feature_with_full_structure():
         "income": ModuleSpec(functions=["录入"], schema="class X:", interface="add"),
         "report": ModuleSpec(functions=["汇总"]),
     }
-    kw["test_cases"] = [
-        FeatureTestCase(name="用例1", precondition="空数据", steps="执行add", expected="有记录"),
-        FeatureTestCase(name="用例2", precondition="有数据", steps="执行list", expected="返回列表"),
+    kw["e2e_test_cases"] = [
+        E2ETestCase(name="用例1", precondition="空数据", steps=["执行add"], observations=[Observation(check="add 结果", expect="有记录")]),
+        E2ETestCase(name="用例2", precondition="有数据", steps=["执行list"], observations=[Observation(check="list 结果", expect="返回列表")]),
     ]
     feature = Feature(**kw)
     assert feature.background is not None
@@ -115,7 +122,7 @@ def test_feature_with_full_structure():
     assert len(feature.spec) == 2
     assert "income" in feature.spec
     assert "report" in feature.spec
-    assert len(feature.test_cases) == 2
+    assert len(feature.e2e_test_cases) == 2
 
 
 def test_feature_extra_field_forbidden():
