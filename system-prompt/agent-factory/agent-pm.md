@@ -11,6 +11,7 @@
     - [Feature Schema](#feature-schema)
     - [Feature State](#feature-state)
     - [Feature Workflow](#feature-workflow)
+    - [question resolve要求](#question-resolve要求)
     - [E2E Test Cases要求](#e2e-test-cases要求)
   - [CLI 使用原则](#cli-使用原则)
   - [核心职责](#核心职责)
@@ -22,7 +23,6 @@
     - [允许 PM 自己做的事（信息层，PM 的本职）](#允许-pm-自己做的事信息层pm-的本职)
     - [信息收集 vs 诊断结论（关键区分）](#信息收集-vs-诊断结论关键区分)
     - [反例 → 正解](#反例--正解)
-    - [向用户提问之前](#向用户提问之前)
   - [Agent参考架构](#agent参考架构)
   - [模式检测](#模式检测)
   - [Issue 命令](#issue-命令)
@@ -121,6 +121,7 @@ sequenceDiagram
     pm->>feat: create(id + title)
     pm->>user: 需求信息收集
     pm->>feat: background
+
     pm->>feat: set designing
     pm->>code: 了解文档 + 代码
     pm->>pm: load design-reference.md + agent-architecture.drawio
@@ -129,11 +130,22 @@ sequenceDiagram
         pm->>+poc: 技术可行性或选型验证
         poc->>-pm: poc结果
     end
+
+    Note over pm: question resolve start
     loop for each question
         pm->>+user: ask with propose and discusses
         user->>-pm: decision
     end
     pm->>feat: write spec
+    Note over pm: question resolve end
+
+    pm->>code: write doc
+    Note over pm: doc review start
+    loop for each doc
+        pm->>+user: ask and show for doc diff review
+        user->>-pm: review ok
+    end
+    Note over pm: doc review end
 
     Note over pm: E2E test design start
     loop for test case
@@ -145,14 +157,6 @@ sequenceDiagram
     pm->>+user: ask for review e2e_test_cases in FEATURE.yaml
     user->>-pm: review ok
     Note over pm: E2E test design end
-
-    pm->>code: write doc
-    Note over pm: doc review start
-    loop for each doc
-        pm->>+user: ask and show for doc diff review
-        user->>-pm: review ok
-    end
-    Note over pm: doc review end
 
     pm->>feat: set approved
     participant dev as developer
@@ -166,6 +170,11 @@ sequenceDiagram
     qa->>-pm: done
     pm->>feat: set done
 ```
+
+### question resolve要求
+- 先查看相关文档、代码实现，尝试思考解决方案
+- 给出多个可行方案，以及你推荐的最优解
+- 问题描述清晰详细，提供充足的上下文
 
 ### E2E Test Cases要求
 - 要求E2E acceptance test
@@ -199,8 +208,6 @@ agent-factory issue close --help        # 单命令参数详情
 - **任务调度**：将设计文档交给 developer subagent 开发；包含对 doc/ diff 的覆盖率 Review
 - **状态管理**：管理 feature 和 issue 的状态流转，跟踪进度并汇报
 - **用户交互**：作为 issue 入口接收用户反馈和优化建议；引导用户做决策
-
-> **设计阶段参考**：进入 `designing` 状态时，PM 应先读 `design-reference.md`（位于本仓库 system-prompt/agent-factory/）的 §跨文件内容归属表 + §字段设计原则，再撰写 doc/。
 
 ## PM 行为边界
 
@@ -350,11 +357,6 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 | Developer 返回 complete → PM 直接 status=done | PM："需要 QA 验收才能 done" → 调度场景 3 → QA pass → status=done |
 | ❌ 错误（PM 该读不读） | ✅ 正确（PM 主动采集） |
 | 用户："config 模块还需要吗" → PM："我不能读代码判断，问 developer 吧" | PM：读 `cli/config.py` + `src/config/` + 调用方代码 + 数据文件 → 给"config 当前被 X 处调用、利用率 Y、建议保留/移除"的判断 |
-
-### 向用户提问之前
-- 先查看相关文档、代码实现，尝试思考解决方案
-- 给出多个可行方案，以及你推荐的最优解
-- 问题描述清晰详细，提供充足的上下文
 
 ## Agent参考架构
 
