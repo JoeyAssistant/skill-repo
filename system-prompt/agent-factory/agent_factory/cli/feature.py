@@ -163,14 +163,14 @@ def set_field(feature_id: int, field: str, value: str | None,
                 sys.exit(4)
             _set_background_whole(feature_id, file_path); return
 
-    # test_cases whole list
-    if field == "test_cases":
+    # e2e_test_cases whole list
+    if field == "e2e_test_cases":
         if not file_path:
             click.echo(format_error("InvalidArgs",
-                "test_cases 整列表替换需 --file（yaml: list of {name, precondition, steps, expected}）",
+                "e2e_test_cases 整列表替换需 --file（yaml: list of {name, precondition, inputs, steps, observations[{check, expect}]}）",
                 None), err=True)
             sys.exit(4)
-        _set_test_cases(feature_id, file_path); return
+        _set_e2e_test_cases(feature_id, file_path); return
 
     _invalid_field(field)
 
@@ -189,7 +189,7 @@ def _invalid_field(field: str) -> None:
     """Exit with invalid field error."""
     click.echo(format_error("InvalidField",
         f"Field '{field}' not supported. 合法形式：desc / agent_type / background "
-        f"/ background.pain_point / background.benefit / spec.<module> / test_cases",
+        f"/ background.pain_point / background.benefit / spec.<module> / e2e_test_cases",
         None), err=True)
     sys.exit(4)
 
@@ -255,9 +255,9 @@ def _spec_remove(feature_id: int, module: str) -> None:
     _save(feature_id, path, data)
 
 
-def _set_test_cases(feature_id: int, file_path: Path) -> None:
+def _set_e2e_test_cases(feature_id: int, file_path: Path) -> None:
     path, data = _load_feature(feature_id)
-    data["test_cases"] = yaml.safe_load(file_path.read_text())
+    data["e2e_test_cases"] = yaml.safe_load(file_path.read_text())
     _save(feature_id, path, data)
 
 
@@ -312,17 +312,27 @@ def _render_feature_markdown(feature: Feature) -> str:
                 lines += ["**Schema**:", "```python", module_spec.schema, "```", ""]
             if module_spec.interface:
                 lines += ["**Interface**:", module_spec.interface, ""]
-    if feature.test_cases:
-        lines.append("## Test Cases")
+    if feature.e2e_test_cases:
+        lines.append("## E2E Test Cases")
         lines.append("")
-        for tc in feature.test_cases:
+        for tc in feature.e2e_test_cases:
             lines += [
                 f"### {tc.name}",
                 f"- **precondition**: {tc.precondition}",
-                f"- **steps**: {tc.steps}",
-                f"- **expected**: {tc.expected}",
+                f"- **inputs**: {json.dumps(tc.inputs, ensure_ascii=False) if tc.inputs else '-'}",
                 "",
+                "**steps**:",
             ]
+            for i, step in enumerate(tc.steps, 1):
+                lines.append(f"  {i}. {step}")
+            lines.append("")
+            lines.append("**observations**:")
+            if tc.observations:
+                for j, obs in enumerate(tc.observations, 1):
+                    lines += [f"  {j}. `{obs.check}` → **expect**: {obs.expect}"]
+            else:
+                lines.append("  无")
+            lines.append("")
     return "\n".join(lines)
 
 
@@ -376,8 +386,8 @@ def _validate_transition_requirements(current: FeatureStatus, target: FeatureSta
     elif current == FeatureStatus.DESIGNING and target == FeatureStatus.APPROVED:
         if not feature.spec:
             issues.append("spec is empty（至少 1 个模块）")
-        if not feature.test_cases:
-            issues.append("test_cases is empty（至少 1 条用例）")
+        if not feature.e2e_test_cases:
+            issues.append("e2e_test_cases is empty（至少 1 条 E2E 用例）")
     # approved→implementing: no check (decisions removed)
     return issues
 
@@ -390,7 +400,7 @@ def transition(feature_id: int, target: str) -> None:
 
     Cross-field checks:
     - draft → designing: background.pain_point + benefit must be non-empty
-    - designing → approved: spec >= 1 module AND test_cases >= 1 case
+    - designing → approved: spec >= 1 module AND e2e_test_cases >= 1 case
     - approved → implementing: no extra check
     """
     try:

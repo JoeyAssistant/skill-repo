@@ -253,25 +253,25 @@ def test_feature_set_spec_module_remove_nonexistent(tmp_path, monkeypatch):
     assert result.exit_code == 2  # NotFound
 
 
-def test_feature_set_test_cases(tmp_path, monkeypatch):
+def test_feature_set_e2e_test_cases(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _setup_feature(tmp_path)
 
     tc_file = tmp_path / "cases.yaml"
     tc_file.write_text(yaml.safe_dump([
-        {"name": "用例1", "precondition": "空", "steps": "执行", "expected": "通过"},
-        {"name": "用例2", "precondition": "有数据", "steps": "查询", "expected": "返回列表"},
+        {"name": "用例1", "precondition": "空", "inputs": {"project": "XYANGS_RT"}, "steps": ["触发诊断"], "observations": [{"check": "日志行", "expect": "含 xxx"}]},
+        {"name": "用例2", "precondition": "有数据", "inputs": {}, "steps": ["查询"], "observations": [{"check": "结果", "expect": "返回列表"}]},
     ]))
 
     runner = CliRunner()
     result = runner.invoke(main, [
-        "feature", "set", "1", "test_cases", "--file", str(tc_file),
+        "feature", "set", "1", "e2e_test_cases", "--file", str(tc_file),
     ])
     assert result.exit_code == 0, result.output
 
     feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
-    assert len(feat["test_cases"]) == 2
-    assert feat["test_cases"][0]["name"] == "用例1"
+    assert len(feat["e2e_test_cases"]) == 2
+    assert feat["e2e_test_cases"][0]["name"] == "用例1"
 
 
 def test_feature_set_invalid_field(tmp_path, monkeypatch):
@@ -356,7 +356,7 @@ def test_feature_show_markdown_default(tmp_path, monkeypatch):
 
 
 def test_feature_show_renders_new_structure(tmp_path, monkeypatch):
-    """Verify markdown show renders background, spec, test_cases."""
+    """Verify markdown show renders background, spec, e2e_test_cases."""
     monkeypatch.chdir(tmp_path)
     _setup_feature_with_full_data(tmp_path)
 
@@ -367,8 +367,9 @@ def test_feature_show_renders_new_structure(tmp_path, monkeypatch):
     assert "痛点" in result.output
     assert "收益" in result.output
     assert "## Spec — income" in result.output
-    assert "## Test Cases" in result.output
+    assert "## E2E Test Cases" in result.output
     assert "t1" in result.output
+    assert "observations" in result.output
 
 
 def test_feature_show_yaml_format(tmp_path, monkeypatch):
@@ -459,21 +460,21 @@ def test_feature_transition_designing_to_approved_requires_spec_and_cases(tmp_pa
     runner = CliRunner()
     runner.invoke(main, ["feature", "transition", "1", "--to", "designing"])
 
-    # Try transition to approved without spec/test_cases → fail
+    # Try transition to approved without spec/e2e_test_cases → fail
     result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
-    assert result.exit_code == 1  # missing spec and test_cases
+    assert result.exit_code == 1  # missing spec and e2e_test_cases
 
     # Add spec module
     spec_file = tmp_path / "m.yaml"
     spec_file.write_text(yaml.safe_dump({"functions": ["录入"], "schema": "class X:", "interface": "add"}))
     runner.invoke(main, ["feature", "set", "1", "spec.income", "--file", str(spec_file)])
 
-    # Add test case
+    # Add E2E test case
     tc_file = tmp_path / "c.yaml"
     tc_file.write_text(yaml.safe_dump([
-        {"name": "t1", "precondition": "p", "steps": "s", "expected": "e"}
+        {"name": "t1", "precondition": "p", "inputs": {}, "steps": ["s"], "observations": [{"check": "obs", "expect": "e"}]}
     ]))
-    runner.invoke(main, ["feature", "set", "1", "test_cases", "--file", str(tc_file)])
+    runner.invoke(main, ["feature", "set", "1", "e2e_test_cases", "--file", str(tc_file)])
 
     # Now should succeed
     result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
@@ -563,15 +564,15 @@ def _setup_feature_approved(tmp_path):
 
 
 def _setup_feature_with_spec_and_cases(tmp_path):
-    """Create feature with spec + test_cases filled."""
+    """Create feature with spec + e2e_test_cases filled."""
     _setup_feature_with_background(tmp_path)
     feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
     data = load_yaml(feat_file)
     data["spec"] = {"income": {"functions": ["录入"], "schema": "class X:", "interface": "add"}}
-    data["test_cases"] = [{"name": "t1", "precondition": "p", "steps": "s", "expected": "e"}]
+    data["e2e_test_cases"] = [{"name": "t1", "precondition": "p", "inputs": {}, "steps": ["s"], "observations": [{"check": "obs", "expect": "e"}]}]
     feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
 
 
 def _setup_feature_with_full_data(tmp_path):
-    """Create feature with background + spec + test_cases for show test."""
+    """Create feature with background + spec + e2e_test_cases for show test."""
     _setup_feature_with_spec_and_cases(tmp_path)
