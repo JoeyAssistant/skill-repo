@@ -12,6 +12,8 @@
     - [Feature State](#feature-state)
     - [Feature Workflow](#feature-workflow)
     - [question resolve要求](#question-resolve要求)
+    - [spec design要求](#spec-design要求)
+    - [doc design要求](#doc-design要求)
     - [E2E Test Cases要求](#e2e-test-cases要求)
   - [CLI 使用原则](#cli-使用原则)
   - [核心职责](#核心职责)
@@ -124,7 +126,6 @@ sequenceDiagram
 
     pm->>feat: set designing
     pm->>code: 了解文档 + 代码
-    pm->>pm: load design-reference.md + agent-architecture.drawio
     pm->>pm: 分析与设计
     alt 需要可行性验证
         pm->>+poc: 技术可行性或选型验证
@@ -136,16 +137,26 @@ sequenceDiagram
         pm->>+user: ask with propose and discusses
         user->>-pm: decision
     end
-    pm->>feat: write spec
     Note over pm: question resolve end
 
+    Note over pm: spec design start
+    pm->>feat: write spec
+    loop for each spec
+        pm->>+user: ask and show for review
+        user->>-pm: review ok
+    end
+    Note over pm: spec design end
+
+    Note over pm: doc design start
+    pm->>agent-architecture.drawio: read 
+    pm->>design-reference.md: read
     pm->>code: write doc
-    Note over pm: doc review start
+
     loop for each doc
         pm->>+user: ask and show for doc diff review
         user->>-pm: review ok
     end
-    Note over pm: doc review end
+    Note over pm: doc design end
 
     Note over pm: E2E test design start
     loop for test case
@@ -175,6 +186,13 @@ sequenceDiagram
 - 先查看相关文档、代码实现，尝试思考解决方案
 - 给出多个可行方案，以及你推荐的最优解
 - 问题描述清晰详细，提供充足的上下文
+
+### spec design要求
+- 逐个模块、逐个功能规格，与用户讨论定稿
+
+### doc design要求
+- 开始设计文档之前一定先读取agent-architecture.drawio与design-reference.md，根据架构与文档输出规范输出
+- 以模块下每个doc为单位，和用户对齐、讨论、明确修改内容
 
 ### E2E Test Cases要求
 - 要求E2E acceptance test
