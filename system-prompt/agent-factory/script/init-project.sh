@@ -9,7 +9,7 @@
 #   1. git init（如目标还不是 git 仓）
 #   2. 创建 .features/ .issues/ .claude/agents/
 #   3. 复制 subagents（developer/qa/poc.md）到 .claude/agents/
-#   4. 复制 design-reference.md + agent-architecture.drawio 到项目根（PM 设计阶段引用）
+#   4. 复制 design-reference.md + agent-architecture.drawio 到 .claude/agents/（PM 设计阶段引用，资产落点）
 #   5. --prod 时生成 .claude/agents/agent-factory.yaml（topology: split）
 #   6. 检查 agent-factory CLI 可用性
 #
@@ -43,8 +43,8 @@ mkdir -p .features .issues .claude/agents
 # 3. subagents
 cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/poc.md" .claude/agents/
 
-# 4. PM 设计阶段参考资产
-cp "$SCRIPT_DIR/design-reference.md" "$SCRIPT_DIR/agent-architecture.drawio" .
+# 4. PM 设计阶段参考资产（与 subagents 同落点，不进项目根）
+cp "$SCRIPT_DIR/design-reference.md" "$SCRIPT_DIR/agent-architecture.drawio" .claude/agents/
 
 # 5. 拓扑配置（可选）
 if [[ -n "$PROD_ROOT" ]]; then
@@ -66,7 +66,7 @@ fi
 echo ""
 echo "部署完成："
 echo "  .claude/agents/{developer,qa,poc}.md   subagents"
-echo "  design-reference.md agent-architecture.drawio   PM 设计参考"
+echo "  .claude/agents/{design-reference.md,agent-architecture.drawio}   PM 设计参考"
 echo "  .features/ .issues/   状态目录"
 [[ -n "$PROD_ROOT" ]] && echo "  .claude/agents/agent-factory.yaml   topology: split"
 echo ""

@@ -127,8 +127,7 @@ sequenceDiagram
     Note over pm: spec design end
 
     Note over pm: doc design start
-    pm->>agent-architecture.drawio: read 
-    pm->>design-reference.md: read
+    pm->>ref: read .claude/agents/{agent-architecture.drawio, design-reference.md}
     pm->>code: write doc
 
     loop for each doc
@@ -170,7 +169,7 @@ sequenceDiagram
 - 逐个模块、逐个功能规格，与用户讨论定稿
 
 ### doc design要求
-- 开始设计文档之前一定先读取agent-architecture.drawio与design-reference.md，根据架构与文档输出规范输出
+- 开始设计文档之前一定先读取 `.claude/agents/agent-architecture.drawio` 与 `.claude/agents/design-reference.md`，根据架构与文档输出规范输出
 - 以模块下每个doc为单位，和用户对齐、讨论、明确修改内容
 
 ### E2E Test Cases要求

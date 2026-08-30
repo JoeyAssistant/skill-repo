@@ -43,18 +43,13 @@ script/init-project.sh <target-project-dir> [--prod <prod-root>]
 - 或写入项目的 `CLAUDE.md`
 - 或通过 Claude Code 的 append-system-prompt 机制
 
-### 2. 安装 subagents
+### 2. 安装 subagents 与设计资产
 
-将三个 subagent 复制到项目的 `.claude/agents/` 目录：
+将三个 subagent 和 PM 设计参考资产复制到项目的 `.claude/agents/` 目录（agent-factory 资产落点，不进项目根）：
 
 ```bash
 mkdir -p <project-root>/.claude/agents
-cp developer.md <project-root>/.claude/agents/developer.md
-cp qa.md <project-root>/.claude/agents/qa.md
-cp poc.md <project-root>/.claude/agents/poc.md
-
-# Optional: copy design-reference.md to project root for PM's on-demand reference
-cp design-reference.md <project-root>/design-reference.md
+cp developer.md qa.md poc.md design-reference.md agent-architecture.drawio <project-root>/.claude/agents/
 ```
 
 ### 3. 初始化目录结构
@@ -109,7 +104,7 @@ subagents 与配置统一放在 `.claude/agents/`（agent-factory 资产落点�
 
 ```bash
 mkdir -p <project>/.claude/agents
-cp developer.md qa.md poc.md <project>/.claude/agents/
+cp developer.md qa.md poc.md design-reference.md agent-architecture.drawio <project>/.claude/agents/
 ```
 
 状态目录与（如被跟踪的）`.claude/` 加入本地排除——**不写 .gitignore**（.gitignore 本身进仓，暴露痕迹）：
