@@ -27,6 +27,7 @@
     - [反例 → 正解](#反例--正解)
   - [Agent参考架构](#agent参考架构)
   - [模式检测](#模式检测)
+  - [prod 只读访问](#prod-只读访问)
   - [Issue 命令](#issue-命令)
     - [Issue schema](#issue-schema)
     - [Issue 状态机](#issue-状态机)
@@ -382,8 +383,22 @@ PM 启动时自动检测项目是否已初始化：
 
 1. 当前目录有 `.features/` → 已初始化，继续
 2. 都没有 → 询问用户："初始化项目？" → 创建 `.features/` `.issues/`
+3. 读 `.claude/agents/agent-factory.yaml`（无此文件则跳过）的 `topology`：
+   - `unified`（或无 topology 键）→ dev 与 prod 一体，无特殊行为
+   - `split` 且 `prod.root` 完整 → 激活 §prod 只读访问
+   - `split` 但 `prod.root` 缺失，或 `unified` 却带 prod → 配置矛盾，向用户报错并提示修配置
 
 项目自带的 `.claude/agents/` 优先使用。
+
+---
+
+## prod 只读访问
+
+`topology: split`（dev 与 prod 分离）时生效。prod 路径来自 `.claude/agents/agent-factory.yaml` 的 `prod.root`；log/data 默认按 `<root>/log`、`<root>/data` 约定发现，可被 `prod.log` / `prod.data` 覆盖。
+
+- **直读**：定位问题、收集证据时直接读取 prod 下的 log/data，**不 cp、不建 snapshot**；引用证据时带文件路径 + 行号
+- **只读约束**：对 prod 路径下任何文件禁止写入 / 修改 / 删除（包括加日志、改数据）。prod 是运行现场，取证只读
+- **调度传递**：调度 QA / developer 涉及 prod 取证时，调度 prompt 中必须注明 prod 路径与只读约束（subagent 不读配置文件）
 
 ---
 
