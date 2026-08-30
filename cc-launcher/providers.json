@@ -4,9 +4,9 @@
     "base_url": "https://open.bigmodel.cn/api/anthropic",
     "doc_url": "https://open.bigmodel.cn/dev/api/claude-code",
     "models": {
-      "haiku": "glm-4.5-air",
-      "sonnet": "glm-5-turbo",
-      "opus": "glm-5.1"
+      "haiku": "glm-5.3-flash",
+      "sonnet": "glm-5.3-flash",
+      "opus": "glm-5.3[1m]"
     }
   },
   "minimax": {
