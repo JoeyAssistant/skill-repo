@@ -28,24 +28,6 @@ User ←→ PM (agent-pm.md, system prompt)
             └── poc (subagent)          ┘
 ```
 
-### 生产 ↔ 开发协作
-
-生产环境和开发环境都以 PM 为 system prompt。生产环境 PM 仅在 `.issues/_incoming/` 下提交产物，开发环境 PM 拉取后按文件类型分流。
-
-```
-生产环境 (PM 入口)
-  User 报告 → PM 调度 QA 诊断 (仅诊断，输出 JSON)
-           → PM 在 .issues/_incoming/<timestamp>-<name>/ 下提交:
-             ├─ bug             → ISSUE.yaml (含 QA Diagnosis) + snapshot/
-             └─ feature-request → FEATURE.yaml (与用户讨论后) + snapshot/
-           → git push
-                ↓ git pull
-开发环境 (PM 入口)
-  PM 扫描 .issues/_incoming/:
-    ├─ 含 ISSUE.yaml         → 登记 .issues/<NNN>-<name>/  → 标准 issue 修复流程
-    └─ 含 FEATURE.yaml  → 登记 .features/<NNN>-<name>/ → 标准 feature 设计流程
-```
-
 ## 安装
 
 ### 1. 设置 PM 为 system prompt
@@ -110,6 +92,64 @@ git clone <repo-url> ./project-a
 PM 启动时自动检测模式：
 - 当前目录有 `.workspace/` → 多项目模式
 - 当前目录有 `.features/` → 单项目模式
+
+## 零足迹部署（协作项目）
+
+团队协作仓不能出现 agent-factory 痕迹时的部署方式。
+
+### 1. 安装资产与本地排除
+
+subagents 与配置统一放在 `.claude/agents/`（agent-factory 资产落点）：
+
+```bash
+mkdir -p <project>/.claude/agents
+cp developer.md qa.md poc.md <project>/.claude/agents/
+```
+
+状态目录与（如被跟踪的）`.claude/` 加入本地排除——**不写 .gitignore**（.gitignore 本身进仓，暴露痕迹）：
+
+```bash
+printf '.features/\n.issues/\n.claude/\n' >> <project>/.git/info/exclude
+```
+
+### 2. 环境配置（dev 与 prod 分离的项目）
+
+创建 `<project>/.claude/agents/agent-factory.yaml`：
+
+```yaml
+topology: split                  # dev 与 prod 分离：同机两个部署目录
+prod:
+  root: /abs/path/to/prod-deploy
+```
+
+一体项目无需此文件（默认 unified）。
+
+### 3. 启动
+
+别名自选；split 时 `--add-dir` 授权读取 prod：
+
+```bash
+pm() {
+  local prod_root=$(grep -E '^\s*root:' .claude/agents/agent-factory.yaml 2>/dev/null | head -1 | awk '{print $2}')
+  claude-glm-skip-perms \
+    --append-system-prompt "$(cat <agent-factory>/agent-pm.md)" \
+    ${prod_root:+--add-dir "$prod_root"}
+}
+```
+
+### 4. prod 只读硬兜底（建议）
+
+用户级 `~/.claude/settings.json` 添加（路径限定，不影响其他项目）：
+
+```json
+{
+  "permissions": {
+    "deny": ["Edit(/abs/path/to/prod/**)", "Write(/abs/path/to/prod/**)"]
+  }
+}
+```
+
+> agent-factory 资产（prompt + subagents + CLI）可在任意 Claude Code 会话中使用，驱动方式不限。
 
 ## 使用
 
