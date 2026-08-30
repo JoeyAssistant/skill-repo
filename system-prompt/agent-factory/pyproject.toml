@@ -22,6 +22,9 @@ agent-factory = "agent_factory.cli:main"
 testpaths = ["agent_factory/schema/tests"]
 pythonpath = ["."]
 
+[tool.setuptools.packages.find]
+include = ["agent_factory*"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
