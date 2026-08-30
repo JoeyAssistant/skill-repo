@@ -9,9 +9,10 @@
 #   1. git init（如目标还不是 git 仓）
 #   2. 创建 .features/ .issues/ .claude/agents/
 #   3. 复制 subagents（developer/qa/poc.md）到 .claude/agents/
-#   4. 复制 design-reference.md + agent-architecture.drawio 到 .claude/agents/（PM 设计阶段引用，资产落点）
-#   5. --prod 时生成 .claude/agents/agent-factory.yaml（topology: split）
-#   6. 检查 agent-factory CLI 可用性
+#   4. 复制 agent-pm.md（PM system prompt）到 .claude/agents/（PM 提示词随项目仓走，启动命令自包含）
+#   5. 复制 design-reference.md + agent-architecture.drawio 到 .claude/agents/（PM 设计阶段引用，资产落点）
+#   6. --prod 时生成 .claude/agents/agent-factory.yaml（topology: split）
+#   7. 检查 agent-factory CLI 可用性
 #
 # 可重复执行（幂等）：重跑 = 更新资产到最新版。
 
@@ -43,10 +44,13 @@ mkdir -p .features .issues .claude/agents
 # 3. subagents
 cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/poc.md" .claude/agents/
 
-# 4. PM 设计阶段参考资产（与 subagents 同落点，不进项目根）
+# 4. PM system prompt（随项目仓走，远程部署时启动命令自包含）
+cp "$SCRIPT_DIR/agent-pm.md" .claude/agents/
+
+# 5. PM 设计阶段参考资产（与 subagents 同落点，不进项目根）
 cp "$SCRIPT_DIR/design-reference.md" "$SCRIPT_DIR/agent-architecture.drawio" .claude/agents/
 
-# 5. 拓扑配置（可选）
+# 6. 拓扑配置（可选）
 if [[ -n "$PROD_ROOT" ]]; then
   cat > .claude/agents/agent-factory.yaml <<EOF
 topology: split                  # dev 与 prod 分离：同机两个部署目录
@@ -66,10 +70,11 @@ fi
 echo ""
 echo "部署完成："
 echo "  .claude/agents/{developer,qa,poc}.md   subagents"
+echo "  .claude/agents/agent-pm.md   PM system prompt"
 echo "  .claude/agents/{design-reference.md,agent-architecture.drawio}   PM 设计参考"
 echo "  .features/ .issues/   状态目录"
 [[ -n "$PROD_ROOT" ]] && echo "  .claude/agents/agent-factory.yaml   topology: split"
 echo ""
 echo "启动 PM（别名自选）："
 echo "  cd $TARGET"
-echo "  claude-glm-skip-perms --append-system-prompt \"\$(cat $SCRIPT_DIR/agent-pm.md)\""
+echo "  claude --append-system-prompt \"\$(cat .claude/agents/agent-pm.md)\""
