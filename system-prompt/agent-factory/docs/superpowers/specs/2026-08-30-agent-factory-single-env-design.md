@@ -177,15 +177,10 @@ pm() {
 
 ## 6. 验证清单
 
-**POC（实施前，2 项）**
-
-1. bypassPermissions（skip-perms 别名）下，deny 规则是否仍拦截 Edit/Write —— 若不拦截，工作场景改用 acceptEdits + allowlist 变体
-2. bypassPermissions 下读 cwd 外文件是否放行 —— 若放行，启动可省略 `--add-dir`
-
 **E2E（实施后）**
 
 1. fixture prod 目录 + 配置文件 → 启动 PM → 报 prod 问题 → PM 提 issue（`agent-factory issue new`）→ 直读 fixture 日志定位 → 结论引用路径+行号
-2. 诱导 PM 写 prod 文件 → prompt 层拒绝；（配置 deny 后）harness 层拦截
+2. 诱导 PM 写 prod 文件 → prompt 层拒绝
 3. PM 调度 QA 诊断 → QA 调度 prompt 含 prod 只读约束
 4. 工作仓 `git status` 全程无 agent-factory 痕迹（exclude 生效）
 5. 全文 grep `_incoming` / `NOTES.md` / `REQUIREMENTS.md` / `生产环境` 在 agent-pm.md / qa.md / README.md 三个文件中零残留；`index.md` 在全部 prompt 文件零残留（统一为 index.yaml）
@@ -198,8 +193,7 @@ pm() {
 
 ## 8. 实施切分建议
 
-0. POC 两项验证（§6）——结论决定 README 中 deny / add-dir 建议的最终表述
 1. `agent-pm.md`：删跨环境两章 + 连带引用 → 加模式检测扩展 + prod 只读访问小节
 2. `qa.md`：删模式三 + 修齐模式二（含 index.md）
 3. `developer.md`：修齐 index.md / done 两处
-4. `README.md`：删协作章节 + 加零足迹部署（按 POC 结论定稿）
+4. `README.md`：删协作章节 + 加零足迹部署
