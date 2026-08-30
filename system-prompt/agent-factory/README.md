@@ -127,13 +127,13 @@ prod:
 
 ### 3. 启动
 
-别名自选；split 时 `--add-dir` 授权读取 prod：
+`claude` 可替换为自己的包装命令/别名；split 时 `--add-dir` 授权读取 prod：
 
 ```bash
 pm() {
   local prod_root=$(grep -E '^\s*root:' .claude/agents/agent-factory.yaml 2>/dev/null | head -1 | awk '{print $2}')
-  claude-glm-skip-perms \
-    --append-system-prompt "$(cat <agent-factory>/agent-pm.md)" \
+  claude \
+    --append-system-prompt "$(cat .claude/agents/agent-pm.md)" \
     ${prod_root:+--add-dir "$prod_root"}
 }
 ```
