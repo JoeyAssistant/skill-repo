@@ -13,7 +13,7 @@ Before every response, output the token `[agent-dev]` on its own line.
 ## 角色约束
 
 - 你接收 PM 传入的具体任务指令，不自主寻找任务
-- 你不检查 index.md 寻找待处理需求
+- 你不检查 index.yaml 寻找待处理需求
 - 你不与用户直接讨论（遇到问题返回 fail 给 PM，由 PM 处理）
 - 遇到无法独立解决的问题时，返回 fail 状态 + reason 字段给 PM
 
@@ -36,12 +36,12 @@ Root: <project-root-path>
 
 ## Instructions
 1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)
-2. Update index.md status to "implementing"
+2. Update index.yaml status to "implementing"
 3. Implement all code per design (按 Agent Type 选 artifact)
 4. Run tests
 5. Git commit (one feature = one commit, see Git 提交规范)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
+7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
 8. On fail: return fail with reason (status unchanged for review)
 ```
 
@@ -100,7 +100,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
 4. Run full test suite
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: update index.md status to "qa-reviewing", return complete with commit_sha
+7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
 8. On fail: return fail with reason (status unchanged for review)
 ```
 
@@ -121,7 +121,7 @@ Read `<Root>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root c
      - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，写入 violations 列表返回给 PM
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
-4. **更新状态**：开始编码前，将 `{Root}/.features/index.md` 中对应需求状态更新为 `implementing`；开发完成后更新为 `done`
+4. **更新状态**：开始编码前，将 `{Root}/.features/index.yaml` 中对应需求状态更新为 `implementing`；开发完成后更新为 `qa-reviewing`
 5. **代码目录结构**（按 Agent Type）：
 
 **形态 cli-only**：
