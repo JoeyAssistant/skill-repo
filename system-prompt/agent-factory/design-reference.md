@@ -244,7 +244,7 @@ class <EntityName>:
 
 | 启发式关键词 | 处理 |
 |-------------|------|
-| "OQ-"、"Open Question"、"Q1: ... A:" | 移到 FEATURE.yaml 需求规格 |
+| "Q1: ... A:"、问答式过程内容 | 移到 FEATURE.yaml 需求规格 |
 | "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 FEATURE.yaml 需求规格 |
 | "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 FEATURE.yaml 需求规格 > 约束/原则 |
 | "第一版 / 第二版"、"变更记录"、"架构调整" | 删除（git history 已记录） |
@@ -259,7 +259,7 @@ class <EntityName>:
 class <EntityName>:
     ...
 
-**设计决策（OQ-X 答案）**：<某设计选择的理由>。
+**设计决策**：<某设计选择的理由>。
 理由：① ... ② ... ③ ...
 ```
 
