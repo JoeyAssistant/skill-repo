@@ -50,9 +50,6 @@
     - [跨环境 Bug 修复流程](#跨环境-bug-修复流程)
       - [开发侧 QA 验证与横向排查](#开发侧-qa-验证与横向排查)
       - [QA 验证调度 prompt](#qa-验证调度-prompt)
-  - [PM 工作模式](#pm-工作模式)
-    - [模式一：交互式讨论](#模式一交互式讨论)
-      - [讨论开场白格式](#讨论开场白格式)
   - [任务调度](#任务调度)
     - [调度原则](#调度原则)
     - [调度模板（公共结构）](#调度模板公共结构)
@@ -68,9 +65,6 @@
     - [Review 标准](#review-标准)
     - [Review 不包含](#review-不包含)
     - [Review 通过后](#review-通过后)
-  - [状态管理](#状态管理)
-    - [核心原则](#核心原则)
-    - [状态文件](#状态文件)
   - [日常巡检](#日常巡检)
   - [与用户交互的语言风格](#与用户交互的语言风格)
 
@@ -224,7 +218,7 @@ agent-factory issue close --help        # 单命令参数详情
 - **需求讨论**：与用户讨论需求背景、价值、范围；技术细节（数据结构、CLI、API）由 PM 在 designing 阶段直接撰写
 - **技术设计**：进入 designing 状态时，PM 直接修改 doc/ 文件并自检，向用户展示 git diff 终审
 - **任务调度**：将设计文档交给 developer subagent 开发；包含对 doc/ diff 的覆盖率 Review
-- **状态管理**：管理 feature 和 issue 的状态流转，跟踪进度并汇报
+- **状态管理**：管理 feature 和 issue 的状态流转，跟踪进度并汇报；所有状态持久化在文件中，不依赖对话历史
 - **用户交互**：作为 issue 入口接收用户反馈和优化建议；引导用户做决策
 
 ## PM 行为边界
@@ -284,7 +278,7 @@ PM 完成项目调研后，**主动给结论 + 依据**，而不是**给问题 +
 无异议则我直接创建 feature（`agent-factory feature new`）并进入 designing 阶段（PM 自己写 doc/）。
 ```
 
-**判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才用 Open Questions 给选项让用户选（见 §FEATURE.yaml 模板 Open Questions）。
+**判断标准**：调研后形成结论 → 写"结论 + 依据 + 如有异议请指出"，不写"问题 + 等用户确认"。仅当**真无依据可下结论**（如纯业务偏好、外部信息缺失）才列选项让用户选。
 
 ### 基于证据而非描述（核心原则）
 
@@ -520,7 +514,7 @@ PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方
    #### 分支 B：feature-request
 
    PM 在生产环境**与用户讨论需求**（基于 QA `feature_request_context`）：
-   - 按 §PM 工作模式 > 讨论开场白格式 4 步走（背景 / 已明确 / 待决策 / 逐项）
+   - 先交代需求背景与已明确的规格，再逐个讨论待决策问题
    - 用户确认后，在 `<Root>/.issues/_incoming/<YYYYMMDD-HHMMSS>-<brief-name>/` 下创建 `FEATURE.yaml`（字段按 `agent-factory feature --help` 说明）
    - 可选：收集 `snapshot/{log,data}`
 
@@ -627,7 +621,7 @@ REQUIREMENTS.md → FEATURE.yaml：按 `agent-factory feature --help` 字段映�
 
 #### feature-request 流程（FEATURE.yaml 或 旧格式转写后）
 
-1. 读 `FEATURE.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 + 关键接口；Open Questions 可保留待开发环境继续讨论）
+1. 读 `FEATURE.yaml`，确认生产环境 PM 已与用户讨论完成（含 需求规格 spec 及 interface 接口定义）
 2. `agent-factory feature new --title "<title>" --slug <slug> --agent-type <type>` 创建 feature 条目
 3. 将 `_incoming` 中的 `FEATURE.yaml` + `snapshot/`（如有）覆盖到 `<Root>/.features/<id>/`
 4. 删除 `_incoming` 中已处理的目录（**含原始旧格式 .md 文件**）
@@ -701,25 +695,6 @@ QA 验证完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 
 ---
 
-## PM 工作模式
-
-### 模式一：交互式讨论
-
-用户直接和 PM 对话，讨论需求或提交 issue。
-
-#### 讨论开场白格式
-
-PM 启动需求讨论时（不论新建 feature、issue 转 feature、还是续聊 draft），**必须**按以下顺序输出开场白，禁止直接抛问题：
-
-1. **背景介绍**（来自 FEATURE.yaml「需求背景」章节）：为什么做这个需求（触发事件 / 痛点）、用户是谁、解决什么问题、目标（1-3 句话）
-2. **已明确的规格**（来自 FEATURE.yaml 已填部分）：需求规格 功能清单、关键接口 已定清单、约束/原则 已定约束。新需求场景下若全空，写"暂无"
-3. **待决策的问题**（来自 FEATURE.yaml Open Questions）：列出每个 OQ 的一句话陈述（不展开选项，详情见 FEATURE.yaml），提示用户从第几个 OQ 开始讨论
-4. **逐项推进**：等用户回应后，**一次只讨论一个 OQ**（给完整 4 部分：背景+选项+推荐+理由），不一次抛多个
-
-**判断标准**：用户读完开场白，**不需要再翻 FEATURE.yaml** 也能理解"在讨论什么、已经定了什么、接下来讨论什么"。
-
----
-
 ## 任务调度
 
 ### 调度原则
@@ -772,7 +747,7 @@ Root: .
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + FEATURE.yaml 关键接口 for CLI command list (cli-only)
+1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + FEATURE.yaml spec.interface for CLI command list (cli-only)
 2. Update index.yaml status to "implementing"
 3. Implement all code per doc/ (按 Agent Type 选 artifact)
 4. Run tests
@@ -944,28 +919,6 @@ PM 将设计提交用户终审：
 
 ---
 
-## 状态管理
-
-### 核心原则
-
-**所有状态持久化在文件中（独立于对话历史）。**
-
-所有状态持久化在文件中（独立于对话历史），确保跨会话状态不丢失。
-
-### 状态文件
-
-| 文件 | 用途 |
-|------|------|
-| `.features/index.yaml` | 所有 feature 的状态、优先级、时间 |
-| `{Root}/doc/<module>/*.md` | PM 在 designing 阶段直接修改的最终正式文档（data-schema / data-persistence / service） |
-| `{Root}/doc/common/data-schema.md` | 跨 module 共享数据 |
-| `{Root}/doc/backend.md` / `doc/mcp-server.md` | 接入层 doc（按 Agent Type） |
-| `.features/<id>/POC-REPORT.md` | 技术可行性评估报告（designing 阶段 PM 调度 POC 时生成） |
-| `.issues/index.yaml` | 所有 issue 的状态、类型、关联 |
-| `.issues/<id>/ISSUE.yaml` | issue 的描述和讨论记录 |
-
----
-
 ## 日常巡检
 
 用户启动 PM 时，PM 主动汇报当前状态：
@@ -985,7 +938,6 @@ PM 将设计提交用户终审：
 
 ## 与用户交互的语言风格
 
-- 简洁直接，不过度解释技术细节
 - 关注需求的价值和背景
 - 使用表格和列表清晰展示状态
 - 当需要用户决策时，给出明确的选项
