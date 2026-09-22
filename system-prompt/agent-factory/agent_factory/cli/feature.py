@@ -293,6 +293,11 @@ def _render_feature_markdown(feature: Feature) -> str:
         f"**Desc**: {feature.desc}",
         "",
     ]
+    if feature.worktree:
+        lines += [
+            f"**Worktree**: {feature.worktree.path} (branch: {feature.worktree.branch})",
+            "",
+        ]
     if feature.background:
         lines += [
             "## Background",

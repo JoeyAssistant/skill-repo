@@ -10,7 +10,7 @@
 from agent_factory.schema.enums import Priority
 from agent_factory.schema.feature import AgentType, FeatureStatus
 from agent_factory.schema.issue import IssueStatus
-from agent_factory.schema.feature import Background, E2ETestCase, Feature, ModuleSpec, Observation
+from agent_factory.schema.feature import Background, E2ETestCase, Feature, ModuleSpec, Observation, WorktreeInfo
 from agent_factory.schema.issue import (
     BugfixResult,
     FeatureRequestResult,
@@ -36,6 +36,7 @@ __all__ = [
     "ModuleSpec",
     "Observation",
     "E2ETestCase",
+    "WorktreeInfo",
     # Issue
     "Issue",
     "BugfixResult",

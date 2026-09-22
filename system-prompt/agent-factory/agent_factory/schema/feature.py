@@ -59,6 +59,14 @@ class E2ETestCase(BaseModel):
         description="观测点列表（可观测，每条 {check, expect}）")
 
 
+class WorktreeInfo(BaseModel):
+    """feature 绑定的 git worktree（agent-factory worktree new 时由 CLI 写入）."""
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(..., description="worktree 目录名（.worktrees/ 下）")
+    branch: str = Field(..., description="绑定的分支名")
+    path: str = Field(..., description="相对主仓根的路径")
+
+
 class Feature(BaseModel):
     """对应 .features/<NNN>-<slug>/FEATURE.yaml."""
     model_config = ConfigDict(extra="forbid")
@@ -73,3 +81,5 @@ class Feature(BaseModel):
         description="需求规格，按模块组织（designing 阶段逐模块写入）")
     e2e_test_cases: list[E2ETestCase] = Field(default_factory=list,
         description="E2E 验收用例（designing 阶段逐条与用户讨论后填入）")
+    worktree: Optional[WorktreeInfo] = Field(None,
+        description="绑定的 worktree（worktree new 时写入，worktree remove 时清除）")

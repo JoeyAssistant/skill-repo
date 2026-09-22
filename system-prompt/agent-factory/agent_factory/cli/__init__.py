@@ -6,13 +6,15 @@ import click
 from agent_factory.cli.feature import feature_group
 from agent_factory.cli.issue import issue_group
 from agent_factory.cli.index import index_group
+from agent_factory.cli.lock import lock_group
+from agent_factory.cli.worktree import worktree_group
 
 
 @click.group()
 def main() -> None:
     """agent-factory CLI - operate YAML workflow files (.features/ .issues/).
 
-    命令组：feature / issue / index
+    命令组：feature / issue / index / worktree / lock
     使用前先看各组 help：agent-factory feature --help
     """
 
@@ -20,6 +22,8 @@ def main() -> None:
 main.add_command(feature_group)
 main.add_command(issue_group)
 main.add_command(index_group)
+main.add_command(worktree_group)
+main.add_command(lock_group)
 
 
 if __name__ == "__main__":
