@@ -39,7 +39,13 @@ if [[ ! -d .git ]]; then
 fi
 
 # 2. 目录结构
-mkdir -p .features .issues .claude/agents
+mkdir -p .features .issues .claude/agents .worktrees
+
+# 2.1 .gitignore 追加 .worktrees/（feature 并行开发的 worktree 落点，不入库）
+if ! grep -qx '.worktrees/' .gitignore 2>/dev/null; then
+  echo '.worktrees/' >> .gitignore
+  echo "==> .gitignore 已追加 .worktrees/"
+fi
 
 # 3. subagents
 cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/poc.md" .claude/agents/
@@ -73,6 +79,7 @@ echo "  .claude/agents/{developer,qa,poc}.md   subagents"
 echo "  .claude/agents/agent-pm.md   PM system prompt"
 echo "  .claude/agents/{design-reference.md,agent-architecture.drawio}   PM 设计参考"
 echo "  .features/ .issues/   状态目录"
+echo "  .worktrees/   feature 并行开发 worktree 落点（已入 .gitignore）"
 [[ -n "$PROD_ROOT" ]] && echo "  .claude/agents/agent-factory.yaml   topology: split"
 echo ""
 echo "启动 PM（别名自选）："
