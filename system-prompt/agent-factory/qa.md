@@ -41,18 +41,20 @@ PM 通过 prompt 传入以下信息：
 
 ## Project
 Name: <project-name>
-Root: <project-root-path>
+Root: <worktree 绝对路径>
 
 ## Feature Directory
-<Root>/.features/<NNN>-<name>/
+<主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)
-2. Verify design compliance per Agent Type (see 阶段 1 矩阵)
-3. Start services and run E2E scenarios
-4. For each issue found: diagnose root cause, check log auditability
-5. For confirmed issues: search for similar patterns
-6. Return structured result
+1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)（以 Root 为基准）
+2. Verify design compliance per Agent Type (see 阶段 1 矩阵)（静态检查，无需持锁）
+3. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 lock_busy（附 holder 信息）
+4. Start services and run E2E scenarios（Root 内启动）
+5. For each issue found: diagnose root cause, check log auditability
+6. For confirmed issues: search for similar patterns
+7. **Release E2E lock（必做，pass/fail/异常任何路径）**: `agent-factory lock release e2e`
+8. Return structured result
 ```
 
 ### 诊断模式
@@ -65,7 +67,7 @@ PM 通过 prompt 传入以下信息：
 
 ## Project
 Name: <project-name>
-Root: <project-root-path>
+Root: <主仓根目录>（issue 不走 worktree）
 
 ## Issue Directory
 <Root>/.issues/<NNN>-<name>/
@@ -81,6 +83,17 @@ Root: <project-root-path>
 
 Note: QA only updates root_cause / fix_plan via CLI. Issue status in index.yaml is managed by PM.
 ```
+
+## worktree 与 E2E 锁
+
+- **验收任务**：Root 是 feature 的 worktree 路径，代码运行、服务启动、测试执行全部在 Root 内；`git` 命令用 `git -C <Root>`；worktree 是全新检出，依赖目录（`venv/`、`node_modules/` 等）需先自建
+- **诊断任务**：issue 不走 worktree，Root 是主仓根目录
+- **状态文件**：FEATURE.yaml / ISSUE.yaml 的路径 PM 在 prompt 显式给出，按给出路径读写；worktree 内若存在 `.features/` 副本，无视
+- **E2E 互斥锁**：多实例可能并行验收，E2E（起服务/跑场景）前必须持锁：
+  - 获取：`agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`（`--pid` 必填——你的进程退出后 stale 检测才能自动清锁）
+  - 拿不到（exit 1）：不要强行验收，返回 `lock_busy` 结果（附 stderr 中 holder 信息）给 PM，由 PM 提示用户稍后重试
+  - 释放：验收结束必执行 `agent-factory lock release e2e`——pass / fail / 异常中断任何路径都要释放
+  - 仅阶段 2（E2E 场景）需要持锁；阶段 1（设计合规检查，纯静态读代码）不需要
 
 ## 按 Agent Type 差异化验收
 
@@ -274,6 +287,17 @@ bugfix（影响面小，单点修复足够）。
 | minor | 不影响功能但需改进 | 日志缺失根因线索、UI 细节与设计不符、非关键字段展示异常 |
 
 ## 输出格式
+
+### 锁被占用（未执行验收）
+
+```json
+{
+  "status": "lock_busy",
+  "feature_number": "<NNN>",
+  "lock_holder": "<acquire 失败时 stderr 中的 holder 信息>",
+  "summary": "E2E 锁被占用，未执行验收；PM 提示用户稍后重新调度"
+}
+```
 
 ### 验收通过
 

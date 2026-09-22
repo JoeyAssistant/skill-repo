@@ -35,6 +35,14 @@
     - [Issue 工作流 CLI 操作与校验](#issue-工作流-cli-操作与校验)
     - [Issue → Feature 迁移](#issue--feature-迁移)
     - [PM Review Gate（调度 developer 前）](#pm-review-gate调度-developer-前)
+  - [并行开发与 worktree](#并行开发与-worktree)
+    - [核心模型](#核心模型)
+    - [worktree 生命周期](#worktree-生命周期)
+    - [真相源约定](#真相源约定)
+    - [rebase 节点化](#rebase-节点化)
+    - [E2E 互斥锁](#e2e-互斥锁)
+    - [冲突解决（rebase 冲突）](#冲突解决rebase-冲突)
+    - [巡检对照](#巡检对照)
   - [任务调度](#任务调度)
     - [调度原则](#调度原则)
     - [调度模板（公共结构）](#调度模板公共结构)
@@ -47,6 +55,7 @@
       - [场景 5: QA（Issue 诊断）](#场景-5-qaissue-诊断)
       - [场景 6: developer（QA 诊断后修复）](#场景-6-developerqa-诊断后修复)
       - [场景 7: POC（技术可行性）](#场景-7-poc技术可行性)
+      - [场景 8: developer（解 rebase 冲突）](#场景-8-developer解-rebase-冲突)
     - [Review 标准](#review-标准)
     - [Review 不包含](#review-不包含)
     - [Review 通过后](#review-通过后)
@@ -98,14 +107,15 @@ sequenceDiagram
     actor user
     user->>pm: 提一个需求 + desc
     participant feat as FEATURE.yaml
-    participant code as codebase
+    participant wt as worktree(.worktrees/feat-NNN-slug)
 
     pm->>feat: create(id + title)
     pm->>user: 需求信息收集
     pm->>feat: background
 
     pm->>feat: set designing
-    pm->>code: 了解文档 + 代码
+    pm->>wt: worktree new（建目录+分支+写 feat 记录）
+    pm->>wt: 了解文档 + 代码
     pm->>pm: 分析与设计
     alt 需要可行性验证
         pm->>+poc: 技术可行性或选型验证
@@ -129,10 +139,10 @@ sequenceDiagram
 
     Note over pm: doc design start
     pm->>ref: read .claude/agents/{agent-architecture.drawio, design-reference.md}
-    pm->>code: write doc
+    pm->>wt: write doc（写入 worktree 路径）
 
     loop for each doc
-        pm->>+user: ask and show for doc diff review
+        pm->>+user: ask and show for doc diff review（git -C worktree diff）
         user->>-pm: review ok
     end
     Note over pm: doc design end
@@ -151,14 +161,19 @@ sequenceDiagram
     pm->>feat: set approved
     participant dev as developer
     pm->>feat: set implementing
-    pm-->>+dev: start coding(FEATURE.yaml + doc) background subagent
-    dev->>code: test driven development
-    dev-->>-pm: done
+    pm->>wt: rebase origin/main（冲突→场景 8）
+    pm-->>+dev: start coding(Root=worktree) background subagent
+    dev->>wt: test driven development
+    dev-->>-pm: complete + suggested_status
 
+    pm->>pm: git show <sha> --stat 验证
     pm->>feat: qa-reviewing
-    pm->>+qa: start acceptance test
-    qa->>-pm: done
+    pm->>+qa: start acceptance test（E2E 前取 e2e.lock）
+    qa->>-pm: done（释放锁）
     pm->>feat: set done
+    pm->>wt: rebase origin/main（冲突→场景 8）
+    pm->>pm: 主仓 merge --no-ff
+    pm->>pm: worktree remove（清目录+删分支+清记录）
 ```
 
 ### question resolve要求
@@ -489,12 +504,80 @@ PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方
 
 ---
 
+## 并行开发与 worktree
+
+多 feature 并行通过 git worktree 物理隔离；issue 不走 worktree（留主仓）。使用形态：多个 agent 终端实例，每个实例负责一个 feature。
+
+### 核心模型
+
+**主仓 PM + 路径化代码操作**：
+
+- PM 与所有实例的 cwd 固定在主仓根目录；状态操作（`agent-factory` CLI）只落主仓 `.features/` `.issues/` 唯一账本
+- 代码操作（写 doc/、developer 实现、QA 验收）一律指向 worktree 路径：读写文件用绝对路径，git 用 `git -C <worktree>`
+- 一 feature ↔ 一分支 ↔ 一 worktree，同名同源：`.worktrees/feat-<NNN>-<slug>` ↔ `feature/<NNN>-<slug>`
+- 实例绑定 = 对话绑定：用户在哪个实例提哪个 feature，该实例即负责，无需环境检测
+
+### worktree 生命周期
+
+1. **创建**：feature 进入 designing 时执行 `agent-factory worktree new <id> --base origin/main`（先 `git fetch`）
+2. **使用**：doc/ 撰写、developer 实现、QA 验收全部在 worktree 路径内进行；调度 developer/QA 时 `Root` 传 worktree 绝对路径
+3. **收尾**：QA pass → 末次 rebase → 主仓 `git merge --no-ff feature/<NNN>-<slug>` → `agent-factory worktree remove <id>`（清目录+删分支+清记录）
+
+### 真相源约定
+
+- 状态文件一律按主仓路径读写；worktree 内若存在 `.features/` 副本（入库项目随分支检出），**无视**——不读、不改、不删
+- FEATURE.yaml 的 worktree 记录是"描述"，`git worktree list` 是"证据"：使用记录前先 `agent-factory worktree list` 对照（记录缺失/目录缺失按 §日常巡检 异常处理）
+
+### rebase 节点化
+
+rebase 不靠用户主动提，固化到流程节点：
+
+| 节点 | 动作 |
+|------|------|
+| worktree new | `--base origin/main`（先 fetch） |
+| 调度 developer 前 | `git -C <worktree> fetch origin && git -C <worktree> rebase origin/main` |
+| 末次合并前 | 同上，保证主仓 merge 无冲突 |
+| 日常巡检 | 主干领先且无在途任务时 rebase |
+
+**兜底规则**：subagent 在途（调度状态表非空）时**禁止 rebase**——rebase 会挪动 worktree 工作区文件，在途 subagent 的中间状态会乱。用户中途要求 rebase 时，说明原因并推迟到 subagent 返回后。
+
+### E2E 互斥锁
+
+E2E 验收（起服务、跑场景）跨实例串行。锁位置 `$(git rev-parse --git-common-dir)/locks/e2e.lock`——所有 worktree 共享的 git common dir 下，跨实例唯一全局点。
+
+- QA 验收前：`agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`
+- 拿不到（exit 1）：读 holder 信息提示用户"X 正在验收（since T），稍后再试"——**不自动轮询**，由用户决定何时重试
+- stale（holder 进程已死）CLI 自动清理重取；pid 复用误判等边缘场景，用户确认后 `acquire --force`
+- 验收结束（**含 fail 路径**）：`agent-factory lock release e2e`
+
+### 冲突解决（rebase 冲突）
+
+PM 不亲手解冲突（不写代码），走调度：
+
+1. rebase 报冲突 → PM 收集现场：`git -C <worktree> status` 冲突清单 + `git log origin/main --oneline -10` 主干近期合并
+2. 调度场景 8（developer 解 rebase 冲突），附冲突上下文
+3. developer 解完**必跑模块 UT**；返回冲突解决说明
+4. PM 判断：机械性冲突（import/相邻行）→ UT 通过即继续；核心逻辑冲突（涉及 e2e_test_cases 覆盖路径）→ 提示用户决定是否重新调度 QA 复验
+5. developer 无法调和 → `git rebase --abort` 回滚 → PM 升级用户决策
+
+末次 rebase 完成后，主仓 merge 必无冲突——冲突全部在 rebase 节点摊薄暴露。
+
+### 巡检对照
+
+`agent-factory worktree list` 输出三类异常（CLI 只出数据，判断归 PM）：
+
+- **孤儿 worktree**：git 登记有、无 FEATURE.yaml 记录 → 提示用户处置
+- **悬空记录**：FEATURE.yaml 有记录、目录不在 git 登记 → 提示用户（可能需重建）
+- **僵尸分支**：feature done 但分支未删 → 提示执行 `worktree remove`
+
+---
+
 ## 任务调度
 
 ### 调度原则
 
 1. **冲突保护**：同一个 feature/issue 同时只调度一次（检查是否已有任务在处理）
-2. **结果处理**：subagent 完成后 PM 处理结果并汇报用户
+2. **结果处理**：subagent 完成后 PM 处理结果并汇报用户；**状态流转统一由 PM 执行**——developer/QA 不自行 transition，返回 `suggested_status`，PM 验证证据（`git show <sha> --stat` 等）后更新 index.yaml
 3. **commit_sha 校验**：developer 返回 complete 但缺失 `commit_sha` 时，PM 记录异常并调度 developer 补提交（兜底机制，非常规路径；正常路径下 developer 的 Commit 前自检 + 输出契约已保证 commit_sha 存在）
 
 PM 维护内存中的调度状态表：
@@ -514,8 +597,10 @@ PM 维护内存中的调度状态表：
 
 ## Project
 Name: <project-name>
-Root: .
+Root: <代码工作区路径>
 ```
+
+**Root 语义**：代码工作区路径（feature 任务 = worktree 绝对路径，由 FEATURE.yaml `worktree.path` 解析；issue 任务 = 主仓根目录）。subagent 一切代码操作限定在 Root 内；状态文件路径 PM 在 prompt 中显式给出（主仓路径）。
 
 各场景在公共部分上追加：可选章节 / `## Feature Directory` 或 `## Issue Directory` / `## Instructions`。
 
@@ -530,44 +615,43 @@ Root: .
 | 5 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
 | 6 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
 | 7 | POC（技术可行性） | designing 阶段判断需要技术可行性 / 选型验证 | `技术可行性分析：feature #<NNN>: <title>` |
+| 8 | developer（解 rebase 冲突） | worktree rebase 节点遇冲突 | `解决 feature #<NNN> rebase 冲突` |
 
 ### 各场景差异（可选章节 + Directory + Instructions）
 
 #### 场景 1: developer（常规开发）
 
-**Feature Directory**: `<Root>/.features/<id>/`
+**Feature Directory**: `<主仓路径>/.features/<id>/`
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + FEATURE.yaml spec.interface for CLI command list (cli-only)
-2. Update index.yaml status to "implementing"
-3. Implement all code per doc/ (按 Agent Type 选 artifact)
-4. Run tests
-5. Git commit (one feature = one commit, see Git 提交规范)
-6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
+1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + FEATURE.yaml spec.interface for CLI command list (cli-only)（路径以 ## Project Root 为基准）
+2. Implement all code per doc/ (按 Agent Type 选 artifact)
+3. Run tests
+4. Git commit (one feature = one commit, see Git 提交规范)
+5. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+6. On success: return complete with commit_sha + suggested_status=qa-reviewing（状态流转由 PM 验证后统一执行）
 ```
 
 #### 场景 2: developer（Bug 直接修复）
 
-**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）。
+**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）；调度前 PM 已执行 `agent-factory issue transition <id> --to in_progress` 认领 issue。
 
 **可选章节**：`## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
 
-**Issue Directory**: `<Root>/.issues/<id>/`
+**Issue Directory**: `<主仓路径>/.issues/<id>/`
 
 **Instructions**：
 ```
-1. `agent-factory issue transition <id> --to in_progress`（认领 issue）
-2. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
-3. Reproduce and diagnose the bug
-4. Apply minimal fix
-5. Add regression test
-6. Run full test suite
-7. Git commit (one issue = one commit, message: fix: <问题描述>)
-8. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-9. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
-10. On success: return complete with commit_sha
+1. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
+2. Reproduce and diagnose the bug
+3. Apply minimal fix
+4. Add regression test
+5. Run full test suite
+6. Git commit (one issue = one commit, message: fix: <问题描述>)
+7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+8. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
+9. On success: return complete with commit_sha
 ```
 
 **关键约束（developer 必读）**：
@@ -584,29 +668,32 @@ Root: .
 
 #### 场景 3: QA（Feature 验收）
 
-**Feature Directory**: `<Root>/.features/<id>/`
+**Feature Directory**: `<主仓路径>/.features/<id>/`
 
 **Instructions**：
 ```
-1. Read FEATURE.yaml (验收标准 Cases) + doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific)
+1. Read FEATURE.yaml (验收标准 Cases) + doc/ files（以 Root 为基准，Root = worktree 绝对路径）
 2. Verify design compliance per Agent Type (see 阶段 1 矩阵 in qa.md for which checks apply)
-3. Start services and run E2E scenarios
-4. For each issue found: diagnose root cause, check log auditability
-5. For confirmed issues: search for similar patterns
-6. Generate QA-REPORT.md
-7. Return structured result
+3. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<id>-<slug>" --pid $PPID`；拿不到 → 返回 lock_busy
+4. Start services and run E2E scenarios
+5. For each issue found: diagnose root cause, check log auditability
+6. For confirmed issues: search for similar patterns
+7. Generate QA-REPORT.md
+8. **Release E2E lock（必做，pass/fail/异常任何路径）**: `agent-factory lock release e2e`
+9. Return structured result
 ```
 
 **QA 验收结果处理**：
 - **pass** → `agent-factory feature transition <id> --to done`
 - **fail** → 调度场景 4（developer 修复），修复后再次调度场景 3 复验
+- **lock_busy** → QA 未执行验收（E2E 锁被占）；将 holder 信息提示用户，由用户决定何时重新调度场景 3
 - 修复循环最多 3 轮，超过仍不通过则升级用户决策
 
 #### 场景 4: developer（QA fail 后修复）
 
 **可选章节**：`## QA Report`: `Read <Root>/.features/<id>/QA-REPORT.md for detailed issues and root cause analysis.`
 
-**Feature Directory**: `<Root>/.features/<id>/`
+**Feature Directory**: `<主仓路径>/.features/<id>/`
 
 **Instructions**：
 ```
@@ -616,12 +703,12 @@ Root: .
 4. Run full test suite
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: update index.yaml status to "qa-reviewing", return complete with commit_sha
+7. On success: return complete with commit_sha + suggested_status=qa-reviewing（状态流转由 PM 验证后统一执行）
 ```
 
 #### 场景 5: QA（Issue 诊断）
 
-**Issue Directory**: `<Root>/.issues/<id>/`
+**Issue Directory**: `<主仓路径>/.issues/<id>/`
 
 **Instructions**：
 ```
@@ -641,25 +728,24 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 
 #### 场景 6: developer（QA 诊断后修复）
 
-**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）。
+**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）；调度前 PM 已执行 `agent-factory issue transition <id> --to in_progress` 认领 issue。
 
 **可选章节**：
 - `## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
 - `## QA Diagnosis`: `Read <Root>/.issues/<id>/ISSUE.yaml QA Diagnosis section for root cause and fix plan.`
 
-**Issue Directory**: `<Root>/.issues/<id>/`
+**Issue Directory**: `<主仓路径>/.issues/<id>/`
 
 **Instructions**：
 ```
-1. `agent-factory issue transition <id> --to in_progress`（认领 issue）
-2. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
-3. Apply fix based on QA's root cause analysis and fix plan
-4. Add regression test
-5. Run full test suite
-6. Git commit (one issue = one commit, message: fix: <问题描述>)
-7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-8. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
-9. On success: return complete with commit_sha
+1. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
+2. Apply fix based on QA's root cause analysis and fix plan
+3. Add regression test
+4. Run full test suite
+5. Git commit (one issue = one commit, message: fix: <问题描述>)
+6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
+7. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
+8. On success: return complete with commit_sha
 ```
 
 **关键约束**：与场景 2 一致（developer 不主动 transition closed，PM 使用 `issue close` 关闭）
@@ -674,7 +760,7 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 - `## Questions`: `<PM 在 designing 时发现的技术问题清单>`
 - `## Context`: `<需求背景、功能范围>`
 
-**Feature Directory**: `<Root>/.features/<id>/`
+**Feature Directory**: `<主仓路径>/.features/<id>/`
 
 **Instructions**：
 ```
@@ -686,6 +772,25 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 ```
 
 POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 恢复 designing 状态，基于用户决策继续修改 doc/。
+
+#### 场景 8: developer（解 rebase 冲突）
+
+**调度时机**：worktree rebase 节点（调度 developer 前 / 末次合并前）遇冲突（详见 §冲突解决）。
+
+**可选章节**：`## Conflict Context`: `<冲突文件清单（git -C <worktree> status）+ 主干近期合并（git log origin/main --oneline -10）>`
+
+**Feature Directory**: `<主仓路径>/.features/<id>/`
+
+**Instructions**：
+```
+1. Read FEATURE.yaml + doc/ 理解本 feature 意图；读 ## Conflict Context 了解冲突双方
+2. `git -C <Root> status` 逐个文件解冲突标记（<<<<<<< ======= >>>>>>>）
+3. `git add` + `git rebase --continue`（可能多轮，循环至 rebase 完成）
+4. **解后必跑修改模块 UT**（冲突解决 = 产出了新代码，必须重新验证）
+5. Self-verify: `git -C <Root> log --oneline -3` 确认 rebase 完成、历史线性
+6. On success: return complete with 冲突解决说明（文件清单 + 取舍方式 + UT 结果）
+7. On 无法调和: `git rebase --abort` 回滚，return fail with reason（PM 升级用户决策）
+```
 
 ---
 
@@ -717,12 +822,14 @@ PM 将设计提交用户终审：
 
 1. `git pull` 拉取最新代码
 2. 读取 `.features/index.yaml` 和 `.issues/index.yaml`
-3. 汇报：
+3. worktree 对照：`agent-factory worktree list`（孤儿 worktree / 悬空记录 / 僵尸分支，见 §巡检对照）
+4. 汇报：
    - open issue 待 triage 数
    - draft feature 待设计数
    - approved feature 待开发数
    - qa-reviewing feature 待验收数
-4. 询问用户需要做什么
+   - worktree 异常（如有）
+5. 询问用户需要做什么
 
 ---
 
