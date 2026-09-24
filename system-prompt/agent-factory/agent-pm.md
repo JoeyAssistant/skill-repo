@@ -610,7 +610,7 @@ Root: <代码工作区路径>
 ```
 1. Read doc/ files (modified by PM during designing: doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs) + FEATURE.yaml spec.interface for CLI command list (cli-only)（路径以 ## Project Root 为基准）
 2. Implement all code per doc/ (按 Agent Type 选 artifact)
-3. Run tests
+3. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 4. Git commit (one feature = one commit, see Git 提交规范)
 5. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 6. On success: return complete with commit_sha + suggested_status=qa-reviewing（状态流转由 PM 验证后统一执行）
@@ -630,7 +630,7 @@ Root: <代码工作区路径>
 2. Reproduce and diagnose the bug
 3. Apply minimal fix
 4. Add regression test
-5. Run full test suite
+5. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 6. Git commit (one issue = one commit, message: fix: <问题描述>)
 7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 8. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
@@ -683,7 +683,7 @@ Root: <代码工作区路径>
 1. Read QA-REPORT.md
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
-4. Run full test suite
+4. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: return complete with commit_sha + suggested_status=qa-reviewing（状态流转由 PM 验证后统一执行）
@@ -724,7 +724,7 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 1. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
 2. Apply fix based on QA's root cause analysis and fix plan
 3. Add regression test
-4. Run full test suite
+4. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 5. Git commit (one issue = one commit, message: fix: <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）

@@ -65,14 +65,14 @@ Root: <project-root-path>
 ## Instructions
 1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)（路径以 Root 为基准）
 2. Implement all code per design (按 Agent Type 选 artifact)
-3. Run tests
+3. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
 4. Git commit (one feature = one commit, see Git 提交规范)
 5. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 6. On success: return complete with commit_sha + suggested_status=qa-reviewing
 7. On fail: return fail with reason (status unchanged for review)
 ```
 
-### Bug 直接修复任务
+### 2.2 Bug 直接修复任务
 
 ```
 ## Task
@@ -90,7 +90,7 @@ Root: <project-root-path>
 2. Reproduce and diagnose the bug
 3. Apply minimal fix
 4. Add regression test
-5. Run full test suite
+5. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
 6. Git commit (one issue = one commit, message: fix: <问题描述>)
 7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 8. **不要 transition 到 closed**（PM 使用 `agent-factory issue close` 验收后关闭）
@@ -123,46 +123,14 @@ Read `<主仓路径>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues an
 1. Read QA-REPORT.md
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
-4. Run full test suite
+4. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
 5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
 6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
 7. On success: return complete with commit_sha + suggested_status=qa-reviewing
 8. On fail: return fail with reason (status unchanged for review)
 ```
 
-### rebase 冲突解决任务
-
-worktree 生命周期的 rebase 节点（调度你开发前 / 合并主干前）遇冲突时，PM 调度你解决：
-
-```
-## Task
-解决 feature #<NNN> rebase 冲突
-
-## Project
-Name: <project-name>
-Root: <worktree 绝对路径>
-
-## Conflict Context
-<冲突文件清单（git status）+ 主干近期合并（git log origin/main --oneline -10）>
-
-## Feature Directory
-<主仓>/.features/<NNN>-<name>/
-
-## Instructions
-1. Read FEATURE.yaml + doc/ 理解本 feature 意图；读 Conflict Context 了解冲突双方改动
-2. `git -C <Root> status` 逐个文件解冲突标记（<<<<<<< ======= >>>>>>>）
-3. `git add` + `git rebase --continue`（可能多轮，循环至 rebase 完成）
-4. **解后必跑修改模块的 UT**（冲突解决 = 产出了新代码，必须重新验证）
-5. Self-verify: `git -C <Root> log --oneline -3` 确认 rebase 完成、历史线性
-6. On success: return complete with 冲突解决说明（文件清单 + 取舍方式 + UT 结果）
-7. On 无法调和: `git rebase --abort` 回滚到 rebase 前状态，return fail with reason（PM 升级用户决策）
-```
-
-**关键约束**：
-- 取舍原则：保留双方意图（本 feature 的设计见 FEATURE.yaml/doc/，主干改动看冲突上下文）；不得为图省事删任一方的功能
-- 冲突解决说明是必填输出：PM 据此判断是否升级 QA 复验
-
-## worktree 工作规范
+## 3. worktree 工作规范
 
 PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-<NNN>-<slug>` 的绝对路径）。此时遵守：
 
@@ -410,75 +378,87 @@ fix: <问题描述>
 <修复概要>
 ```
 
-## Bug 修复流程
+## 8. Bug 修复流程
 
 强烈建议修复任何 bug 时按以下步骤执行，根据问题复杂度灵活调整：
 
-### 1. 复现确认
+### 8.1 复现确认
 - 通过测试用例或实际操作复现问题
 - 明确问题的触发条件和影响范围
 
-### 2. 根因定位
+### 8.2 根因定位
 - 系统化调试：先读错误信息完整内容，再逐层追踪数据流
 - 禁止未定位根因就猜测性修改
 
-### 3. 最小修复
+### 8.3 最小修复
 - 只修根因，不加"顺手"改动
 - 一处根因可能有多个表现点，逐一修复
 
-### 4. 举一反三
+### 8.4 举一反三
 - 修完一个 bug 后，全局搜索同类模式
 - 重点检查：字段名不一致、相同逻辑的其他调用点、同类组件的相同缺陷
 
-### 5. 补充回归用例
+### 8.5 补充回归用例
 - 每个修复必须有对应的回归用例
 - 用例命名标注 `regression` 并说明 bug 描述
 - 优先同时覆盖 API 层和 UI 层（若涉及前端）
 
-### 6. 副作用检查
+### 8.6 副作用检查
 - 运行全量测试确认无回归
 - 检查是否引入新文件、新依赖或临时文件残留
 - 测试生成的临时文件必须写入系统临时目录或测试目录，不得污染源码
 
-## 部署脚本
+## 9. 部署脚本
 
 创建基本 agent 部署运维脚本，要求脚本打印 human-friendly output 用户阅读：
 
-### 脚本行为规范
+### 9.1 脚本行为规范
 
 - `start.sh`：按依赖顺序启动服务（Backend → Frontend），启动前检查依赖是否安装、端口是否被占用
 - `stop.sh`：按逆序停止服务，支持优雅关闭（发送 SIGTERM 后等待超时再 SIGKILL）
 - `restart.sh`：先 stop 再 start，中途失败时回滚到原状态并报错
 - `status.sh`：检查各服务进程是否存活，打印运行状态、PID、端口占用信息
 
-### 通用要求
+### 9.2 通用要求
 
 - 脚本位于项目根目录 `{Root}/script/` 下
 - 所有脚本支持 `--help` 参数，打印用法说明
 - 错误信息使用红色输出，成功信息使用绿色输出
 
-## 测试设计
+## 10. 测试设计
 
-### 测试框架
+### 10.1 测试框架
 
 - 单元测试（UT）：使用 `pytest`
 - 集成测试（IT）：使用 `pytest` + `playwright`（Python 版本），Playwright 未安装时自动跳过相关用例
 
-### 测试用例类型
+### 10.2 测试用例类型
 
 - 单元测试（UT）: 验证子模块或类核心逻辑，mock 外部依赖
 - 集成测试（IT）: 以用户使用场景为驱动，根据服务实际对外暴露的方式选择测试入口，进行整体前后端端到端功能验证，使用真实依赖。若服务通过 Web UI 对外提供，使用 Playwright 操作浏览器；若服务以 HTTP API 形式暴露，则通过 API 进行测试
 
-### 测试用例运行方式
+### 10.3 测试用例运行方式
 
-针对单元测试与集成测试，各自提供执行脚本，自动化全量运行，按模块生成测试报告
+针对单元测试与集成测试，各自提供执行脚本，按模块生成测试报告：
 
 ```
-{Root}/test/run_ut.py
-{Root}/test/run_it.py
+{Root}/test/run_ut.py                  # UT：全量 / 按模块过滤
+{Root}/test/run_it.py                  # IT：按场景
 ```
 
-### 测试用例编写原则
+**UT 测试策略（必须遵守）**：
+
+- **迭代期**：改完一处只跑涉及修改的模块（秒级）：
+  ```bash
+  python3 test/run_ut.py <module> [<module2> ...]
+  ```
+  run_ut.py 按 `test/unit/<module>/` 目录匹配模块参数；模块名不存在时报错并列出可用模块清单。
+- **提交前**：全量跑一次，确认无跨模块回归：
+  ```bash
+  python3 test/run_ut.py
+  ```
+
+### 10.4 测试用例编写原则
 
 #### 通用原则（UT 与 IT）
 
