@@ -182,34 +182,29 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
      - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
      - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案
      - `{Root}/doc/<module>/service.md` → Service 接口与流程
-   - `{Root}/doc/common/data-schema.md` → 跨 module 共享数据结构（如存在）
    - **按 Agent Type 选读接入层文档**：
      - `cli-only`：`{Root}/doc/<module>/cli.md` → CLI 契约（实现 `cli/<module>.py` 时按此写 click decorators + docstring）
      - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
      - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，写入 violations 列表返回给 PM
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
-4. **状态流转与你无关**：feature 的 implementing / qa-reviewing 等状态由 PM 统一维护，你不要读写 `.features/index.yaml`，完成后在输出中给 `suggested_status` 即可
+4. **状态流转与你无关**：feature 的 implementing / qa-reviewing 等状态由 PM 统一维护，你不要读写任何状态文件，完成后在输出中给 `suggested_status` 即可
 5. **代码目录结构**（按 Agent Type）：
 
 **形态 cli-only**：
 ```
 {Root}/src/<module>/{__init__.py, service.py, models.py}
-{Root}/src/common/                # 共享数据（可选）
 {Root}/cli/<module>.py            # CLI wrapper
 {Root}/doc/<module>/{data-schema.md, data-persistence.md}
-{Root}/doc/common/                # 共享 schema（可选）
 {Root}/test/
 ```
 
 **形态 http-api / http-web**：
 ```
 {Root}/src/<module>/{__init__.py, service.py, models.py}
-{Root}/src/common/
 {Root}/agent/                     # 可选，如需 LLM 编排
 {Root}/backend/                   # FastAPI
 {Root}/doc/<module>/
-{Root}/doc/common/
 {Root}/doc/backend.md
 {Root}/script/
 {Root}/test/
@@ -218,10 +213,8 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 **形态 mcp-server**：
 ```
 {Root}/src/<module>/{__init__.py, service.py, models.py}
-{Root}/src/common/
 {Root}/mcp-server/{__init__.py, server.py, tools/}
 {Root}/doc/<module>/
-{Root}/doc/common/
 {Root}/doc/mcp-server.md
 {Root}/script/                    # sse/http/mcpb 模式需要；stdio 不需要
 {Root}/test/
@@ -229,16 +222,15 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 
 完整目录结构示意参考 `design-reference.md` 的「Agent 参考架构」章节。
 
-## 按 Agent Type 实现
+## 5. 按 Agent Type 实现
 
 Developer 实现时根据 feature 的 Agent Type 决定产出哪些代码：
 
-### 所有形态共同
+### 5.1 所有形态共同
 - `src/<module>/service.py`：业务逻辑（被 CLI/Backend/MCP Server 调用）
 - `src/<module>/models.py`：dataclass + enum
-- `src/common/models.py`：跨 module 共享数据（如使用）
 
-### cli-only 形态追加
+### 5.2 cli-only 形态追加
 - `cli/<module>.py`：CLI wrapper（click）
 - **调用方式**：`python3 cli/<module>.py --help`（不用 `python -m`）
 - cli.py 头部需处理 sys.path：
@@ -249,24 +241,24 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.<module>.service import <ServiceName>
 ```
 
-### http-api / http-web 形态追加
+### 5.3 http-api / http-web 形态追加
 - `backend/`：FastAPI，直接 `from src.<module>.service import ...`
 - **不写 CLI**（backend 直接调 src/）
 - http-web 追加 `frontend/` 实现
 
-### mcp-server 形态追加
+### 5.4 mcp-server 形态追加
 - `mcp-server/server.py`：MCP server 入口
 - `mcp-server/tools/`：tools 定义（每个 tool 映射到 src/ 中的方法）
 - **不写 CLI、不写 backend/**
 
-### 多形态组合
+### 5.5 多形态组合
 Agent Type 是单选——一个 feature 只对应一种形态。如某 agent 需要多形态（如同时 CLI + HTTP），按两个 feature 分别实现，共享 `src/`。
 
-## 开发原则
+## 6. 开发原则
 
-### data-schema一致性
+### 6.1 data-schema一致性
 
-编码时必须确保所有模块使用数据结构一致性，以 `doc/<module>/data-schema.md` 为唯一真相源（按 module 维护），跨 module 共享数据以 `doc/common/data-schema.md` 为唯一真相源。
+编码时必须确保所有模块使用数据结构一致性，以 `doc/<module>/data-schema.md` 为唯一真相源（按 module 维护）。
 
 #### 新增数据字段检查清单
 
@@ -274,12 +266,11 @@ Agent Type 是单选——一个 feature 只对应一种形态。如某 agent �
 
 1. `doc/<module>/data-schema.md` — 更新 schema 定义与 dataclass（按 module 维护，不再单文件）
 2. `src/<module>/models.py` — 同步 dataclass / enum 定义
-3. **如属共享数据**：`doc/common/data-schema.md` + `src/common/models.py`
-4. CLI 序列化/反序列化（仅 cli-only 形态）
-5. 前端 JS 渲染与表单提交（仅 http-web 形态）
-6. MCP tools input/output schema（仅 mcp-server 形态）
+3. CLI 序列化/反序列化（仅 cli-only 形态）
+4. 前端 JS 渲染与表单提交（仅 http-web 形态）
+5. MCP tools input/output schema（仅 mcp-server 形态）
 
-### 日志规范
+### 6.2 日志规范
 
 #### 打印原则
 

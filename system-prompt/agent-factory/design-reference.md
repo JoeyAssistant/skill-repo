@@ -23,7 +23,6 @@
   - [❌ 禁止的内容（过程性）](#-禁止的内容过程性)
   - [撰写自检（写完每个 doc 文件后）](#撰写自检写完每个-doc-文件后)
   - [反例（过程性内容混入 doc/，禁止）](#反例过程性内容混入-doc禁止)
-- [共享数据提议流程](#共享数据提议流程)
 - [设计文档输出规范](#设计文档输出规范)
 - [Data Schema](#data-schema)
   - [文件内容](#文件内容)
@@ -87,7 +86,6 @@ graph TD
     CLI["CLI Wrapper<br/>(click)"]
     SrcFinancial["src/financial/<br/>(service + models)"]
     SrcNews["src/news/<br/>(service + models)"]
-    SrcCommon["src/common/<br/>(共享 models)"]
     Data[("Data<br/>(JSON / database)")]
 
     User <--> WebUI
@@ -106,8 +104,6 @@ graph TD
     McpServer --> SrcNews
     SrcFinancial <--> Data
     SrcNews <--> Data
-    SrcCommon -.-> SrcFinancial
-    SrcCommon -.-> SrcNews
 ```
 
 ## doc/<module>/ 章节契约
@@ -218,7 +214,6 @@ class <EntityName>:
 
 所有 `{Root}/doc/` 下的 .md 文件：
 - `doc/<module>/data-schema.md`、`doc/<module>/data-persistence.md`、`doc/<module>/service.md`、`doc/<module>/cli.md`（cli-only）
-- `doc/common/data-schema.md`
 - `doc/backend.md`、`doc/mcp-server.md`
 
 ### ✅ 允许的内容
@@ -280,19 +275,6 @@ class <EntityName>:
 
 决策"为什么共用 list" → FEATURE.yaml 需求规格。
 
-## 共享数据提议流程
-
-设计中如发现某数据结构（如 `AuditLog`）需要被 ≥2 个 module 使用，按以下流程提议加入 `doc/common/data-schema.md`：
-
-1. 在 FEATURE.yaml 需求规格 新增"提议 common 数据结构"条目：
-   - 结构名、dataclass 字段定义
-   - 使用方（≥2 module）
-   - 理由（为什么不归属单一 module）
-2. PM 初步 review：合理性 + 是否真共享
-3. 用户在 FEATURE.yaml review 时确认
-4. 通过后直接写入 `doc/common/data-schema.md`
-5. 各 module 在自己的 `data-schema.md` 中 import 引用，**不重复定义字段**
-
 ## 设计文档输出规范
 
 设计完成后，按以下结构输出文档到 `{Root}/doc/` 目录（无 DESIGN.md）：
@@ -302,7 +284,6 @@ class <EntityName>:
 | `{Root}/doc/<module>/data-schema.md` | 该 module 业务数据结构定义（dataclass + 字段注释） | 所有形态 |
 | `{Root}/doc/<module>/data-persistence.md` | 该 module 数据持久化方案 | 所有形态 |
 | `{Root}/doc/<module>/service.md` | Service 方法签名 + 关键流程 mermaid + 跨 module 关系图 | 所有形态 |
-| `{Root}/doc/common/data-schema.md` | 跨 module 共享数据结构（User/AuditLog/Pagination 等） | 所有形态（如需） |
 | `python3 {Root}/cli/<module>.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 FEATURE.yaml 关键接口定） | cli-only |
 | `{Root}/doc/backend.md` | 后端技术选型 + REST API 设计 | http-api / http-web |
 | `{Root}/doc/mcp-server.md` | MCP tools 清单 + 部署模式 + 调用流程 | mcp-server |
@@ -310,7 +291,7 @@ class <EntityName>:
 
 ## Data Schema
 
-设计文档 `{Root}/doc/<module>/data-schema.md`（按 module 拆分，跨 module 共享部分写在 `{Root}/doc/common/data-schema.md`）
+设计文档 `{Root}/doc/<module>/data-schema.md`（按 module 拆分）
 
 ### 文件内容
 
@@ -402,7 +383,6 @@ class <EntityName>:
 ### 关键原则
 
 - **每个 module 的 `data-schema.md` 作为该 module 数据结构的唯一真值，必须保证跨文档一致性**
-- **跨 module 共享数据结构以 `{Root}/doc/common/data-schema.md` 为唯一真值**
 - 任何 data-schema 修改需先与用户讨论
 
 ## Data Persistence
@@ -467,17 +447,12 @@ PM 在 draft 阶段把 CLI 命令清单写到 FEATURE.yaml 关键接口；design
       __init__.py
       service.py            # 业务逻辑
       models.py             # dataclass + enum
-    common/                 # 共享数据（按需创建）
-      __init__.py
-      models.py
   cli/
     <module>.py             # python3 cli/<module>.py --help
   doc/
     <module>/
       data-schema.md
       data-persistence.md
-    common/
-      data-schema.md        # 按需
   test/
 ```
 
