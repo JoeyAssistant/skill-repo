@@ -205,7 +205,6 @@ PM 完成 doc/ 修改后，提交用户终审：
 2. **diff 落对话**：贴原始 git diff hunk（含上下文行），禁止「详见文件 X」「如前述」——用户可能不打开文件；外层围栏用 `~~~`（diff 内含代码块时不破坏渲染）
 3. **每处必附修改原因**：引用代码位置（file:line）或文档段落为依据；设计决策写「依据 XX 项已确认」，纠错写「原文 XX 不准确，依据 YY」
 4. **改后重贴**：用户提出修改 → 改完重新贴该处最终 diff（只贴最终态，不累积中间态）
-5. **review 完成确认**：全部修改点逐处 review 完成、用户确认后，doc 终审通过，进入 E2E test design（approved 在 E2E test cases 也 review 完成后才流转）
 
 ### E2E Test Cases要求
 - 要求E2E acceptance test
