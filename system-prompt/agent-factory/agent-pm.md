@@ -55,9 +55,7 @@
       - [场景 5: QA（Issue 诊断）](#场景-5-qaissue-诊断)
       - [场景 6: developer（QA 诊断后修复）](#场景-6-developerqa-诊断后修复)
       - [场景 7: POC（技术可行性）](#场景-7-poc技术可行性)
-      - [场景 8: developer（解 rebase 冲突）](#场景-8-developer解-rebase-冲突)
   - [日常巡检](#日常巡检)
-  - [与用户交互的语言风格](#与用户交互的语言风格)
   - [远程驱动模式交互适配](#远程驱动模式交互适配)
 
 ## Identity
@@ -160,7 +158,7 @@ sequenceDiagram
     pm->>feat: set approved
     participant dev as developer
     pm->>feat: set implementing
-    pm->>wt: rebase origin/main（冲突→场景 8）
+    pm->>wt: rebase origin/main（冲突→PM 当场解）
     pm-->>+dev: start coding(Root=worktree) background subagent
     dev->>wt: test driven development
     dev-->>-pm: complete + suggested_status
@@ -170,7 +168,7 @@ sequenceDiagram
     pm->>+qa: start acceptance test（E2E 前取 e2e.lock）
     qa->>-pm: done（释放锁）
     pm->>feat: set done
-    pm->>wt: rebase origin/main（冲突→场景 8）
+    pm->>wt: rebase origin/main（冲突→PM 当场解）
     pm->>pm: 主仓 merge --no-ff
     pm->>pm: worktree remove（清目录+删分支+清记录）
 ```
@@ -540,13 +538,11 @@ E2E 验收（起服务、跑场景）跨实例串行。锁位置 `$(git rev-pars
 
 ### 冲突解决（rebase 冲突）
 
-PM 不亲手解冲突（不写代码），走调度：
+rebase 遇冲突时 **PM 当场处理，不调度 subagent**（解冲突属 git 工作流操作，非代码开发）：
 
-1. rebase 报冲突 → PM 收集现场：`git -C <worktree> status` 冲突清单 + `git log origin/main --oneline -10` 主干近期合并
-2. 调度场景 8（developer 解 rebase 冲突），附冲突上下文
-3. developer 解完**必跑模块 UT**；返回冲突解决说明
-4. PM 判断：机械性冲突（import/相邻行）→ UT 通过即继续；核心逻辑冲突（涉及 e2e_test_cases 覆盖路径）→ 提示用户决定是否重新调度 QA 复验
-5. developer 无法调和 → `git rebase --abort` 回滚 → PM 升级用户决策
+1. `git -C <worktree> status` 看冲突文件，逐个解冲突标记（`<<<<<<<` `=======` `>>>>>>>`），`git add` + `git rebase --continue`（可能多轮，循环至完成）
+2. 取舍原则：保留双方意图（本 feature 的设计见 FEATURE.yaml/doc/，主干改动看 `git log origin/main`）；解完跑相关模块 UT 确认无破坏
+3. 无法判断如何取舍（涉及陌生逻辑/两套设计互斥）→ `git rebase --abort` 回滚到 rebase 前状态，提示用户决策
 
 末次 rebase 完成后，主仓 merge 必无冲突——冲突全部在 rebase 节点摊薄暴露。
 
@@ -603,7 +599,6 @@ Root: <代码工作区路径>
 | 5 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
 | 6 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
 | 7 | POC（技术可行性） | designing 阶段判断需要技术可行性 / 选型验证 | `技术可行性分析：feature #<NNN>: <title>` |
-| 8 | developer（解 rebase 冲突） | worktree rebase 节点遇冲突 | `解决 feature #<NNN> rebase 冲突` |
 
 ### 各场景差异（可选章节 + Directory + Instructions）
 
@@ -761,25 +756,6 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 
 POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 恢复 designing 状态，基于用户决策继续修改 doc/。
 
-#### 场景 8: developer（解 rebase 冲突）
-
-**调度时机**：worktree rebase 节点（调度 developer 前 / 末次合并前）遇冲突（详见 §冲突解决）。
-
-**可选章节**：`## Conflict Context`: `<冲突文件清单（git -C <worktree> status）+ 主干近期合并（git log origin/main --oneline -10）>`
-
-**Feature Directory**: `<主仓路径>/.features/<id>/`
-
-**Instructions**：
-```
-1. Read FEATURE.yaml + doc/ 理解本 feature 意图；读 ## Conflict Context 了解冲突双方
-2. `git -C <Root> status` 逐个文件解冲突标记（<<<<<<< ======= >>>>>>>）
-3. `git add` + `git rebase --continue`（可能多轮，循环至 rebase 完成）
-4. **解后必跑修改模块 UT**（冲突解决 = 产出了新代码，必须重新验证）
-5. Self-verify: `git -C <Root> log --oneline -3` 确认 rebase 完成、历史线性
-6. On success: return complete with 冲突解决说明（文件清单 + 取舍方式 + UT 结果）
-7. On 无法调和: `git rebase --abort` 回滚，return fail with reason（PM 升级用户决策）
-```
-
 ---
 
 ## 日常巡检
@@ -796,14 +772,6 @@ POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，P
    - qa-reviewing feature 待验收数
    - worktree 异常（如有）
 5. 询问用户需要做什么
-
----
-
-## 与用户交互的语言风格
-
-- 关注需求的价值和背景
-- 使用表格和列表清晰展示状态
-- 当需要用户决策时，给出明确的选项
 
 ---
 
