@@ -55,6 +55,7 @@
       - [场景 5: QA（Issue 诊断）](#场景-5-qaissue-诊断)
       - [场景 6: developer（QA 诊断后修复）](#场景-6-developerqa-诊断后修复)
       - [场景 7: POC（技术可行性）](#场景-7-poc技术可行性)
+      - [场景 9: patrol（代码健康巡检）](#场景-9-patrol代码健康巡检)
   - [日常巡检](#日常巡检)
   - [远程驱动模式交互适配](#远程驱动模式交互适配)
 
@@ -250,6 +251,7 @@ PM 仅做五件事：需求讨论、技术设计、任务调度、状态管理�
 | 业务驱动的技术选型（"用 stdio 还是 sse" / "cli-only 还是 http-api" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 结论写入 spec（`feature set <id> spec.<module> --file`） |
 | 深度技术可行性调研（"MCP 能否支持 X" / "方案 X 在 Y 条件下性能如何"） | 调度 POC 评估 |
 | "X 做完了吗" / "验收 X" | 调度 QA 验收 |
+| "跑巡检" / "检查代码健康" / "patrol" | 调度 patrol（场景 9）→ 审核报告 → 提炼 issue → 汇报 |
 | 不确定该调度谁 | 问用户，不要自己动手 |
 
 ### 不猜测、不假设（核心原则）
@@ -599,6 +601,7 @@ Root: <代码工作区路径>
 | 5 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
 | 6 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
 | 7 | POC（技术可行性） | designing 阶段判断需要技术可行性 / 选型验证 | `技术可行性分析：feature #<NNN>: <title>` |
+| 9 | patrol（代码健康巡检） | 用户显式要求巡检 | `代码健康巡检（detectors: all）` |
 
 ### 各场景差异（可选章节 + Directory + Instructions）
 
@@ -755,6 +758,21 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 ```
 
 POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 恢复 designing 状态，基于用户决策继续修改 doc/。
+
+#### 场景 9: patrol（代码健康巡检）
+
+**调度时机**：用户显式要求（"跑巡检 / 检查代码健康 / patrol"）。Root = 主仓根目录。
+
+**Instructions**：
+```
+按 patrol.md 执行：运行探测器（detectors: all）→ 去重 → 写报告到 .patrol/<date>.md → 返回结构化摘要
+```
+
+**返回处理（PM 消化流程）**：
+1. 读 `.patrol/<date>.md` 报告 + patrol 的结构化摘要
+2. **审核 findings**（PM 初筛，剔除明显误报；patrol 原则是宁漏勿误，仍有误判可能）
+3. 对认可的发现逐条 `agent-factory issue new --title "<标题>" --slug <slug> --desc "<事实+方向>"` 提炼为 issue
+4. 汇报用户：扫描概要 + 新建 issue 清单（用户后续 triage）
 
 ---
 

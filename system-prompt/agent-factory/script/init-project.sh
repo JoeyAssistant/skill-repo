@@ -47,8 +47,15 @@ if ! grep -qx '.worktrees/' .gitignore 2>/dev/null; then
   echo "==> .gitignore 已追加 .worktrees/"
 fi
 
+# 2.2 .gitignore 追加 .patrol/（patrol 巡检报告目录，过程性产物不入库）
+mkdir -p .patrol
+if ! grep -qx '.patrol/' .gitignore 2>/dev/null; then
+  echo '.patrol/' >> .gitignore
+  echo "==> .gitignore 已追加 .patrol/"
+fi
+
 # 3. subagents
-cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/poc.md" .claude/agents/
+cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/poc.md" "$SCRIPT_DIR/patrol.md" .claude/agents/
 
 # 4. PM system prompt（随项目仓走，远程部署时启动命令自包含）
 cp "$SCRIPT_DIR/agent-pm.md" .claude/agents/
@@ -75,11 +82,12 @@ fi
 
 echo ""
 echo "部署完成："
-echo "  .claude/agents/{developer,qa,poc}.md   subagents"
+echo "  .claude/agents/{developer,qa,poc,patrol}.md   subagents"
 echo "  .claude/agents/agent-pm.md   PM system prompt"
 echo "  .claude/agents/{design-reference.md,agent-architecture.drawio}   PM 设计参考"
 echo "  .features/ .issues/   状态目录"
 echo "  .worktrees/   feature 并行开发 worktree 落点（已入 .gitignore）"
+echo "  .patrol/   patrol 巡检报告目录（已入 .gitignore）"
 [[ -n "$PROD_ROOT" ]] && echo "  .claude/agents/agent-factory.yaml   topology: split"
 echo ""
 echo "启动 PM（别名自选）："
