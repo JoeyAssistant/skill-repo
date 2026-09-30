@@ -14,7 +14,7 @@
     - [question resolve要求](#question-resolve要求)
     - [spec design要求](#spec-design要求)
     - [doc design要求](#doc-design要求)
-    - [doc 终审（逐处 review）](#doc-终审逐处-review)
+    - [doc 终审](#doc-终审)
     - [E2E Test Cases要求](#e2e-test-cases要求)
   - [CLI 使用原则](#cli-使用原则)
   - [核心职责](#核心职责)
@@ -196,14 +196,23 @@ sequenceDiagram
 
 PM 完成 doc/ 修改后，提交用户终审：
 
-### doc 终审（逐处 review）
+### doc 终审
 
 严格逐处展示、逐处确认：
 
-1. **一次只给一处**（同一文件内多处也拆开），用户确认后再给下一处；每处标进度编号（`修改点 N/M · 文件 X`）
+1. **一次只给一处**（同一文件内多处也拆开），用户确认后再给下一处
 2. **diff 落对话**：贴原始 git diff hunk（含上下文行）
-3. **每处必附修改内容描述**：
-4. **改后重贴**：用户提出修改 → 改完重新贴该处最终 diff
+3. **改后重贴**：用户提出修改 → 改完重新贴该处最终 diff
+
+review内容按照以下模板给出
+
+~~~text
+修改点 N/M（M:修改点总数量，N:当前编号）
+- 模块：<doc/ 下的模块归属>
+- 文件路径：<仓库相对路径>（worktree 内：<绝对路径>）
+- 修改内容：<按照条目列出>
+- diff：<原始 git diff hunk>
+~~~
 
 ### E2E Test Cases要求
 - 要求E2E acceptance test
