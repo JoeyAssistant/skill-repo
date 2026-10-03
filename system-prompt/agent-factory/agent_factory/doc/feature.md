@@ -3,12 +3,11 @@
 - id # feature编号
 - title # feature标题，与目录一致
 - desc # 需求描述
-- agent_type
 - background # 需求背景，为什么要做这个需求
     - pain_point # 解决什么痛点
     - benefit # 带来什么收益
 - spec # 需求规格
-    - module # 模块名
+    - module # 改动所在模块名，或 backend / frontend / skill / mcp
         - functions # 功能、修改点
             1. function_1 
             2. function_2

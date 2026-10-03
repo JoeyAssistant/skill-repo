@@ -16,7 +16,7 @@ from agent_factory.cli.common import (
 )
 from agent_factory.schema import Feature, FeatureIndex, FeatureIndexItem
 from agent_factory.schema.enums import Priority
-from agent_factory.schema.feature import AgentType, FeatureStatus
+from agent_factory.schema.feature import FeatureStatus
 
 
 def _feature_doc() -> str:
@@ -41,18 +41,12 @@ def feature_group() -> None:
 @click.option("--slug", required=True, help="Directory slug (kebab-case)")
 @click.option("--desc", required=True, help="User's original request description (preserved verbatim)")
 @click.option(
-    "--agent-type",
-    type=click.Choice([t.value for t in AgentType]),
-    default=AgentType.CLI_ONLY.value,
-    help="Agent type (default: cli-only)",
-)
-@click.option(
     "--priority",
     type=click.Choice([p.value for p in Priority]),
     default=Priority.P2.value,
     help="Priority (default: P2)",
 )
-def new(title: str, slug: str, desc: str, agent_type: str, priority: str) -> None:
+def new(title: str, slug: str, desc: str, priority: str) -> None:
     """Create new feature (status=draft).
 
     Directory name: <NNN>-<slug> (e.g., 001-income-module).
@@ -80,7 +74,6 @@ def new(title: str, slug: str, desc: str, agent_type: str, priority: str) -> Non
             id=feature_id,
             title=dir_name,  # title field = directory name
             desc=desc,
-            agent_type=AgentType(agent_type),
         )
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
@@ -106,7 +99,7 @@ def new(title: str, slug: str, desc: str, agent_type: str, priority: str) -> Non
 
 
 # Fields that route to FEATURE.yaml (plain scalars)
-SCALAR_FIELDS = {"desc", "agent_type"}
+SCALAR_FIELDS = {"desc"}
 
 # Subfields of background that can be set individually
 BACKGROUND_SUBFIELDS = {"pain_point", "benefit"}
@@ -188,7 +181,7 @@ def _read_value(value: str | None, file_path: Path | None) -> str:
 def _invalid_field(field: str) -> None:
     """Exit with invalid field error."""
     click.echo(format_error("InvalidField",
-        f"Field '{field}' not supported. 合法形式：desc / agent_type / background "
+        f"Field '{field}' not supported. 合法形式：desc / background "
         f"/ background.pain_point / background.benefit / spec.<module> / e2e_test_cases",
         None), err=True)
     sys.exit(4)
@@ -287,8 +280,6 @@ def show(feature_id: int, fmt: str) -> None:
 def _render_feature_markdown(feature: Feature) -> str:
     lines = [
         f"# Feature {feature.id}: {feature.title}",
-        "",
-        f"**Agent Type**: {feature.agent_type.value}",
         "",
         f"**Desc**: {feature.desc}",
         "",

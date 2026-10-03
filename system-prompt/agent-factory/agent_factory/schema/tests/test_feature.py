@@ -2,8 +2,7 @@
 import pytest
 from pydantic import ValidationError
 
-from agent_factory.schema.feature import AgentType
-from agent_factory.schema.feature import Background, E2ETestCase, Feature, ModuleSpec, Observation
+from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Feature, Observation
 
 
 # === Background 测试 ===
@@ -80,7 +79,6 @@ def _valid_feature_kwargs():
         id=1,
         title="001-income-module",
         desc="用户原话：收入管理",
-        agent_type=AgentType.CLI_ONLY,
     )
 
 
@@ -89,7 +87,6 @@ def test_feature_minimal_valid():
     assert feature.id == 1
     assert feature.title == "001-income-module"
     assert feature.desc == "用户原话：收入管理"
-    assert feature.agent_type == AgentType.CLI_ONLY
     assert feature.background is None
     assert feature.spec == {}
     assert feature.e2e_test_cases == []
@@ -140,13 +137,6 @@ def test_feature_id_range():
     with pytest.raises(ValidationError):
         Feature(**kw)
     kw["id"] = 1000
-    with pytest.raises(ValidationError):
-        Feature(**kw)
-
-
-def test_feature_agent_type_must_be_enum():
-    kw = _valid_feature_kwargs()
-    kw["agent_type"] = "unknown-type"
     with pytest.raises(ValidationError):
         Feature(**kw)
 

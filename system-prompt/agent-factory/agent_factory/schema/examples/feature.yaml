@@ -3,7 +3,6 @@ id: 1
 title: 001-income-module
 desc: |
   用户原话："我想记收入，现在只有支出模块，月底看不到净收支。"
-agent_type: cli-only
 
 background:
   pain_point: |

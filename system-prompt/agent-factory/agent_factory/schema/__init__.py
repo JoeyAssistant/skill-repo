@@ -8,9 +8,9 @@
 - IssueIndex / IssueIndexItem：issue 索引
 """
 from agent_factory.schema.enums import Priority
-from agent_factory.schema.feature import AgentType, FeatureStatus
+from agent_factory.schema.feature import FeatureStatus
 from agent_factory.schema.issue import IssueStatus
-from agent_factory.schema.feature import Background, E2ETestCase, Feature, ModuleSpec, Observation, WorktreeInfo
+from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Feature, Observation, WorktreeInfo
 from agent_factory.schema.issue import (
     BugfixResult,
     FeatureRequestResult,
@@ -26,7 +26,6 @@ from agent_factory.schema.index import (
 
 __all__ = [
     # 枚举
-    "AgentType",
     "FeatureStatus",
     "IssueStatus",
     "Priority",

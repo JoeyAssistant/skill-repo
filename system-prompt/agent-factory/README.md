@@ -251,7 +251,7 @@ PM 工作流 YAML 文件的 schema 定义在 `agent_factory/schema/` 目录：
 
 | 文件 | 内容 |
 |------|------|
-| `agent_factory/schema/enums.py` | 6 个枚举（AgentType / Priority / FeatureStatus / 等） |
+| `agent_factory/schema/enums.py` | 枚举（Priority / FeatureStatus / 等） |
 | `agent_factory/schema/feature.py` | Feature / Decision / Option 模型 |
 | `agent_factory/schema/issue.py` | Issue 模型 |
 | `agent_factory/schema/index.py` | FeatureIndex / IssueIndex 模型 |

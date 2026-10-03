@@ -20,7 +20,6 @@ def test_feature_new_creates_files(tmp_path, monkeypatch):
         "--title", "收入管理",
         "--slug", "income-module",
         "--desc", "用户原话：我想记收入",
-        "--agent-type", "cli-only",
         "--priority", "P1",
     ])
     assert result.exit_code == 0, result.output
@@ -34,7 +33,6 @@ def test_feature_new_creates_files(tmp_path, monkeypatch):
     assert data["id"] == 1
     assert data["title"] == "001-income-module"
     assert data["desc"] == "用户原话：我想记收入"
-    assert data["agent_type"] == "cli-only"
 
     # Index updated
     idx = load_yaml(tmp_path / ".features" / "index.yaml")
@@ -89,7 +87,7 @@ def test_feature_new_slug_must_start_with_letter(tmp_path, monkeypatch):
     assert result.exit_code == 4
 
 
-def test_feature_new_default_agent_type_and_priority(tmp_path, monkeypatch):
+def test_feature_new_default_priority(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".features").mkdir()
     (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
@@ -98,23 +96,8 @@ def test_feature_new_default_agent_type_and_priority(tmp_path, monkeypatch):
     result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x", "--desc", "test desc"])
     assert result.exit_code == 0
 
-    feat = load_yaml(tmp_path / ".features" / "001-x" / "FEATURE.yaml")
-    assert feat["agent_type"] == "cli-only"  # default
     idx = load_yaml(tmp_path / ".features" / "index.yaml")
     assert idx["features"][0]["priority"] == "P2"  # default
-
-
-def test_feature_new_invalid_agent_type(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / ".features").mkdir()
-    (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
-
-    runner = CliRunner()
-    result = runner.invoke(main, [
-        "feature", "new", "--title", "X", "--slug", "x", "--desc", "test",
-        "--agent-type", "unknown-type",
-    ])
-    assert result.exit_code != 0  # click rejects invalid choice
 
 
 def test_feature_new_increments_id(tmp_path, monkeypatch):
@@ -144,20 +127,6 @@ def test_feature_set_desc(tmp_path, monkeypatch):
 
     feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
     assert feat["desc"] == "新的需求描述"
-
-
-def test_feature_set_agent_type(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _setup_feature(tmp_path)
-
-    runner = CliRunner()
-    result = runner.invoke(main, [
-        "feature", "set", "1", "agent_type", "http-api",
-    ])
-    assert result.exit_code == 0, result.output
-
-    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
-    assert feat["agent_type"] == "http-api"
 
 
 def test_feature_set_background_sub(tmp_path, monkeypatch):
@@ -326,7 +295,7 @@ def _setup_feature(tmp_path):
     """Helper: create .features/001-test-feature/FEATURE.yaml + index.yaml entry."""
     (tmp_path / ".features" / "001-test-feature").mkdir(parents=True)
     (tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml").write_text(
-        "id: 1\ntitle: '001-test-feature'\nagent_type: cli-only\ndesc: test desc\n"
+        "id: 1\ntitle: '001-test-feature'\ndesc: test desc\n"
     )
     (tmp_path / ".features" / "index.yaml").write_text(
         "features:\n  - id: 1\n    title: '001-test-feature'\n    status: draft\n    priority: P2\n"
@@ -541,7 +510,7 @@ def _setup_minimal_feature(tmp_path, fid, dir_name, desc):
     """Create a minimal feature with given id, dir_name, desc."""
     (tmp_path / ".features" / dir_name).mkdir(parents=True)
     (tmp_path / ".features" / dir_name / "FEATURE.yaml").write_text(
-        f"id: {fid}\ntitle: '{dir_name}'\nagent_type: cli-only\ndesc: {desc}\n"
+        f"id: {fid}\ntitle: '{dir_name}'\ndesc: {desc}\n"
     )
 
 

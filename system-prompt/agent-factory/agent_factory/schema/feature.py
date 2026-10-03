@@ -7,14 +7,6 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AgentType(str, Enum):
-    """Agent 形态."""
-    CLI_ONLY = "cli-only"
-    HTTP_API = "http-api"
-    HTTP_WEB = "http-web"
-    MCP_SERVER = "mcp-server"
-
-
 class FeatureStatus(str, Enum):
     """Feature 生命周期状态."""
     DRAFT = "draft"
@@ -34,7 +26,7 @@ class Background(BaseModel):
 
 
 class ModuleSpec(BaseModel):
-    """单个模块的需求规格（spec 按模块 dict 的 value）."""
+    """单个模块的需求规格（spec 按 module dict 的 value）."""
     model_config = ConfigDict(extra="forbid")
     functions: list[str] = Field(default_factory=list, description="功能、修改点")
     schema: Optional[str] = Field(None, description="data schema")
@@ -74,7 +66,6 @@ class Feature(BaseModel):
     id: int = Field(..., ge=1, le=999, description="feature 编号")
     title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
     desc: str = Field(..., description="用户原始需求描述（create 时必填）")
-    agent_type: AgentType = Field(..., description="Agent 形态")
 
     background: Optional[Background] = Field(None, description="需求背景（draft 阶段填）")
     spec: dict[str, ModuleSpec] = Field(default_factory=dict,

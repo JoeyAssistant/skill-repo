@@ -67,11 +67,11 @@ def test_index_refresh_rebuilds_feature_index(tmp_path, monkeypatch):
     # Create 2 features with slug naming
     (tmp_path / ".features" / "001-alpha").mkdir(parents=True)
     (tmp_path / ".features" / "001-alpha" / "FEATURE.yaml").write_text(
-        "id: 1\ntitle: '001-alpha'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
+        "id: 1\ntitle: '001-alpha'\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "002-beta").mkdir(parents=True)
     (tmp_path / ".features" / "002-beta" / "FEATURE.yaml").write_text(
-        "id: 2\ntitle: '002-beta'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
+        "id: 2\ntitle: '002-beta'\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     # Empty / corrupt index
     (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
@@ -111,7 +111,7 @@ def test_index_refresh_uses_directory_name_as_title(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".features" / "057-cli-only-data-access").mkdir(parents=True)
     (tmp_path / ".features" / "057-cli-only-data-access" / "FEATURE.yaml").write_text(
-        "id: 57\ntitle: '001-alpha'\nagent_type: cli-only\nproblem: x\nbenefit: y\ndescription: z\n"
+        "id: 57\ntitle: '001-alpha'\nproblem: x\nbenefit: y\ndescription: z\n"
     )
     (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
 
