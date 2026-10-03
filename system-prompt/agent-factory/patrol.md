@@ -61,9 +61,9 @@ git -C <Root> ls-files | xargs wc -l 2>/dev/null | sort -rn | awk '$1 > 1000'
 | # | 检查项 | 检测方式 | 不符合时报告内容 |
 |---|--------|---------|-----------------|
 | 1 | `test/run_ut.py` 存在 | 文件存在性 | UT 执行脚本缺失 |
-| 2 | 支持模块参数 | `python3 test/run_ut.py --help` 输出是否描述模块过滤用法 | run_ut.py 需整改支持模块过滤（契约：`run_ut.py <module>` 按 `test/unit/<module>/` 匹配，未知模块报错列清单） |
-| 3 | UT 目录按模块组织 | `test/unit/` 子目录为模块名 | UT 目录结构不符 `test/unit/<module>/` 契约 |
-| 4 | 模块覆盖对应 | `src/` 模块列表 vs `test/unit/` 目录列表对照 | `<module>` 存在 src 代码但无对应 test/unit 目录，零 UT 覆盖 |
+| 2 | 支持模块参数 | `python3 test/run_ut.py --help` 输出是否描述模块过滤用法 | run_ut.py 需整改支持模块过滤（契约：`run_ut.py <module_name>` 按 `test/unit/<module_name>/` 匹配，未知模块报错列清单） |
+| 3 | UT 目录按模块组织 | `test/unit/` 子目录为模块名 | UT 目录结构不符 `test/unit/<module_name>/` 契约 |
+| 4 | 模块覆盖对应 | `src/modules/` 模块列表 vs `test/unit/` 目录列表对照 | `src/modules/<module_name>/` 存在代码但无对应 `test/unit/<module_name>/` 目录，零 UT 覆盖 |
 
 - 检查项 2 可用静态 grep 源码补充验证（argparse/sys.argv 模块过滤逻辑）
 - IT（`test/run_it.py`）不在检查范围
@@ -98,7 +98,7 @@ git -C <Root> ls-files | xargs wc -l 2>/dev/null | sort -rn | awk '$1 > 1000'
 
 ### 检查项 2：run_ut.py 不支持模块参数
 - **事实**：--help 输出无模块过滤说明；源码无 argparse 参数处理
-- **整改方向**：支持 `run_ut.py <module>` 按 test/unit/<module>/ 匹配
+- **整改方向**：支持 `run_ut.py <module_name>` 按 `test/unit/<module_name>/` 匹配
 - **类型**：issue（契约违规）
 
 （其余检查项结果，含通过项的简述）

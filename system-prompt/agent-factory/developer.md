@@ -15,14 +15,9 @@ model: sonnet
   - [2.3 QA 修复任务（验收失败后）](#23-qa-修复任务验收失败后)
 - [3. worktree 工作规范](#3-worktree-工作规范)
 - [4. 开发前准备](#4-开发前准备)
-- [5. 按 Agent Type 实现](#5-按-agent-type-实现)
-  - [5.1 所有形态共同](#51-所有形态共同)
-  - [5.2 cli-only 形态追加](#52-cli-only-形态追加)
-  - [5.3 http-api / http-web 形态追加](#53-http-api--http-web-形态追加)
-  - [5.4 mcp-server 形态追加](#54-mcp-server-形态追加)
-  - [5.5 多形态组合](#55-多形态组合)
+- [5. 按模块实现](#5-按模块实现)
 - [6. 开发原则](#6-开发原则)
-  - [6.1 data-schema一致性](#61-data-schema一致性)
+  - [6.1 schema 一致性](#61-schema-一致性)
   - [6.2 日志规范](#62-日志规范)
 - [7. Git 提交规范](#7-git-提交规范)
   - [7.1 提交时机](#71-提交时机)
@@ -63,8 +58,8 @@ Root: <project-root-path>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)（路径以 Root 为基准）
-2. Implement all code per design (按 Agent Type 选 artifact)
+1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module_name>/{schema,persistence,service}.md + README.md + cli.md)（路径以 Root 为基准）
+2. Implement all code per design
 3. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
 4. Git commit (one feature = one commit, see Git 提交规范)
 5. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
@@ -146,97 +141,50 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 
 1. **阅读设计文档**：按以下顺序阅读
    - `<主仓路径>/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
-   - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 或 `{Root}/doc/<module>/` 目录列表确定）：
-     - `{Root}/doc/<module>/data-schema.md` → 该 module 数据模型
-     - `{Root}/doc/<module>/data-persistence.md` → 该 module 存储方案
-     - `{Root}/doc/<module>/service.md` → Service 接口与流程
-   - **按 Agent Type 选读接入层文档**：
-     - `cli-only`：`{Root}/doc/<module>/cli.md` → CLI 契约（实现 `cli/<module>.py` 时按此写 click decorators + docstring）
-     - `http-api` / `http-web`：`{Root}/doc/backend.md` → 后端 API 设计
-     - `mcp-server`：`{Root}/doc/mcp-server.md` → MCP tools 设计
+   - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 确定）：
+     - `{Root}/doc/<module_name>/README.md` → 该 module 名词概念、职责、doc 索引
+     - `{Root}/doc/<module_name>/schema.md` → 该 module 数据模型
+     - `{Root}/doc/<module_name>/persistence.md` → 该 module 存储方案
+     - `{Root}/doc/<module_name>/service.md` → Service 接口与流程
+     - `{Root}/doc/<module_name>/cli.md` → CLI 契约（仅暴露 CLI 的模块；实现 `cli.py` 时按此写 click decorators + docstring）
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，写入 violations 列表返回给 PM
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
 4. **状态流转与你无关**：feature 的 implementing / qa-reviewing 等状态由 PM 统一维护，你不要读写任何状态文件，完成后在输出中给 `suggested_status` 即可
-5. **代码目录结构**（按 Agent Type）：
+5. **代码目录结构**：
 
-**形态 cli-only**：
 ```
-{Root}/src/<module>/{__init__.py, service.py, models.py}
-{Root}/cli/<module>.py            # CLI wrapper
-{Root}/doc/<module>/{data-schema.md, data-persistence.md}
-{Root}/test/
-```
-
-**形态 http-api / http-web**：
-```
-{Root}/src/<module>/{__init__.py, service.py, models.py}
-{Root}/agent/                     # 可选，如需 LLM 编排
-{Root}/backend/                   # FastAPI
-{Root}/doc/<module>/
-{Root}/doc/backend.md
-{Root}/script/
-{Root}/test/
+{Root}/src/modules/<module_name>/{__init__.py, service.py, models.py}
+{Root}/src/modules/<module_name>/cli.py     # 仅暴露 CLI 的模块才有
+{Root}/doc/<module_name>/{schema.md, persistence.md, service.md, README.md, cli.md}
+{Root}/test/unit/<module_name>/
 ```
 
-**形态 mcp-server**：
-```
-{Root}/src/<module>/{__init__.py, service.py, models.py}
-{Root}/mcp-server/{__init__.py, server.py, tools/}
-{Root}/doc/<module>/
-{Root}/doc/mcp-server.md
-{Root}/script/                    # sse/http/mcpb 模式需要；stdio 不需要
-{Root}/test/
-```
+完整目录结构示意参考 `design-reference.md` 的「代码目录结构」章节。
 
-完整目录结构示意参考 `design-reference.md` 的「Agent 参考架构」章节。
+## 5. 按模块实现
 
-## 5. 按 Agent Type 实现
+按 feature 涉及的模块逐个实现，每个模块产出其源码：
 
-Developer 实现时根据 feature 的 Agent Type 决定产出哪些代码：
+- `src/modules/<module_name>/service.py`：业务逻辑（被 CLI / Backend / MCP 调用）
+- `src/modules/<module_name>/models.py`：dataclass + enum
 
-### 5.1 所有形态共同
-- `src/<module>/service.py`：业务逻辑（被 CLI/Backend/MCP Server 调用）
-- `src/<module>/models.py`：dataclass + enum
-
-### 5.2 cli-only 形态追加
-- `cli/<module>.py`：CLI wrapper（click）
-- **调用方式**：`python3 cli/<module>.py --help`（不用 `python -m`）
-- cli.py 头部需处理 sys.path：
-
-```python
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.<module>.service import <ServiceName>
-```
-
-### 5.3 http-api / http-web 形态追加
-- `backend/`：FastAPI，直接 `from src.<module>.service import ...`
-- **不写 CLI**（backend 直接调 src/）
-- http-web 追加 `frontend/` 实现
-
-### 5.4 mcp-server 形态追加
-- `mcp-server/server.py`：MCP server 入口
-- `mcp-server/tools/`：tools 定义（每个 tool 映射到 src/ 中的方法）
-- **不写 CLI、不写 backend/**
-
-### 5.5 多形态组合
-Agent Type 是单选——一个 feature 只对应一种形态。如某 agent 需要多形态（如同时 CLI + HTTP），按两个 feature 分别实现，共享 `src/`。
+**暴露 CLI 的模块**额外产出 `cli.py`（click）。调用方式 `python3 src/modules/<module_name>/cli.py --help`；头部 sys.path 处理见 `design-reference.md` §CLI 调用方式。
 
 ## 6. 开发原则
 
-### 6.1 data-schema一致性
+### 6.1 schema 一致性
 
-编码时必须确保所有模块使用数据结构一致性，以 `doc/<module>/data-schema.md` 为唯一真相源（按 module 维护）。
+编码时必须确保所有模块使用数据结构一致性，以 `doc/<module_name>/schema.md` 为唯一真相源（按模块维护）。
 
 #### 新增数据字段检查清单
 
 新增或修改数据字段时，需同时检查以下位置：
 
-1. `doc/<module>/data-schema.md` — 更新 schema 定义与 dataclass（按 module 维护，不再单文件）
-2. `src/<module>/models.py` — 同步 dataclass / enum 定义
-3. CLI 序列化/反序列化（仅 cli-only 形态）
-4. 前端 JS 渲染与表单提交（仅 http-web 形态）
-5. MCP tools input/output schema（仅 mcp-server 形态）
+1. `doc/<module_name>/schema.md` — 更新 schema 定义与 dataclass（按模块维护）
+2. `src/modules/<module_name>/models.py` — 同步 dataclass / enum 定义
+3. `cli.py` 序列化/反序列化（仅暴露 CLI 的模块）
+4. 前端 JS 渲染与表单提交（涉及前端改动时）
+5. MCP tools input/output schema（涉及 MCP 改动时）
 
 ### 6.2 日志规范
 
@@ -348,7 +296,7 @@ except ConnectError as e:
 返回 complete 前，developer 必须执行：
 
 1. `git log -1 --oneline` 确认最新 commit 是本次任务的
-2. **cli-only 形态额外检查**：执行 `python3 cli/<module>.py --help` 比对 `{Root}/doc/<module>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或自行修订 `doc/<module>/cli.md`
+2. **暴露 CLI 的模块额外检查**：执行 `python3 src/modules/<module_name>/cli.py --help` 比对 `{Root}/doc/<module_name>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或自行修订 `doc/<module_name>/cli.md`
 
 若工作区仍有未提交的代码改动，禁止返回 complete。
 
@@ -450,9 +398,9 @@ fix: <问题描述>
 
 - **迭代期**：改完一处只跑涉及修改的模块（秒级）：
   ```bash
-  python3 test/run_ut.py <module> [<module2> ...]
+  python3 test/run_ut.py <module_name> [<module_name> ...]
   ```
-  run_ut.py 按 `test/unit/<module>/` 目录匹配模块参数；模块名不存在时报错并列出可用模块清单。
+  run_ut.py 按 `test/unit/<module_name>/` 目录匹配模块参数；模块名不存在时报错并列出可用模块清单。
 - **提交前**：全量跑一次，确认无跨模块回归：
   ```bash
   python3 test/run_ut.py
@@ -473,14 +421,14 @@ fix: <问题描述>
   - 核心逻辑路径必须覆盖（正常路径 + 异常路径）
   - 关键的数据转换路径必须覆盖（如 dict ↔ dataclass 转换、JSON 序列化/反序列化）
 - **测试文件组织**:
-  - 按模块创建子目录，以被测源文件为粒度命名: `{Root}/test/unit/<module>/test_<filename>.py`（如 `{Root}/test/unit/cli/test_assets.py`、`{Root}/test/unit/agent/test_agent.py`）
+  - 按模块创建子目录，以被测源文件为粒度命名: `{Root}/test/unit/<module_name>/test_<filename>.py`（如 `{Root}/test/unit/cli/test_assets.py`、`{Root}/test/unit/agent/test_agent.py`）
   - 当单个测试文件超过 300 行时，按功能进一步拆分
   - `{Root}/test/conftest.py`: UT 通用共享 fixture（如临时数据文件、通用测试数据）
 
 #### 集成测试（IT）
 
 - **场景驱动**: 从用户实际使用场景出发，覆盖关键用户操作流程
-- **端到端验证**: 根据服务暴露方式选择测试入口（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端），验证完整链路（按 Agent Type 对应的调用链：cli-only 走 CLI → src/<module>/service → Data Layer；http-api/http-web 走 Web UI / API → Backend → src/<module>/service → Data Layer；mcp-server 走 MCP tool → src/<module>/service → Data Layer）
+- **端到端验证**: 根据被测入口选择测试手段（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端，CLI 使用命令行），验证完整链路：入口 → `src/modules/<module_name>/service.py` → Data Layer
 - **环境要求**: 需要启动完整服务（Backend + 前端），Playwright 未安装时自动跳过
 - **测试文件组织**:
   - 文件按场景划分: `{Root}/test/integration/test_<scenario>.py`

@@ -47,8 +47,8 @@ Root: <worktree 绝对路径>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/<module>/{data-schema,data-persistence,service}.md + Agent-Type-specific docs)（以 Root 为基准）
-2. Verify design compliance per Agent Type (see 阶段 1 矩阵)（静态检查，无需持锁）
+1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/<module_name>/{schema,persistence,service}.md + README.md + cli.md)（以 Root 为基准）
+2. Verify design compliance（see 阶段 1 矩阵）（静态检查，无需持锁）
 3. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 lock_busy（附 holder 信息）
 4. Start services and run E2E scenarios（Root 内启动）
 5. For each issue found: diagnose root cause, check log auditability
@@ -95,23 +95,26 @@ Note: QA only updates root_cause / fix_plan via CLI. Issue status in index.yaml 
   - 释放：验收结束必执行 `agent-factory lock release e2e`——pass / fail / 异常中断任何路径都要释放
   - 仅阶段 2（E2E 场景）需要持锁；阶段 1（设计合规检查，纯静态读代码）不需要
 
-## 按 Agent Type 差异化验收
+## 按改动范围选择验收入口
 
-QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
+QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 
-| Agent Type | 验收入口 | 跳过项 |
-|------------|----------|--------|
-| `cli-only` | 执行 `python3 cli/<module>.py --help` + 各子命令 | backend / frontend / mcp-server |
-| `http-api` | HTTP API 调用（启动 backend，调 REST API） | CLI / frontend / mcp-server |
-| `http-web` | Playwright 操作 Web UI（完整端到端） | CLI / mcp-server |
-| `mcp-server` | MCP client 模拟调用 tools | CLI / backend / frontend |
+| 改动落在 | 验收入口 |
+|---------|---------|
+| 模块暴露的 CLI（`src/modules/<module_name>/cli.py`） | 执行 `python3 src/modules/<module_name>/cli.py --help` + 各子命令 |
+| `src/backend/` | HTTP API 调用（启动 backend，调 REST API） |
+| `src/frontend/` | Playwright 操作 Web UI（完整端到端） |
+| `src/mcp/` | MCP client 模拟调用 tools |
+| `src/skill/` | 按 skill 的调用方式（经 CLI）执行 |
 
-### mcp-server 形态的验收特殊性
+未涉及的入口不验；涉及多个则逐个验。
 
-- 启动 mcp-server（按 Deploy Mode）
+### MCP 入口的验收要点
+
+- 启动 mcp
 - 用 MCP client（如 Claude Code inspector、mcp CLI）调用每个 tool
-- 验证 tool 返回结构与 `doc/mcp-server.md` 定义的 output schema 一致
-- 验证每个 tool 实际调用了 `src/<module>/service.py` 的对应方法
+- 验证 tool 返回结构与其声明一致
+- 验证每个 tool 实际调用了 `src/modules/<module_name>/service.py` 的对应方法
 
 ## 验收工作流程
 
@@ -119,39 +122,38 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 
 ### 阶段 1：设计合规检查
 
-对照 doc/ 文件检查实现，按 Agent Type 启用对应检查：
+对照 doc/ 文件检查实现：
 
-| 检查项 | cli-only | http-api | http-web | mcp-server |
-|--------|----------|----------|----------|------------|
-| 数据结构 | ✓ `doc/<module>/data-schema.md` | ✓ | ✓ | ✓ |
-| 数据持久化 | ✓ `doc/<module>/data-persistence.md` | ✓ | ✓ | ✓ |
-| CLI 接口 | ✓ `python3 cli/<module>.py --help` 实际输出，与 `doc/<module>/cli.md` 比对一致 | ✗ | ✗ | ✗ |
-| API 接口 | ✗ | ✓ `doc/backend.md` | ✓ | ✗ |
-| MCP tools | ✗ | ✗ | ✗ | ✓ `doc/mcp-server.md` |
+| 检查项 | 依据 |
+|--------|------|
+| 数据结构 | `doc/<module_name>/schema.md` |
+| 数据持久化 | `doc/<module_name>/persistence.md` |
+| Service 接口 | `doc/<module_name>/service.md` |
+| CLI 接口 | `python3 src/modules/<module_name>/cli.py --help` 实际输出，与 `doc/<module_name>/cli.md` 比对一致（仅暴露 CLI 的模块） |
 
-> http-web 形态不再单独验 UI：Frontend 章节已删除，页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
+> Backend / Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
 
 ### 阶段 2：E2E 场景验收
 
-按 Agent Type 选择验收入口，逐一执行 FEATURE.yaml `e2e_test_cases` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
+按 feature 涉及的入口逐一执行 FEATURE.yaml `e2e_test_cases` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
 
-**cli-only**：
+**经 CLI**：
 1. 准备测试输入（JSON / 参数）
-2. 执行 `python3 cli/<module>.py <command> [args]`
+2. 执行 `python3 src/modules/<module_name>/cli.py <command> [args]`
 3. 验证输出格式与 `--help` 描述一致
-4. 验证完整链路（CLI → src/<module>/service → Data Layer）
+4. 验证完整链路（CLI → `src/modules/<module_name>/service.py` → Data Layer）
 
-**http-api / http-web**：
-1. 启动 backend 服务（http-web 同时启动 frontend）
-2. 通过 HTTP API 调用（http-web 用 Playwright 操作 UI）
-3. 验证响应结构与 `doc/backend.md` 设计一致
-4. 验证完整链路（Web UI / API → Backend → src/<module>/service → Data Layer）
+**经 HTTP（backend / frontend）**：
+1. 启动 backend 服务（涉及 frontend 时同时启动）
+2. 通过 HTTP API 调用（涉及 frontend 时用 Playwright 操作 UI）
+3. 验证响应结构
+4. 验证完整链路（Web UI / API → Backend → `src/modules/<module_name>/service.py` → Data Layer）
 
-**mcp-server**：
-1. 按 Deploy Mode 启动 mcp-server
+**经 MCP**：
+1. 启动 mcp
 2. 用 MCP client 调用 tool
-3. 验证返回结构与 `doc/mcp-server.md` output schema 一致
-4. 验证完整链路（MCP tool → src/<module>/service → Data Layer）
+3. 验证返回结构与其声明一致
+4. 验证完整链路（MCP tool → `src/modules/<module_name>/service.py` → Data Layer）
 
 记录每个场景的执行结果和发现的问题。
 
@@ -207,14 +209,15 @@ QA 验收时根据 feature 的 Agent Type 选择对应的验收入口：
 | 1 | <场景名> | PASS | ... |
 
 ## Design Compliance
-| Item | Applicable (per Agent Type) | Result | Notes |
-|------|------------------------------|--------|-------|
-| Data Schema | All forms | PASS/FAIL | ... |
-| Data Persistence | All forms | PASS/FAIL | ... |
-| CLI Interface | cli-only | PASS/FAIL/N/A | ... |
-| Backend API | http-api / http-web | PASS/FAIL/N/A | ... |
-| Frontend UI | http-web | PASS/FAIL/N/A | ... |
-| MCP Tools | mcp-server | PASS/FAIL/N/A | ... |
+| Item | 依据 | Result | Notes |
+|------|------|--------|-------|
+| Data Schema | doc/<module_name>/schema.md | PASS/FAIL | ... |
+| Data Persistence | doc/<module_name>/persistence.md | PASS/FAIL | ... |
+| Service Interface | doc/<module_name>/service.md | PASS/FAIL | ... |
+| CLI Interface | src/modules/<module_name>/cli.py vs doc/<module_name>/cli.md | PASS/FAIL/N/A | ... |
+| Backend API | 行为验证 | PASS/FAIL/N/A | ... |
+| Frontend UI | 行为验证 | PASS/FAIL/N/A | ... |
+| MCP Tools | 行为验证 | PASS/FAIL/N/A | ... |
 
 ## Issues Found
 ### QA-001: <title>
@@ -303,7 +306,6 @@ bugfix（影响面小，单点修复足够）。
 {
   "status": "pass",
   "feature_number": "<NNN>",
-  "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "scenarios_tested": 5,
   "scenarios_passed": 5,
   "issues_found": [],
@@ -318,7 +320,6 @@ bugfix（影响面小，单点修复足够）。
 {
   "status": "fail",
   "feature_number": "<NNN>",
-  "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "scenarios_tested": 5,
   "scenarios_passed": 3,
   "issues_found": [
@@ -345,7 +346,6 @@ bugfix（影响面小，单点修复足够）。
 {
   "status": "diagnosed",
   "issue_number": "<NNN>",
-  "agent_type": "<cli-only | http-api | http-web | mcp-server>",
   "root_cause": "<根因描述>",
   "reproduction_confirmed": true,
   "fix_plan": "<方案：问题分析 + bugfix 方向 + feature 方向 + QA 建议>",
