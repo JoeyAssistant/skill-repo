@@ -211,8 +211,8 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 ## Design Compliance
 | Item | 依据 | Result | Notes |
 |------|------|--------|-------|
-| Data Schema | doc/<module_name>/schema.md | PASS/FAIL | ... |
-| Data Persistence | doc/<module_name>/persistence.md | PASS/FAIL | ... |
+| Schema | doc/<module_name>/schema.md | PASS/FAIL | ... |
+| Persistence | doc/<module_name>/persistence.md | PASS/FAIL | ... |
 | Service Interface | doc/<module_name>/service.md | PASS/FAIL | ... |
 | CLI Interface | src/modules/<module_name>/cli.py vs doc/<module_name>/cli.md | PASS/FAIL/N/A | ... |
 | Backend API | 行为验证 | PASS/FAIL/N/A | ... |

@@ -143,7 +143,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
    - `<主仓路径>/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
    - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 确定）：
      - `{Root}/doc/<module_name>/README.md` → 该 module 名词概念、职责、doc 索引
-     - `{Root}/doc/<module_name>/schema.md` → 该 module 数据模型
+     - `{Root}/doc/<module_name>/schema.md` → 该 module 的 schema（业务数据结构定义）
      - `{Root}/doc/<module_name>/persistence.md` → 该 module 存储方案
      - `{Root}/doc/<module_name>/service.md` → Service 接口与流程
      - `{Root}/doc/<module_name>/cli.md` → CLI 契约（仅暴露 CLI 的模块；实现 `cli.py` 时按此写 click decorators + docstring）
