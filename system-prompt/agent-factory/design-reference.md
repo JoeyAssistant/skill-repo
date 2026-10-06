@@ -20,7 +20,7 @@
       - [4.2.2.3 注释原则](#4223-注释原则)
       - [4.2.2.4 一致性原则](#4224-一致性原则)
   - [4.3 persistence.md（数据存储方案）](#43-persistencemd数据存储方案)
-  - [4.4 service.md（Service 接口契约 + 流程 + 模块关系）](#44-servicemdservice-接口契约--流程--模块关系)
+  - [4.4 service.md（Service 接口契约 + 流程）](#44-servicemdservice-接口契约--流程)
   - [4.5 cli.md（CLI 契约，仅暴露 CLI 的模块才有）](#45-climdcli-契约仅暴露-cli-的模块才有)
 - [5. 跨文件内容归属表](#5-跨文件内容归属表)
 - [6. 设计文档产出清单](#6-设计文档产出清单)
@@ -58,7 +58,7 @@
 | `README.md` | 模块门面：名词概念 + 功能与职责 |
 | `schema.md` | 业务数据结构定义 |
 | `persistence.md` | 数据存储方案 |
-| `service.md` | Service 接口契约 + 关键流程 + 模块关系 |
+| `service.md` | Service 接口契约 + 关键流程 |
 | `cli.md` | CLI 契约（仅暴露 CLI 的模块才有） |
 
 **命名**：`<module_name>` 统一使用下划线（`module_name`），四处路径同名。
@@ -107,6 +107,9 @@ graph TD
   - 英文名对应 `schema.md` 的实体名
   - 定义为一句话
 - `## 功能与职责`（本模块提供什么功能；负责什么、不负责什么）
+- `## 依赖关系`：
+  - 依赖的模块 —— 本模块使用它什么功能
+  - 被依赖的模块 —— 本模块向它提供哪些功能
 
 ### 4.2 schema.md（业务数据结构定义）
 
@@ -229,14 +232,13 @@ class <EnumName>(str, Enum):
 
 **存储介质选型**：优先 json、yaml 等简单持久化；较复杂场景使用数据库。
 
-### 4.4 service.md（Service 接口契约 + 流程 + 模块关系）
+### 4.4 service.md（Service 接口契约 + 流程）
 
 > Service.py 的实现契约。仅描述"是什么/怎么调用/怎么走流程"，**不解释"为什么这么设计"**。
 
 **应有章节**：
 - `## Service 接口`（class + 方法签名 + docstring）
 - `## 关键流程`（mermaid sequence，按 use case 组织）
-- `## 模块关系`（mermaid graph + 依赖说明）
 
 ### 4.5 cli.md（CLI 契约，仅暴露 CLI 的模块才有）
 
@@ -271,7 +273,7 @@ class <EnumName>(str, Enum):
 | 配置（环境变量/路径） | persistence.md | service.md |
 | Service 方法签名 | service.md | - |
 | Service 关键流程 | service.md | - |
-| 模块依赖关系 | service.md | - |
+| 模块依赖关系（依赖 / 被依赖） | README.md | - |
 | CLI 命令清单（产品级） | cli.md（designing 阶段定） | service.md / schema.md |
 | CLI 详细 JSON I/O schema | cli.md（仅暴露 CLI 的模块） | schema.md / service.md |
 | CLI 错误码定义 | cli.md（仅暴露 CLI 的模块） | schema.md |
