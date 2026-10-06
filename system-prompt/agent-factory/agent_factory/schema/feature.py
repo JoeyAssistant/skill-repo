@@ -71,6 +71,6 @@ class Feature(BaseModel):
     spec: dict[str, ModuleSpec] = Field(default_factory=dict,
         description="需求规格，按模块组织（designing 阶段逐模块写入）")
     e2e_test_cases: list[E2ETestCase] = Field(default_factory=list,
-        description="E2E 验收用例（designing 阶段逐条与用户讨论后填入）")
+        description="E2E 验收用例（designing 阶段逐条与用户讨论后填入；无 E2E 场景的需求可为空）")
     worktree: Optional[WorktreeInfo] = Field(None,
         description="绑定的 worktree（worktree new 时写入，worktree remove 时清除）")

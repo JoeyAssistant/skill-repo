@@ -382,8 +382,7 @@ def _validate_transition_requirements(current: FeatureStatus, target: FeatureSta
     elif current == FeatureStatus.DESIGNING and target == FeatureStatus.APPROVED:
         if not feature.spec:
             issues.append("spec is empty（至少 1 个模块）")
-        if not feature.e2e_test_cases:
-            issues.append("e2e_test_cases is empty（至少 1 条 E2E 用例）")
+        # e2e_test_cases 不作硬性要求：部分需求无可运行的 E2E 场景，允许为空
     # approved→implementing: no check (decisions removed)
     return issues
 
@@ -396,7 +395,7 @@ def transition(feature_id: int, target: str) -> None:
 
     Cross-field checks:
     - draft → designing: background.pain_point + benefit must be non-empty
-    - designing → approved: spec >= 1 module AND e2e_test_cases >= 1 case
+    - designing → approved: spec >= 1 module（e2e_test_cases 可选，无 E2E 场景的需求允许为空）
     - approved → implementing: no extra check
     """
     try:

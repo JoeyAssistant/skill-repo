@@ -223,6 +223,8 @@ E2E acceptance test：在真实运行的服务上、以确定输入驱动真实�
 - 依赖外部系统可用性的观测点标注为环境前提，不与实现正确性混判
 - 逐个用例与我讨论，以FEATURE.yaml中结构展示
 
+E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、内部字段调整、文档/配置类），`e2e_test_cases` 允许为空，并在与用户确认后直接进入 approved。
+
 ## CLI 使用原则
 
 PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编辑 YAML**。

@@ -422,30 +422,24 @@ def test_feature_transition_draft_to_designing_requires_background(tmp_path, mon
     assert idx["features"][0]["status"] == "designing"
 
 
-def test_feature_transition_designing_to_approved_requires_spec_and_cases(tmp_path, monkeypatch):
+def test_feature_transition_designing_to_approved_requires_spec_only(tmp_path, monkeypatch):
+    """designing → approved 只要求 spec；e2e_test_cases 可为空（无 E2E 场景的需求）。"""
     monkeypatch.chdir(tmp_path)
     _setup_feature_with_background(tmp_path)
     # Transition to designing first
     runner = CliRunner()
     runner.invoke(main, ["feature", "transition", "1", "--to", "designing"])
 
-    # Try transition to approved without spec/e2e_test_cases → fail
+    # Try transition to approved without spec → fail
     result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
-    assert result.exit_code == 1  # missing spec and e2e_test_cases
+    assert result.exit_code == 1  # missing spec
 
-    # Add spec module
+    # Add spec module only (no e2e_test_cases)
     spec_file = tmp_path / "m.yaml"
     spec_file.write_text(yaml.safe_dump({"functions": ["录入"], "schema": "class X:", "interface": "add"}))
     runner.invoke(main, ["feature", "set", "1", "spec.income", "--file", str(spec_file)])
 
-    # Add E2E test case
-    tc_file = tmp_path / "c.yaml"
-    tc_file.write_text(yaml.safe_dump([
-        {"name": "t1", "precondition": "p", "inputs": {}, "steps": ["s"], "observations": [{"check": "obs", "expect": "e"}]}
-    ]))
-    runner.invoke(main, ["feature", "set", "1", "e2e_test_cases", "--file", str(tc_file)])
-
-    # Now should succeed
+    # e2e_test_cases 为空也应能进入 approved
     result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
     assert result.exit_code == 0, result.output
     assert "designing → approved" in result.output
