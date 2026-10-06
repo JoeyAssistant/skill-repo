@@ -23,21 +23,15 @@
   - [4.4 cli.md（CLI 契约，仅暴露 CLI 的模块才有）](#44-climdcli-契约仅暴露-cli-的模块才有)
   - [4.5 README.md（模块门面）](#45-readmemd模块门面)
 - [5. 跨文件内容归属表](#5-跨文件内容归属表)
-- [6. doc/ 内容规则（最终正式文档，全 doc/ 适用）](#6-doc-内容规则最终正式文档全-doc-适用)
-  - [6.1 适用范围](#61-适用范围)
-  - [6.2 ✅ 允许的内容](#62--允许的内容)
-  - [6.3 ❌ 禁止的内容（过程性）](#63--禁止的内容过程性)
-  - [6.4 撰写自检（写完每个 doc 文件后）](#64-撰写自检写完每个-doc-文件后)
-  - [6.5 反例（过程性内容混入 doc/，禁止）](#65-反例过程性内容混入-doc禁止)
-- [7. 设计文档输出规范](#7-设计文档输出规范)
-- [8. CLI Layer](#8-cli-layer)
-  - [8.1 CLI 设计原则](#81-cli-设计原则)
-  - [8.2 CLI 设计归属（分三阶段）](#82-cli-设计归属分三阶段)
-- [9. Agent Layer](#9-agent-layer)
-- [10. Backend Layer](#10-backend-layer)
-- [11. 代码目录结构](#11-代码目录结构)
-  - [11.1 目录结构](#111-目录结构)
-  - [11.2 CLI 调用方式](#112-cli-调用方式)
+- [6. 设计文档输出规范](#6-设计文档输出规范)
+- [7. CLI Layer](#7-cli-layer)
+  - [7.1 CLI 设计原则](#71-cli-设计原则)
+  - [7.2 CLI 设计归属（分三阶段）](#72-cli-设计归属分三阶段)
+- [8. Agent Layer](#8-agent-layer)
+- [9. Backend Layer](#9-backend-layer)
+- [10. 代码目录结构](#10-代码目录结构)
+  - [10.1 目录结构](#101-目录结构)
+  - [10.2 CLI 调用方式](#102-cli-调用方式)
 
 ## 1. 设计工作原则
 
@@ -256,6 +250,8 @@ class <EnumName>(str, Enum):
 
 ## 5. 跨文件内容归属表
 
+`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 FEATURE.yaml 需求规格。
+
 每写一段内容前，先对照下表判断归属。命中"应写到 FEATURE.yaml / 删"的，**不要写到 doc/**。
 
 | 内容类别 | 应写到 | 不应写到 |
@@ -285,45 +281,17 @@ class <EnumName>(str, Enum):
 | 异常场景（issue 上下文） | FEATURE.yaml 需求规格 | service.md |
 | 变更记录 / "X 已删除" | 删（不应存在任何 doc/） | 任何 |
 
-## 6. doc/ 内容规则（最终正式文档，全 doc/ 适用）
+**撰写自检**（写完每个 doc 文件后，扫描以下关键词）：
 
-`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 FEATURE.yaml 需求规格。
+| 关键词 | 处理 |
+|--------|------|
+| `feature #` / `issue #` / `(#NNN)` 编号 | 移到 FEATURE.yaml 需求规格 |
+| `实测` | 移到 FEATURE.yaml 需求规格 |
+| `决策` / `为什么` / `权衡` / `相比` / `vs` | 移到 FEATURE.yaml 需求规格 |
+| `YAGNI` / `留给后续` / `待定` / 本期明确排除 | 移到 FEATURE.yaml 需求规格 > 约束/原则 |
+| `变更记录` / `第一版` / `第二版` / `架构调整` | 删除（git history 已记录） |
 
-### 6.1 适用范围
-
-所有 `{Root}/doc/` 下的 .md 文件：
-- `doc/<module_name>/schema.md`、`doc/<module_name>/persistence.md`、`doc/<module_name>/service.md`、`doc/<module_name>/README.md`、`doc/<module_name>/cli.md`（仅暴露 CLI 的模块）
-
-### 6.2 ✅ 允许的内容
-
-按文件类型分布（详见上方"doc/<module_name>/ 章节契约"和"跨文件内容归属表"）：
-
-- `schema.md`：dataclass 定义 + 字段注释（字段关系、不变量、合法值集合写在字段注释里）
-- `persistence.md`：存储方案（介质、Schema、读写机制、生命周期、配置）
-- `service.md`：Service 接口 + 关键流程（mermaid sequence）+ 模块关系（mermaid graph）
-- `README.md`：模块名词概念 + 模块职责 + 文档索引
-
-### 6.3 ❌ 禁止的内容（过程性）
-
-详见上方"跨文件内容归属表"。重点：
-
-- "本期 Constraints 明确排除..."、"留给后续 feature"、"YAGNI 排除" → 移到 FEATURE.yaml 需求规格 > 约束/原则
-- 与其他 module 的对比说明（除非字段语义必需）
-- 决策讨论、issue 引用、实测数据、变更记录等 → 见归属表对应行
-
-### 6.4 撰写自检（写完每个 doc 文件后）
-
-扫描文件内容，命中以下任一关键词即删或迁出：
-
-| 启发式关键词 | 处理 |
-|-------------|------|
-| "Q1: ... A:"、问答式过程内容 | 移到 FEATURE.yaml 需求规格 |
-| "决策"、"为什么"、"权衡"、"vs"、"相比" | 移到 FEATURE.yaml 需求规格 |
-| "本期 Constraints 明确排除"、"YAGNI"、"留给后续"、"待定" | 移到 FEATURE.yaml 需求规格 > 约束/原则 |
-| "第一版 / 第二版"、"变更记录"、"架构调整" | 删除（git history 已记录） |
-| "用户补充"、"用户决策"、"讨论中确认" | 删除（已落在 FEATURE.yaml 需求规格） |
-
-### 6.5 反例（过程性内容混入 doc/，禁止）
+**反例**（过程性内容混入 doc/，禁止）：
 
 ```markdown
 ## <EntityName>
@@ -336,26 +304,9 @@ class <EntityName>:
 理由：① ... ② ... ③ ...
 ```
 
-正解（仅留 dataclass + 字段注释，描述清晰 + 关键约束）：
+设计决策应写到 FEATURE.yaml 需求规格，不留在 doc/。
 
-```markdown
-## <EntityName>
-
-@dataclass
-class <EntityName>:
-    field_a: str
-        # <字段描述>
-        # 约束：YYYY-MM-DD
-    field_b: int
-        # <字段描述>
-        # 约束：> 0
-    field_c: <EnumName>
-        # <字段描述>（值1 / 值2 / 值3）
-```
-
-决策"为什么共用 list" → FEATURE.yaml 需求规格。
-
-## 7. 设计文档输出规范
+## 6. 设计文档输出规范
 
 设计完成后，按以下结构输出文档到 `{Root}/doc/` 目录：
 
@@ -369,9 +320,9 @@ class <EntityName>:
 | `python3 {Root}/src/modules/<module_name>/cli.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 FEATURE.yaml 关键接口定） | 仅暴露 CLI 的模块 |
 
 
-## 8. CLI Layer
+## 7. CLI Layer
 
-### 8.1 CLI 设计原则
+### 7.1 CLI 设计原则
 - **`--help as doc`**：CLI 命令文档通过 `python3 {Root}/src/modules/<module_name>/cli.py --help` 运行时输出获得（运行期产出），包含：
     - **功能说明**：脚本用途、内部实现原理
     - **输入说明**：参数、选项、结构化输入格式
@@ -384,7 +335,7 @@ class <EntityName>:
 - 使用 `dataclass` 定义 data schema
 - 默认使用 `python3`
 
-### 8.2 CLI 设计归属（分三阶段）
+### 7.2 CLI 设计归属（分三阶段）
 
 暴露 CLI 的模块，CLI 设计分布在三处：
 
@@ -396,7 +347,7 @@ class <EntityName>:
 
 PM 在 draft 阶段把 CLI 命令清单写到 FEATURE.yaml 关键接口；designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
 
-## 9. Agent Layer
+## 8. Agent Layer
 
 - 使用 Claude SDK (Anthropic SDK) 或 Claude Agent SDK 构建 Agent
 - **Agent 职责边界**：Agent 负责理解用户意图、编排任务流程、调用工具（执行实际业务逻辑的工具）
@@ -407,15 +358,15 @@ PM 在 draft 阶段把 CLI 命令清单写到 FEATURE.yaml 关键接口；design
 - 定义目标 Agent 的 system prompt，可通过 Claude Code 的 append-system-prompt 使用，也可通过 Anthropic SDK 或 Claude Agent SDK 使用，根据实际需求决定
 - 实现时可参考 `/claude-api` skill
 
-## 10. Backend Layer
+## 9. Backend Layer
 
 - backend 技术选型
 - REST API 设计，针对每一个 API，列出接口定义，包括接口功能、输入、输出，使用 mermaid 语法列出 API 的调用流程，与内部模块（如 agent、`src/modules/<module_name>/`、data layer）的交互流程
 - **Backend 直接 import `src/modules/<module_name>/service.py`，不经过 CLI**
 
-## 11. 代码目录结构
+## 10. 代码目录结构
 
-### 11.1 目录结构
+### 10.1 目录结构
 
 ```
 {Root}/
@@ -442,7 +393,7 @@ PM 在 draft 阶段把 CLI 命令清单写到 FEATURE.yaml 关键接口；design
       <module_name>/
 ```
 
-### 11.2 CLI 调用方式
+### 10.2 CLI 调用方式
 
 所有 CLI 调用使用脚本方式：`python3 src/modules/<module_name>/cli.py --help`。
 
