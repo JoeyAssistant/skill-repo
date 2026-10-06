@@ -156,7 +156,7 @@ class <EnumName>(str, Enum):
 
 **命名风格**
 
-- 实体名：`PascalCase`、单数、不带模块前缀
+- 实体名：`PascalCase`
 - 字段名：`snake_case`
 
 **原则一：名称必须自解释**——单位、时间点、标识等语义要素编进名字本身，不靠注释或上下文补齐。如 `timeout_seconds` 而非 `timeout` 加注释 "(s)"；`created_at` 而非 `create_time`。
