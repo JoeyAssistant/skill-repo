@@ -11,8 +11,6 @@
         - functions # 功能、修改点
             1. function_1 
             2. function_2
-        - schema # data schema
-        - interface # API CLI
 - e2e_test_cases # E2E 验收用例（可构造、可观测、可运行）
   1. test_case_1 # 端到端测试用例
     - name

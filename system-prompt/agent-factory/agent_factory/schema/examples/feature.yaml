@@ -16,24 +16,6 @@ spec:
     functions:
       - 录入收入（单条/批量，支持 JSON 输入）
       - 按月查询收入
-    schema: |
-      class IncomeType(str, Enum):
-          SALARY = "salary"
-          BONUS = "bonus"
-          OTHER = "other"
-
-      @dataclass
-      class IncomeEntry:
-          id: int
-          type: IncomeType
-          amount: float    # 约束：> 0
-          date: date
-          note: str = ""
-    interface: |
-      | 命令 | 用途 | 关键参数 |
-      |------|------|----------|
-      | add | 录入单条收入 | --type, --amount, --date |
-      | list | 按月查询收入 | --month |
 
 e2e_test_cases:
   - name: 录入并查询

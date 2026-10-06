@@ -168,8 +168,6 @@ def test_feature_set_spec_module_upsert(tmp_path, monkeypatch):
     spec_file = tmp_path / "income.yaml"
     spec_file.write_text(yaml.safe_dump({
         "functions": ["录入收入", "查询收入"],
-        "schema": "class IncomeEntry:\n    id: int",
-        "interface": "| add | 录入 |",
     }))
 
     runner = CliRunner()
@@ -186,8 +184,6 @@ def test_feature_set_spec_module_upsert(tmp_path, monkeypatch):
     spec_file2 = tmp_path / "income2.yaml"
     spec_file2.write_text(yaml.safe_dump({
         "functions": ["仅录入"],
-        "schema": None,
-        "interface": None,
     }))
     result = runner.invoke(main, [
         "feature", "set", "1", "spec.income", "--file", str(spec_file2),
@@ -255,7 +251,7 @@ def test_feature_set_invalid_field(tmp_path, monkeypatch):
 
 
 def test_feature_set_spec_field_level_rejected(tmp_path, monkeypatch):
-    """Field-level spec paths like spec.income.schema are NOT supported."""
+    """Field-level spec paths like spec.income.functions are NOT supported."""
     monkeypatch.chdir(tmp_path)
     _setup_feature(tmp_path)
 
@@ -263,7 +259,7 @@ def test_feature_set_spec_field_level_rejected(tmp_path, monkeypatch):
     f = tmp_path / "x.yaml"
     f.write_text("x")
     result = runner.invoke(main, [
-        "feature", "set", "1", "spec.income.schema", "--file", str(f),
+        "feature", "set", "1", "spec.income.functions", "--file", str(f),
     ])
     assert result.exit_code == 4
 
@@ -308,7 +304,7 @@ def _setup_feature_with_spec(tmp_path):
     feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
     data = load_yaml(feat_file)
     data["spec"] = {
-        "income": {"functions": ["录入"], "schema": "class X:", "interface": "add"}
+        "income": {"functions": ["录入"]}
     }
     feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
 
@@ -436,7 +432,7 @@ def test_feature_transition_designing_to_approved_requires_spec_only(tmp_path, m
 
     # Add spec module only (no e2e_test_cases)
     spec_file = tmp_path / "m.yaml"
-    spec_file.write_text(yaml.safe_dump({"functions": ["录入"], "schema": "class X:", "interface": "add"}))
+    spec_file.write_text(yaml.safe_dump({"functions": ["录入"]}))
     runner.invoke(main, ["feature", "set", "1", "spec.income", "--file", str(spec_file)])
 
     # e2e_test_cases 为空也应能进入 approved
@@ -531,7 +527,7 @@ def _setup_feature_with_spec_and_cases(tmp_path):
     _setup_feature_with_background(tmp_path)
     feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
     data = load_yaml(feat_file)
-    data["spec"] = {"income": {"functions": ["录入"], "schema": "class X:", "interface": "add"}}
+    data["spec"] = {"income": {"functions": ["录入"]}}
     data["e2e_test_cases"] = [{"name": "t1", "precondition": "p", "inputs": {}, "steps": ["s"], "observations": [{"check": "obs", "expect": "e"}]}]
     feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
 

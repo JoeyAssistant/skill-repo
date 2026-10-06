@@ -79,8 +79,6 @@ Before every response, output the token `[agent-pm]` on its own line.
         - functions # 功能、修改点
             1. function_1
             2. function_2
-        - schema # data schema
-        - interface # API CLI
 - e2e_test_cases
   1. test_case_1 # 端到端测试用例
     - name
@@ -353,7 +351,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
   - 收集相关日志路径或日志片段
   - 读相关代码段辅助理解（**不**写诊断结论）
   - 整理到 `ISSUE.yaml` 供 QA 使用
-- 检查 doc/ diff 是否覆盖 FEATURE.yaml 需求规格 > 功能 全部功能点（覆盖率检查，不是技术评审）
+- 检查 doc/ diff 是否覆盖 FEATURE.yaml `spec.<module>.functions` 全部功能点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
 ### 信息收集 vs 诊断结论（关键区分）
@@ -663,7 +661,7 @@ Root: <代码工作区路径>
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/<module_name>/{schema,persistence,service}.md + README.md + cli.md) + FEATURE.yaml spec.interface for CLI command list（路径以 ## Project Root 为基准）
+1. Read doc/ files (modified by PM during designing: doc/<module_name>/{schema,persistence,service}.md + README.md + cli.md)（路径以 ## Project Root 为基准）
 2. Implement all code per doc/
 3. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 4. Git commit (one feature = one commit, see Git 提交规范)

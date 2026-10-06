@@ -124,7 +124,7 @@ def set_field(feature_id: int, field: str, value: str | None,
         if not sub:
             _invalid_field(field)
         if "." in sub:
-            _invalid_field(field)  # field-level spec paths like spec.income.schema NOT supported
+            _invalid_field(field)  # field-level spec paths like spec.income.functions NOT supported
         module = sub
         if remove:
             _spec_remove(feature_id, module); return
@@ -304,10 +304,6 @@ def _render_feature_markdown(feature: Feature) -> str:
                 for i, fn in enumerate(module_spec.functions, 1):
                     lines.append(f"{i}. {fn}")
                 lines.append("")
-            if module_spec.schema:
-                lines += ["**Schema**:", "```python", module_spec.schema, "```", ""]
-            if module_spec.interface:
-                lines += ["**Interface**:", module_spec.interface, ""]
     if feature.e2e_test_cases:
         lines.append("## E2E Test Cases")
         lines.append("")

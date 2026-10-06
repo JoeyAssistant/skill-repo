@@ -29,18 +29,9 @@ def test_background_extra_forbidden():
 
 # === ModuleSpec 测试 ===
 
-def test_module_spec_minimal():
-    ms = ModuleSpec(functions=["fn1"])
-    assert ms.functions == ["fn1"]
-    assert ms.schema is None
-    assert ms.interface is None
-
-
-def test_module_spec_full():
-    ms = ModuleSpec(functions=["fn1", "fn2"], schema="class X:", interface="| cmd |")
-    assert len(ms.functions) == 2
-    assert ms.schema == "class X:"
-    assert ms.interface == "| cmd |"
+def test_module_spec_functions():
+    ms = ModuleSpec(functions=["fn1", "fn2"])
+    assert ms.functions == ["fn1", "fn2"]
 
 
 def test_module_spec_extra_forbidden():
@@ -106,7 +97,7 @@ def test_feature_with_full_structure():
     kw = _valid_feature_kwargs()
     kw["background"] = Background(pain_point="痛点描述", benefit="收益描述")
     kw["spec"] = {
-        "income": ModuleSpec(functions=["录入"], schema="class X:", interface="add"),
+        "income": ModuleSpec(functions=["录入"]),
         "report": ModuleSpec(functions=["汇总"]),
     }
     kw["e2e_test_cases"] = [

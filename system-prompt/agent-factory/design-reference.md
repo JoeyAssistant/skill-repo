@@ -26,7 +26,7 @@
 - [6. 设计文档产出清单](#6-设计文档产出清单)
 - [7. CLI Layer](#7-cli-layer)
   - [7.1 CLI 设计原则](#71-cli-设计原则)
-  - [7.2 CLI 设计归属（分三阶段）](#72-cli-设计归属分三阶段)
+  - [7.2 CLI 设计归属（分两阶段）](#72-cli-设计归属分两阶段)
 - [8. Agent Layer](#8-agent-layer)
 - [9. Backend Layer](#9-backend-layer)
 - [10. 代码目录结构](#10-代码目录结构)
@@ -258,7 +258,7 @@ class <EnumName>(str, Enum):
 
 ## 5. 跨文件内容归属表
 
-`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。所有过程性内容只能写在 FEATURE.yaml 需求规格。
+`{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。过程性内容不落库——决策与讨论在对话中与用户完成，结论由 commit message / PR 描述承载（git history 已记录）。
 
 每写一段内容前，先对照下表判断归属。命中"应写到 FEATURE.yaml / 删"的，**不要写到 doc/**。
 
@@ -270,33 +270,33 @@ class <EnumName>(str, Enum):
 | CREATE TABLE / DDL | persistence.md | schema.md |
 | 索引定义 | persistence.md | schema.md |
 | Column ↔ 字段映射（仅非一一对应时） | persistence.md | schema.md |
-| 存储介质选型理由 | persistence.md（一句话）+ FEATURE.yaml 需求规格 > 技术决策（深度） | service.md |
+| 存储介质选型理由 | persistence.md（一句话）；深度分析见 commit message / PR 描述 | service.md |
 | 读写机制 | persistence.md | schema.md |
 | 数据生命周期 | persistence.md | service.md |
 | 配置（环境变量/路径） | persistence.md | service.md |
 | Service 方法签名 | service.md | - |
 | Service 关键流程 | service.md | - |
 | 模块依赖关系 | service.md | - |
-| CLI 命令清单（产品级） | FEATURE.yaml 关键接口 | cli.md |
+| CLI 命令清单（产品级） | cli.md（designing 阶段定） | service.md / schema.md |
 | CLI 详细 JSON I/O schema | cli.md（仅暴露 CLI 的模块） | schema.md / service.md |
 | CLI 错误码定义 | cli.md（仅暴露 CLI 的模块） | schema.md |
 | CLI 使用示例 | cli.md（仅暴露 CLI 的模块） | schema.md |
-| 设计决策 | FEATURE.yaml 需求规格 | doc/ |
-| 决策对比（方案 A/B/C） | FEATURE.yaml 需求规格 | doc/ |
-| 实测数据 / POC 命中率 | FEATURE.yaml 需求规格 | doc/ |
-| Issue 引用（QA-XXX） | FEATURE.yaml 需求规格 | doc/ |
+| 设计决策 | commit message / PR 描述 | doc/ |
+| 决策对比（方案 A/B/C） | commit message / PR 描述 | doc/ |
+| 实测数据 / POC 命中率 | commit message / PR 描述 | doc/ |
+| Issue 引用（QA-XXX） | commit message / PR 描述 | doc/ |
 | 异常场景（接口契约） | service.md（方法 docstring） | - |
-| 异常场景（issue 上下文） | FEATURE.yaml 需求规格 | service.md |
+| 异常场景（issue 上下文） | commit message / PR 描述 | service.md |
 | 变更记录 / "X 已删除" | 删（不应存在任何 doc/） | 任何 |
 
 **撰写自检**（写完每个 doc 文件后，扫描以下关键词）：
 
 | 关键词 | 处理 |
 |--------|------|
-| `feature #` / `issue #` / `(#NNN)` 编号 | 移到 FEATURE.yaml 需求规格 |
-| `实测` | 移到 FEATURE.yaml 需求规格 |
-| `决策` / `为什么` / `权衡` / `相比` / `vs` | 移到 FEATURE.yaml 需求规格 |
-| `YAGNI` / `留给后续` / `待定` / 本期明确排除 | 移到 FEATURE.yaml 需求规格 > 约束/原则 |
+| `feature #` / `issue #` / `(#NNN)` 编号 | 删（commit / PR 已关联） |
+| `实测` | 删（commit message / PR 描述承载） |
+| `决策` / `为什么` / `权衡` / `相比` / `vs` | 删（commit message / PR 描述承载） |
+| `YAGNI` / `留给后续` / `待定` / 本期明确排除 | 删（范围决策不落库） |
 | `变更记录` / `第一版` / `第二版` / `架构调整` | 删除（git history 已记录） |
 
 **反例**（过程性内容混入 doc/，禁止）：
@@ -312,7 +312,7 @@ class <EntityName>:
 理由：① ... ② ... ③ ...
 ```
 
-设计决策应写到 FEATURE.yaml 需求规格，不留在 doc/。
+设计决策不落库（对话中与用户完成），由 commit message / PR 描述承载，不留在 doc/。
 
 ## 6. 设计文档产出清单
 
@@ -343,17 +343,16 @@ class <EntityName>:
 - 使用 `dataclass` 定义 data schema
 - 默认使用 `python3`
 
-### 7.2 CLI 设计归属（分三阶段）
+### 7.2 CLI 设计归属（分两阶段）
 
-暴露 CLI 的模块，CLI 设计分布在三处：
+暴露 CLI 的模块，CLI 设计分布在两处：
 
 | 阶段 | 文件 | 内容 |
 |------|------|------|
-| `draft`（PM 与用户讨论） | FEATURE.yaml 关键接口 | 命令清单表 `\| 命令 \| 用途 \| 关键参数 \|`（产品级决策，要做哪些命令） |
-| `designing`（设计） | `doc/<module_name>/cli.md` | 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
+| `designing`（设计） | `doc/<module_name>/cli.md` | 命令清单（产品级，要做哪些命令）+ 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
 | `implementing`（developer 实现） | `src/modules/<module_name>/cli.py` docstring + click decorators → 运行时 `--help` | 实现 `cli.py`，运行 `--help` 输出应与 `cli.md` 一致 |
 
-PM 在 draft 阶段把 CLI 命令清单写到 FEATURE.yaml 关键接口；designing 阶段写 `cli.md` 详细契约；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
+产品级命令清单在讨论中与用户确定后直接写入 `cli.md`；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
 
 ## 8. Agent Layer
 

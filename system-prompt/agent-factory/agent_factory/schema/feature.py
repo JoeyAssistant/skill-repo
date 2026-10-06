@@ -29,8 +29,6 @@ class ModuleSpec(BaseModel):
     """单个模块的需求规格（spec 按 module dict 的 value）."""
     model_config = ConfigDict(extra="forbid")
     functions: list[str] = Field(default_factory=list, description="功能、修改点")
-    schema: Optional[str] = Field(None, description="data schema")
-    interface: Optional[str] = Field(None, description="API / CLI 接口")
 
 
 class Observation(BaseModel):
