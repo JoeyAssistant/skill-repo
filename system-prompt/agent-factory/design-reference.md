@@ -326,7 +326,7 @@ class <EnumName>(str, Enum):
 ### 6.5 反例（过程性内容混入 doc/，禁止）
 
 ```markdown
-### <EntityName>
+## <EntityName>
 
 @dataclass
 class <EntityName>:
@@ -339,14 +339,16 @@ class <EntityName>:
 正解（仅留 dataclass + 字段注释，描述清晰 + 关键约束）：
 
 ```markdown
-### <EntityName> -- <一句话业务角色>
+## <EntityName>
 
 @dataclass
 class <EntityName>:
     field_a: str
-        # <字段描述>。约束：YYYY-MM-DD
+        # <字段描述>
+        # 约束：YYYY-MM-DD
     field_b: int
-        # <字段描述>。约束：> 0
+        # <字段描述>
+        # 约束：> 0
     field_c: <EnumName>
         # <字段描述>（值1 / 值2 / 值3）
 ```
