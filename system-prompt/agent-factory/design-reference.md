@@ -23,7 +23,7 @@
   - [4.4 cli.md（CLI 契约，仅暴露 CLI 的模块才有）](#44-climdcli-契约仅暴露-cli-的模块才有)
   - [4.5 README.md（模块门面）](#45-readmemd模块门面)
 - [5. 跨文件内容归属表](#5-跨文件内容归属表)
-- [6. 设计文档输出规范](#6-设计文档输出规范)
+- [6. 设计文档产出清单](#6-设计文档产出清单)
 - [7. CLI Layer](#7-cli-layer)
   - [7.1 CLI 设计原则](#71-cli-设计原则)
   - [7.2 CLI 设计归属（分三阶段）](#72-cli-设计归属分三阶段)
@@ -76,26 +76,20 @@ graph TD
     Agent["Agent<br/>(SDK)"]
     McpServer["MCP Server<br/>(stdio/sse/http/mcpb)"]
     CLI["CLI Wrapper<br/>(click)"]
-    SrcFinancial["src/financial/<br/>(service + models)"]
-    SrcNews["src/news/<br/>(service + models)"]
+    SrcModules["src/modules/&lt;module_name&gt;/<br/>(service + models) × N"]
     Data[("Data<br/>(JSON / database)")]
 
     User <--> WebUI
     User <--> Claude
     WebUI <--> Backend
     Backend <--> Agent
-    Backend --> SrcFinancial
-    Backend --> SrcNews
-    Agent --> SrcFinancial
-    Agent --> SrcNews
+    Backend --> SrcModules
+    Agent --> SrcModules
     Claude <--> CLI
-    CLI --> SrcFinancial
-    CLI --> SrcNews
+    CLI --> SrcModules
     Claude <--> McpServer
-    McpServer --> SrcFinancial
-    McpServer --> SrcNews
-    SrcFinancial <--> Data
-    SrcNews <--> Data
+    McpServer --> SrcModules
+    SrcModules <--> Data
 ```
 
 ## 4. doc/<module_name>/ 章节契约
@@ -109,7 +103,10 @@ graph TD
 ##### 4.1.1.1 应有章节
 
 - 文件标题
-- `## 数据结构总览` —— mermaid classDiagram，展示模块内实体及关系
+- `## 数据结构总览` —— mermaid classDiagram，展示模块内**全部**实体及关系：
+  - 节点：每个 dataclass 与 enum（enum 标注 `<<enumeration>>`）
+  - 边：**组合**（字段持有子对象）用 `-->`；**按值引用**（引用其它实体的标识）与引用 enum 用 `..>`
+  - 字段类型：列表统一写作 `List~T~`
 - N × `## <EntityName>` —— dataclass / enum 定义
 
 ##### 4.1.1.2 模板
@@ -121,10 +118,20 @@ graph TD
 
 ```mermaid
 classDiagram
-    class <EntityName> {
-        +field_a: str
+    class <EntityA> {
+        +field_a: <EnumName>
+        +field_b: List~<EntityB>~
+    }
+    class <EntityB> {
+        +field_c: str
+    }
+    class <EnumName> {
+        <<enumeration>>
+        VALUE_A
+        VALUE_B
     }
     <EntityA> --> <EntityB> : field_b
+    <EntityA> ..> <EnumName> : field_a
 ```
 
 ## <EntityName>
@@ -155,7 +162,7 @@ class <EnumName>(str, Enum):
 
 **原则一：名称必须自解释**——单位、时间点、标识等语义要素编进名字本身，不靠注释或上下文补齐。如 `timeout_seconds` 而非 `timeout` 加注释 "(s)"；`created_at` 而非 `create_time`。
 
-**原则二：名称承载业务语义**——避免 `data` / `info` / `flag` / `value` 一类无信息量的词；集合用复数。
+**原则二：名称承载业务语义**
 
 ##### 4.1.2.2 类型选型原则
 
@@ -163,7 +170,8 @@ class <EnumName>(str, Enum):
 
 | 原则 | 反例 | 正解 |
 |------|------|------|
-| **str 仅用于自由文本**——需被解析/比较/计算/含结构化语义时禁用 | `value: str  # "X 个" / "无限制"` | `value_type: Enum (LIMITED / UNLIMITED)`<br>`value_count: Optional[int]` |
+| **str 仅用于自由文本**——需被解析/比较/计算/含结构化语义时禁用 | `value: str  # "X 个" / "无限制"` | `value_type: <EnumName>`<br>`value_count: Optional[int]` |
+| **时间戳 / 日期用 `str`（上条的例外）**——时间戳统一 ISO 8601（UTC，如 `2026-07-26T10:00:00Z`）；纯日期用 `YYYY-MM-DD` | `create_time: str  # YYYY-MM-DD HH:MM:SS` | `created_at: str  # ISO 8601, UTC` |
 | **Optional 表"未提供"**——与零值区分（None ≠ 0 ≠ ""） | `count: int = 0  # 无数据时填 0` | `count: Optional[int] = None  # None = 未提供, 0 = 显式零` |
 | **成组字段封装 dataclass**——N 字段一起出现一起消失 | `tag_k1: str`<br>`tag_k2: str`<br>`tag_k3: str` | `tags: list[TagItem]`（`TagItem` 含 key + value，可扩展） |
 
@@ -171,7 +179,7 @@ class <EnumName>(str, Enum):
 
 | 字段类型 / 形态 | 自检 |
 |---------------|------|
-| `str` | 值是自由文本吗？需解析/比较/计算 → 改类型 |
+| `str` | 值是自由文本或时间戳吗？其余需解析/比较/计算的值 → 改类型 |
 | `Optional[X]` | None 语义是"未提供"还是"零值"？后者用默认值 |
 | 多个相关字段 | 总是一起出现？若是 → 封装 dataclass |
 
@@ -306,18 +314,18 @@ class <EntityName>:
 
 设计决策应写到 FEATURE.yaml 需求规格，不留在 doc/。
 
-## 6. 设计文档输出规范
+## 6. 设计文档产出清单
 
-设计完成后，按以下结构输出文档到 `{Root}/doc/` 目录：
+设计完成后，产出以下文件到 `{Root}/doc/<module_name>/`：
 
-| 文件 | 内容 | 条件 |
-|------|------|------|
-| `{Root}/doc/<module_name>/schema.md` | 该 module 业务数据结构定义（dataclass + 字段注释） | 所有模块 |
-| `{Root}/doc/<module_name>/persistence.md` | 该 module 数据持久化方案 | 所有模块 |
-| `{Root}/doc/<module_name>/service.md` | Service 方法签名 + 关键流程 mermaid + 跨 module 关系图 | 所有模块 |
-| `{Root}/doc/<module_name>/README.md` | 模块门面：名词概念 + 模块职责 + 文档索引 | 所有模块 |
-| `{Root}/doc/<module_name>/cli.md` | CLI 契约（每命令的 JSON I/O schema、错误码、使用示例） | 仅暴露 CLI 的模块 |
-| `python3 {Root}/src/modules/<module_name>/cli.py --help` | CLI 命令运行时输出（无静态文件；命令清单在 FEATURE.yaml 关键接口定） | 仅暴露 CLI 的模块 |
+| 产出 | 条件 |
+|------|------|
+| `schema.md` | 所有模块 |
+| `persistence.md` | 所有模块 |
+| `service.md` | 所有模块 |
+| `README.md` | 所有模块 |
+| `cli.md` | 仅暴露 CLI 的模块 |
+| `python3 src/modules/<module_name>/cli.py --help` 运行时输出 | 仅暴露 CLI 的模块 |
 
 
 ## 7. CLI Layer
