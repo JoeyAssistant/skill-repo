@@ -74,5 +74,16 @@ sequenceDiagram
     pm->>feat: qa-reviewing
     pm->>+qa: start acceptance test
     qa->>-pm: done
-    pm->>feat: set done
+    pm->>+user: 合入方式：merge 还是 PR
+    user->>-pm: 选择
+    alt merge
+        pm->>code: 主仓 merge --no-ff
+        pm->>feat: set done
+    else PR
+        pm->>code: push 分支 + 建 PR（带描述）
+        pm->>user: 等人工合入
+        user->>pm: 已合入
+        pm->>code: fetch + merge --ff-only origin/main
+        pm->>feat: set done
+    end
 ```

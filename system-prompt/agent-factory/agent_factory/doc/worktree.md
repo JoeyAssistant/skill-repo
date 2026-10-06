@@ -14,7 +14,7 @@ feature 绑定的 git worktree 生命周期管理。
 
 - `worktree new <id> [--base <ref>]`：创建 worktree + 分支，写 FEATURE.yaml 记录。已绑定则报错。
 - `worktree list [--format table|json]`：git 登记的 worktree 与 FEATURE.yaml 记录的对照（纯数据输出；孤儿/悬空判断留给 PM）
-- `worktree remove <id> [--force]`：校验 feature=done → 移除 worktree → 删分支（-d）→ 清记录。非 done 拒绝（exit 3），确认要删用 --force（同时 git remove --force + branch -D）
+- `worktree remove <id> [--force]`：校验 feature=done → 移除 worktree → 删分支（-d）→ 清记录。非 done 拒绝（exit 3），确认要删用 --force（同时 git remove --force + branch -D）；分支已不存在时跳过删除（幂等）
 
 ## 退出码
 

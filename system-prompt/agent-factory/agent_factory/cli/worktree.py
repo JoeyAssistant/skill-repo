@@ -42,6 +42,11 @@ def _git(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=False)
 
 
+def _branch_exists(branch: str) -> bool:
+    """分支是否存在于本地（remove 幂等：PR 合入后平台删源分支时跳过删除）。"""
+    return bool(_git("branch", "--list", branch).stdout.strip())
+
+
 def _git_fail(result: subprocess.CompletedProcess, context: str) -> None:
     """Print git stderr and exit 1."""
     click.echo(format_error("GitError", result.stderr.strip() or result.stdout.strip(), context), err=True)
@@ -186,8 +191,9 @@ def list_worktrees(fmt: str) -> None:
 def remove(feature_id: int, force: bool) -> None:
     """移除 feature 绑定的 worktree（校验 done）+ 删除分支 + 清 FEATURE.yaml 记录.
 
-    正常路径（QA pass → merge 完成）后调用。worktree 有未提交改动或未跟踪文件时
-    git 会拒绝删除，确认无价值后用 --force。
+    正常路径（QA pass → 合入完成，merge 或 PR 已合入）后调用。worktree 有未提交改动或
+    未跟踪文件时 git 会拒绝删除，确认无价值后用 --force。分支已不存在（如 PR 合入后
+    平台删除源分支）时跳过删除，不报错。
     """
     _, feat_path, feature = _load_feature_with_worktree(feature_id)
 
@@ -224,10 +230,13 @@ def remove(feature_id: int, force: bool) -> None:
         click.echo(f"Note: worktree 目录不存在，跳过 remove: {path}", err=True)
         _git("worktree", "prune")
 
-    # 删分支（-d 安全删除，--force 用 -D）
-    r = _git("branch", "-D" if force else "-d", wt.branch)
-    if r.returncode != 0:
-        _git_fail(r, f"git branch -d {wt.branch}（分支未合并时 -d 拒绝；确认后 --force 走 -D）")
+    # 删分支（-d 安全删除，--force 用 -D）；分支已不存在（平台删源分支 / 本地已 prune）视为已清理
+    if _branch_exists(wt.branch):
+        r = _git("branch", "-D" if force else "-d", wt.branch)
+        if r.returncode != 0:
+            _git_fail(r, f"git branch -d {wt.branch}（分支未合并时 -d 拒绝；确认后 --force 走 -D）")
+    else:
+        click.echo(f"Note: 分支 {wt.branch} 不存在，跳过删除", err=True)
 
     # 清 FEATURE.yaml worktree 记录
     data = load_yaml(feat_path)

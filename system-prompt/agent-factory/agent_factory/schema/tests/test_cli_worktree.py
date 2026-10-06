@@ -126,6 +126,25 @@ def test_worktree_remove_done_cleans_all(tmp_path, monkeypatch):
     assert data["worktree"] is None
 
 
+def test_worktree_remove_tolerates_missing_branch(tmp_path, monkeypatch):
+    """PR 合入后平台删源分支：本地分支已不存在，remove 仍成功且清记录。"""
+    monkeypatch.chdir(tmp_path)
+    _init_repo(tmp_path)
+    runner = CliRunner()
+    _new_feature(runner)
+    runner.invoke(main, ["worktree", "new", "1"])
+    _set_status_done(tmp_path)
+
+    # 模拟分支已被删除（平台删源分支 + 本地 prune）
+    _git(tmp_path, "worktree", "remove", "--force", ".worktrees/feat-001-income-module")
+    _git(tmp_path, "branch", "-D", "feature/001-income-module")
+
+    result = runner.invoke(main, ["worktree", "remove", "1"])
+    assert result.exit_code == 0, result.output
+    data = load_yaml(tmp_path / ".features" / "001-income-module" / "FEATURE.yaml")
+    assert data["worktree"] is None
+
+
 def test_worktree_remove_without_record_not_found(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _init_repo(tmp_path)
