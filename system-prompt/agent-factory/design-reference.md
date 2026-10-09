@@ -78,7 +78,7 @@ graph TD
     Agent["Agent<br/>(SDK)"]
     McpServer["MCP Server<br/>(stdio/sse/http/mcpb)"]
     CLI["CLI Wrapper<br/>(click)"]
-    SrcModules["src/modules/&lt;module_name&gt;/<br/>(service + models) × N"]
+    SrcModules["src/modules/&lt;module_name&gt;/<br/>(业务逻辑 + models) × N"]
     Data[("Data<br/>(JSON / database)")]
 
     User <--> WebUI
@@ -432,8 +432,8 @@ class <EntityName>:
 - **Agent 职责边界**：Agent 负责理解用户意图、编排任务流程、调用工具（执行实际业务逻辑的工具）
 - **Agent 调用模块能力的两条路径**：
   - 经 CLI：执行 `python3 src/modules/<module_name>/cli.py <command>`（跨进程；模块未暴露 CLI 时不可用；契约见该模块的 `doc/<module_name>/cli.md`）
-  - 直接 import：`from src.modules.<module_name>.service import ...`（同进程；契约见该模块的 `doc/<module_name>/api.md`）
-- Agent 通过 `src/modules/<module_name>/service.py` 完成数据操作
+  - 直接 import：`from src.modules.<module_name> import ...`（同进程；`__init__.py` 的公开符号即模块对外接口，契约见该模块的 `doc/<module_name>/api.md`）
+- Agent 通过模块的公开接口完成数据操作
 - 定义目标 Agent 的 system prompt，可通过 Claude Code 的 append-system-prompt 使用，也可通过 Anthropic SDK 或 Claude Agent SDK 使用，根据实际需求决定
 - 实现时可参考 `/claude-api` skill
 
@@ -441,7 +441,7 @@ class <EntityName>:
 
 - backend 技术选型
 - REST API 设计，针对每一个 API，列出接口定义，包括接口功能、输入、输出，使用 mermaid 语法列出 API 的调用流程，与内部模块（如 agent、`src/modules/<module_name>/`、data layer）的交互流程
-- **Backend 直接 import `src/modules/<module_name>/service.py`，不经过 CLI**
+- **Backend 直接 import `src/modules/<module_name>/` 的公开接口，不经过 CLI**
 
 ## 10. 代码目录结构
 
@@ -452,9 +452,9 @@ class <EntityName>:
   src/
     modules/
       <module_name>/
-        __init__.py
-        service.py          # 业务逻辑
-        models.py           # dataclass + enum
+        __init__.py         # 对外接口：re-export 公开符号（__all__）—— api.md 的落点
+        models.py           # 数据结构：dataclass + enum —— schema.md 的落点
+        *.py                # 业务逻辑：按模块自身形态命名与拆分（service.py / resolver.py / service/ …）
         cli.py              # 仅暴露 CLI 的模块才有：python3 src/modules/<module_name>/cli.py --help
     backend/                # 非模块
     frontend/               # 非模块
@@ -485,6 +485,6 @@ import sys
 
 # parents[3] = {Root}。深度由「模块定义」固定的 CLI 路径决定；CLI 路径变更需同步改此处
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from src.modules.<module_name>.service import <Module>Service
+from src.modules.<module_name> import <公开接口>
 # ... click 命令定义
 ```

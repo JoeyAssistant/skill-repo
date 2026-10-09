@@ -153,7 +153,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 5. **代码目录结构**：
 
 ```
-{Root}/src/modules/<module_name>/{__init__.py, service.py, models.py}
+{Root}/src/modules/<module_name>/{__init__.py, models.py, *.py}
 {Root}/src/modules/<module_name>/cli.py     # 仅暴露 CLI 的模块才有
 {Root}/doc/<module_name>/{schema.md, persistence.md, api.md, README.md, cli.md}
 {Root}/test/unit/<module_name>/
@@ -165,7 +165,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 
 按 feature 涉及的模块逐个实现，每个模块产出其源码：
 
-- `src/modules/<module_name>/service.py`：业务逻辑（被 CLI / Backend / MCP 调用）
+- `src/modules/<module_name>/`：对外接口（`__init__.py` 的公开符号，被 CLI / Backend / MCP / Agent 调用）+ 业务逻辑（按模块自身形态命名与拆分）
 - `src/modules/<module_name>/models.py`：dataclass + enum
 
 **暴露 CLI 的模块**额外产出 `cli.py`（click）。调用方式 `python3 src/modules/<module_name>/cli.py --help`；头部 sys.path 处理见 `design-reference.md` §CLI 调用方式。
@@ -428,7 +428,7 @@ fix: <问题描述>
 #### 集成测试（IT）
 
 - **场景驱动**: 从用户实际使用场景出发，覆盖关键用户操作流程
-- **端到端验证**: 根据被测入口选择测试手段（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端，CLI 使用命令行），验证完整链路：入口 → `src/modules/<module_name>/service.py` → Data Layer
+- **端到端验证**: 根据被测入口选择测试手段（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端，CLI 使用命令行），验证完整链路：入口 → `src/modules/<module_name>` → Data Layer
 - **环境要求**: 需要启动完整服务（Backend + 前端），Playwright 未安装时自动跳过
 - **测试文件组织**:
   - 文件按场景划分: `{Root}/test/integration/test_<scenario>.py`

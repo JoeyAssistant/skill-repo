@@ -114,7 +114,7 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 - 启动 mcp
 - 用 MCP client（如 Claude Code inspector、mcp CLI）调用每个 tool
 - 验证 tool 返回结构与其声明一致
-- 验证每个 tool 实际调用了 `src/modules/<module_name>/service.py` 的对应方法
+- 验证每个 tool 实际调用了 `src/modules/<module_name>/` 的公开接口
 
 ## 验收工作流程
 
@@ -141,19 +141,19 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 1. 准备测试输入（JSON / 参数）
 2. 执行 `python3 src/modules/<module_name>/cli.py <command> [args]`
 3. 验证输出格式与 `--help` 描述一致
-4. 验证完整链路（CLI → `src/modules/<module_name>/service.py` → Data Layer）
+4. 验证完整链路（CLI → `src/modules/<module_name>` → Data Layer）
 
 **经 HTTP（backend / frontend）**：
 1. 启动 backend 服务（涉及 frontend 时同时启动）
 2. 通过 HTTP API 调用（涉及 frontend 时用 Playwright 操作 UI）
 3. 验证响应结构
-4. 验证完整链路（Web UI / API → Backend → `src/modules/<module_name>/service.py` → Data Layer）
+4. 验证完整链路（Web UI / API → Backend → `src/modules/<module_name>` → Data Layer）
 
 **经 MCP**：
 1. 启动 mcp
 2. 用 MCP client 调用 tool
 3. 验证返回结构与其声明一致
-4. 验证完整链路（MCP tool → `src/modules/<module_name>/service.py` → Data Layer）
+4. 验证完整链路（MCP tool → `src/modules/<module_name>` → Data Layer）
 
 记录每个场景的执行结果和发现的问题。
 
