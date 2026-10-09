@@ -42,14 +42,14 @@
 
 ## 2. 模块定义
 
-**模块是 agent 系统的功能单元，提供一个独立的功能或服务。** 一个模块由以下要件构成，缺一不可：
+**模块是 agent 系统的功能单元，提供一个独立的功能或服务。** 一个模块由以下要件构成：
 
-| # | 要件 | 路径 |
-|---|------|------|
-| 1 | 独立源码 | `src/modules/<module_name>/` |
-| 2 | 独立 CLI（仅暴露 CLI 的模块才有） | `src/modules/<module_name>/cli.py`（单文件） |
-| 3 | 独立文档 | `doc/<module_name>/` |
-| 4 | 独立单元测试 | `test/unit/<module_name>/` |
+| # | 要件 | 路径 | 条件 |
+|---|------|------|------|
+| 1 | 独立源码 | `src/modules/<module_name>/` | 所有模块 |
+| 2 | 独立文档 | `doc/<module_name>/` | 所有模块 |
+| 3 | 独立单元测试 | `test/unit/<module_name>/` | 所有模块 |
+| 4 | 独立 CLI | `src/modules/<module_name>/cli.py`（单文件） | 仅暴露 CLI 的模块 |
 
 `doc/<module_name>/` 下的文件：
 
