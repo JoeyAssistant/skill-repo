@@ -58,7 +58,7 @@ Root: <project-root-path>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module_name>/{schema,persistence,service}.md + README.md + cli.md)（路径以 Root 为基准）
+1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 Root 为基准）
 2. Implement all code per design
 3. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
 4. Git commit (one feature = one commit, see Git 提交规范)
@@ -142,10 +142,10 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 1. **阅读设计文档**：按以下顺序阅读
    - `<主仓路径>/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
    - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 确定）：
-     - `{Root}/doc/<module_name>/README.md` → 该 module 名词概念、职责、doc 索引
+     - `{Root}/doc/<module_name>/README.md` → 该 module 名词概念、功能与职责、依赖关系
      - `{Root}/doc/<module_name>/schema.md` → 该 module 的 schema（业务数据结构定义）
      - `{Root}/doc/<module_name>/persistence.md` → 该 module 存储方案
-     - `{Root}/doc/<module_name>/service.md` → Service 接口与流程
+     - `{Root}/doc/<module_name>/api.md` → 该 module 对外接口契约、流程与配置
      - `{Root}/doc/<module_name>/cli.md` → CLI 契约（仅暴露 CLI 的模块；实现 `cli.py` 时按此写 click decorators + docstring）
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，写入 violations 列表返回给 PM
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
@@ -155,7 +155,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 ```
 {Root}/src/modules/<module_name>/{__init__.py, service.py, models.py}
 {Root}/src/modules/<module_name>/cli.py     # 仅暴露 CLI 的模块才有
-{Root}/doc/<module_name>/{schema.md, persistence.md, service.md, README.md, cli.md}
+{Root}/doc/<module_name>/{schema.md, persistence.md, api.md, README.md, cli.md}
 {Root}/test/unit/<module_name>/
 ```
 

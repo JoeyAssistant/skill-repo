@@ -47,7 +47,7 @@ Root: <worktree 绝对路径>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/<module_name>/{schema,persistence,service}.md + README.md + cli.md)（以 Root 为基准）
+1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（以 Root 为基准）
 2. Verify design compliance（see 阶段 1 矩阵）（静态检查，无需持锁）
 3. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 lock_busy（附 holder 信息）
 4. Start services and run E2E scenarios（Root 内启动）
@@ -128,7 +128,7 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 |--------|------|
 | 数据结构 | `doc/<module_name>/schema.md` |
 | 数据持久化 | `doc/<module_name>/persistence.md` |
-| Service 接口 | `doc/<module_name>/service.md` |
+| 接口契约 | `doc/<module_name>/api.md` |
 | CLI 接口 | `python3 src/modules/<module_name>/cli.py --help` 实际输出，与 `doc/<module_name>/cli.md` 比对一致（仅暴露 CLI 的模块） |
 
 > Backend / Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
@@ -213,7 +213,7 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 |------|------|--------|-------|
 | Schema | doc/<module_name>/schema.md | PASS/FAIL | ... |
 | Persistence | doc/<module_name>/persistence.md | PASS/FAIL | ... |
-| Service Interface | doc/<module_name>/service.md | PASS/FAIL | ... |
+| API Contract | doc/<module_name>/api.md | PASS/FAIL | ... |
 | CLI Interface | src/modules/<module_name>/cli.py vs doc/<module_name>/cli.md | PASS/FAIL/N/A | ... |
 | Backend API | 行为验证 | PASS/FAIL/N/A | ... |
 | Frontend UI | 行为验证 | PASS/FAIL/N/A | ... |

@@ -20,7 +20,9 @@
       - [4.2.2.3 注释原则](#4223-注释原则)
       - [4.2.2.4 一致性原则](#4224-一致性原则)
   - [4.3 persistence.md（数据存储方案）](#43-persistencemd数据存储方案)
-  - [4.4 service.md（Service 接口契约 + 流程 + 配置）](#44-servicemdservice-接口契约--流程--配置)
+  - [4.4 api.md（对外接口契约 + 流程 + 配置）](#44-apimd对外接口契约--流程--配置)
+    - [4.4.1 应有章节](#441-应有章节)
+    - [4.4.2 模板](#442-模板)
   - [4.5 cli.md（CLI 契约，仅暴露 CLI 的模块才有）](#45-climdcli-契约仅暴露-cli-的模块才有)
 - [5. 跨文件内容归属表](#5-跨文件内容归属表)
 - [6. 设计文档产出清单](#6-设计文档产出清单)
@@ -36,7 +38,7 @@
 ## 1. 设计工作原则
 
 - **图表优先**：流程、交互、依赖关系优先用 mermaid 表达（flowchart / sequence / state）。能用图说明的不写文字；文字仅作图的补充说明
-- **聚焦核心**：文档核心是四类内容 —— 数据结构定义、CLI 定义、模块边界与依赖、接口交互。其余（背景、概述、理由）保持精简
+- **聚焦核心**：文档核心是五类内容 —— 数据结构定义、数据存储方案、CLI 定义、模块边界与依赖、接口交互。其余（背景、概述、理由）保持精简
 - **可审计性**：每个设计决策都必须记录选择理由，使设计过程可追溯
 - **可讨论性**：设计方案应先与用户讨论确认后再定稿，不擅自做重大架构决定
 
@@ -58,7 +60,7 @@
 | `README.md` | 模块门面：名词概念 + 功能与职责 |
 | `schema.md` | 业务数据结构定义 |
 | `persistence.md` | 数据存储方案 |
-| `service.md` | Service 接口契约 + 关键流程 + 配置 |
+| `api.md` | 对外接口契约 + 流程 + 配置 |
 | `cli.md` | CLI 契约（仅暴露 CLI 的模块才有） |
 
 **命名**：`<module_name>` 统一使用下划线（`module_name`），四处路径同名。
@@ -98,7 +100,7 @@ graph TD
 
 ### 4.1 README.md（模块门面）
 
-> 模块入口：讲清这个模块是什么、负责什么。**不重复** `schema.md` / `service.md` 的正文内容。
+> 模块入口：讲清这个模块是什么、负责什么。**不重复** `schema.md` / `api.md` 的正文内容。
 
 **应有章节**：
 - 模块标题 + 一句话模块功能与职责
@@ -245,14 +247,75 @@ class <EnumName>(str, Enum):
 
 **存储介质选型**：优先 json、yaml 等简单持久化；较复杂场景使用数据库。
 
-### 4.4 service.md（Service 接口契约 + 流程 + 配置）
+### 4.4 api.md（对外接口契约 + 流程 + 配置）
 
-> Service.py 的实现契约。描述 Service 接口、关键流程与运行配置；**不解释"为什么这么设计"**。
+#### 4.4.1 应有章节
 
-**应有章节**：
-- `## Service 接口`（class + 方法签名 + docstring）
-- `## 关键流程`（mermaid sequence，按 use case 组织）
-- `## 配置`（环境变量、路径参数）
+对外 API 是本模块「功能与职责」（`README.md`）中「负责」各项功能的接口表达；一项功能对应一个或多个接口，粒度在设计讨论中结合实际需求确定。
+
+- `## 1. 对外接口` —— N × `### N.M <接口>`，每个接口三小节：
+
+  | 小节 | 内容 |
+  |------|------|
+  | `#### N.M.1 接口定义` | **只有一个 ```python 代码块**：签名 + 完整 docstring（含 `参数:` / `返回:` 段）。**代码块外零文字**。签名与 docstring 是本接口的**设计契约、编码依据** |
+  | `#### N.M.2 实现方案` | **实现描述**（步骤 / 调用的外部接口与存储 / 关键约束）+ **图**（mermaid：时序图 `sequenceDiagram` 或流程图 `flowchart`）。图的调用方一律抽象为 `调用方`，**不写具体模块名**，**只画本模块的逻辑** |
+  | `#### N.M.3 异常与错误码` | 该接口**全部**异常 / 错误场景的处理，三选一：**不涉及**（纯函数 / 纯内存，确无错误场景）/ **异常表或错误码表**（抛异常或返回错误码）/ **错误场景返回描述**（不抛，以特定返回值表达；或「向上抛，由上层兜底」）。异常类不单列条目，写在这里。**禁止只写「无。」** |
+
+- `## 2. 模块配置` —— 环境变量、路径参数；无配置项时写一句「本模块无可配置项。」
+- `## 3. 模块常量` —— 可选，仅当模块存在对外共享的常量时才有；无则整节省略
+
+不写「消费方：`backend/xxx.py`」这类点名具体消费方的句子。不得有顶部 blockquote 前置说明。
+
+**编号**：顶层 `## N.`，接口 `### N.M`，接口内 `#### N.M.K`。`实现方案` 内部用**粗体标签** `**实现描述**` / `**图**`，不再加第 5 级编号。
+
+#### 4.4.2 模板
+
+````markdown
+# <Module> API
+
+## 1. 对外接口
+
+### 1.1 <接口名>
+
+#### 1.1.1 接口定义
+
+```python
+def <签名>:
+    """<一句话语义>。
+
+    参数:
+        <name>: <说明>
+
+    返回:
+        <说明>
+    """
+```
+
+#### 1.1.2 实现方案
+
+**实现描述**
+
+<步骤 / 调用的外部接口与存储 / 关键约束>
+
+**图**
+
+```mermaid
+<mermaid 图：时序图 sequenceDiagram 或流程图 flowchart，按内容选择>
+```
+
+#### 1.1.3 异常与错误码
+
+| 异常 | 触发条件 |
+|---|---|
+| `<ExceptionName>` | <条件> |
+
+### 1.2 <下一个接口>
+
+## 2. 模块配置
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+````
 
 ### 4.5 cli.md（CLI 契约，仅暴露 CLI 的模块才有）
 
@@ -265,7 +328,6 @@ class <EnumName>(str, Enum):
   - 输入 schema（arguments / options / `--json-input` 示例）
   - 输出 schema（成功响应 + 失败响应 + 错误码）
   - 使用示例（典型调用）
-
 
 ## 5. 跨文件内容归属表
 
@@ -281,23 +343,23 @@ class <EnumName>(str, Enum):
 | CREATE TABLE / DDL | persistence.md | schema.md |
 | 索引定义 | persistence.md | schema.md |
 | Column ↔ 字段映射（仅非一一对应时） | persistence.md | schema.md |
-| 存储介质选型理由 | persistence.md（一句话）；深度分析见 commit message / PR 描述 | service.md |
+| 存储介质选型理由 | persistence.md（一句话）；深度分析见 commit message / PR 描述 | api.md |
 | 读写机制 | persistence.md | schema.md |
-| 数据生命周期 | persistence.md | service.md |
-| 配置（环境变量/路径） | service.md | persistence.md |
-| Service 方法签名 | service.md | - |
-| Service 关键流程 | service.md | - |
+| 数据生命周期 | persistence.md | api.md |
+| 配置（环境变量/路径） | api.md | persistence.md |
+| 接口签名 | api.md | - |
+| 接口实现方案 | api.md | - |
 | 模块依赖关系（依赖 / 被依赖） | README.md | - |
-| CLI 命令清单（产品级） | cli.md（designing 阶段定） | service.md / schema.md |
-| CLI 详细 JSON I/O schema | cli.md（仅暴露 CLI 的模块） | schema.md / service.md |
+| CLI 命令清单（产品级） | cli.md（designing 阶段定） | api.md / schema.md |
+| CLI 详细 JSON I/O schema | cli.md（仅暴露 CLI 的模块） | schema.md / api.md |
 | CLI 错误码定义 | cli.md（仅暴露 CLI 的模块） | schema.md |
 | CLI 使用示例 | cli.md（仅暴露 CLI 的模块） | schema.md |
 | 设计决策 | commit message / PR 描述 | doc/ |
 | 决策对比（方案 A/B/C） | commit message / PR 描述 | doc/ |
 | 实测数据 / POC 命中率 | commit message / PR 描述 | doc/ |
 | Issue 引用（QA-XXX） | commit message / PR 描述 | doc/ |
-| 异常场景（接口契约） | service.md（方法 docstring） | - |
-| 异常场景（issue 上下文） | commit message / PR 描述 | service.md |
+| 异常场景（接口契约） | api.md（异常与错误码） | - |
+| 异常场景（issue 上下文） | commit message / PR 描述 | api.md |
 | 变更记录 / "X 已删除" | 删（不应存在任何 doc/） | 任何 |
 
 **撰写自检**（写完每个 doc 文件后，扫描以下关键词）：
@@ -334,10 +396,9 @@ class <EntityName>:
 | `README.md` | 所有模块 |
 | `schema.md` | 所有模块 |
 | `persistence.md` | 所有模块 |
-| `service.md` | 所有模块 |
+| `api.md` | 所有模块 |
 | `cli.md` | 仅暴露 CLI 的模块 |
 | `python3 src/modules/<module_name>/cli.py --help` 运行时输出 | 仅暴露 CLI 的模块 |
-
 
 ## 7. CLI Layer
 
@@ -370,8 +431,8 @@ class <EntityName>:
 - 使用 Claude SDK (Anthropic SDK) 或 Claude Agent SDK 构建 Agent
 - **Agent 职责边界**：Agent 负责理解用户意图、编排任务流程、调用工具（执行实际业务逻辑的工具）
 - **Agent 调用模块能力的两条路径**：
-  - 经 CLI：执行 `python3 src/modules/<module_name>/cli.py <command>`（跨进程；模块未暴露 CLI 时不可用）
-  - 直接 import：`from src.modules.<module_name>.service import ...`（同进程）
+  - 经 CLI：执行 `python3 src/modules/<module_name>/cli.py <command>`（跨进程；模块未暴露 CLI 时不可用；契约见该模块的 `doc/<module_name>/cli.md`）
+  - 直接 import：`from src.modules.<module_name>.service import ...`（同进程；契约见该模块的 `doc/<module_name>/api.md`）
 - Agent 通过 `src/modules/<module_name>/service.py` 完成数据操作
 - 定义目标 Agent 的 system prompt，可通过 Claude Code 的 append-system-prompt 使用，也可通过 Anthropic SDK 或 Claude Agent SDK 使用，根据实际需求决定
 - 实现时可参考 `/claude-api` skill
@@ -404,7 +465,7 @@ class <EntityName>:
       README.md
       schema.md
       persistence.md
-      service.md
+      api.md
       cli.md                # 仅暴露 CLI 的模块才有
   test/
     unit/
