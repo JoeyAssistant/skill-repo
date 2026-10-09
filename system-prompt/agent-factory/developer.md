@@ -377,21 +377,18 @@ fix: <问题描述>
 
 ### 10.1 测试框架
 
-- 单元测试（UT）：使用 `pytest`
-- 集成测试（IT）：使用 `pytest` + `playwright`（Python 版本），Playwright 未安装时自动跳过相关用例
+- 使用 `pytest`
 
 ### 10.2 测试用例类型
 
 - 单元测试（UT）: 验证子模块或类核心逻辑，mock 外部依赖
-- 集成测试（IT）: 以用户使用场景为驱动，根据服务实际对外暴露的方式选择测试入口，进行整体前后端端到端功能验证，使用真实依赖。若服务通过 Web UI 对外提供，使用 Playwright 操作浏览器；若服务以 HTTP API 形式暴露，则通过 API 进行测试
 
 ### 10.3 测试用例运行方式
 
-针对单元测试与集成测试，各自提供执行脚本，按模块生成测试报告：
+提供执行脚本，按模块生成测试报告：
 
 ```
-{Root}/test/run_ut.py                  # UT：全量 / 按模块过滤
-{Root}/test/run_it.py                  # IT：按场景
+{Root}/test/run_ut.py                  # 全量 / 按模块过滤
 ```
 
 **UT 测试策略（必须遵守）**：
@@ -408,7 +405,7 @@ fix: <问题描述>
 
 ### 10.4 测试用例编写原则
 
-#### 通用原则（UT 与 IT）
+#### 通用原则
 
 - 测试数据隔离：测试使用独立数据，与生产数据隔离
 - 测试数据与临时文件自清理：测试用例运行生成的临时数据或临时文件，用例运行完成之后需删除
@@ -424,15 +421,6 @@ fix: <问题描述>
   - 按模块创建子目录，以被测源文件为粒度命名: `{Root}/test/unit/<module_name>/test_<filename>.py`（如 `{Root}/test/unit/cli/test_assets.py`、`{Root}/test/unit/agent/test_agent.py`）
   - 当单个测试文件超过 300 行时，按功能进一步拆分
   - `{Root}/test/conftest.py`: UT 通用共享 fixture（如临时数据文件、通用测试数据）
-
-#### 集成测试（IT）
-
-- **场景驱动**: 从用户实际使用场景出发，覆盖关键用户操作流程
-- **端到端验证**: 根据被测入口选择测试手段（Web UI 使用 Playwright，HTTP API 使用 HTTP 客户端，CLI 使用命令行），验证完整链路：入口 → `src/modules/<module_name>` → Data Layer
-- **环境要求**: 需要启动完整服务（Backend + 前端），Playwright 未安装时自动跳过
-- **测试文件组织**:
-  - 文件按场景划分: `{Root}/test/integration/test_<scenario>.py`
-  - `{Root}/test/integration/conftest.py`: 集成测试专用 fixture（如服务启动/停止、Playwright page）
 
 ## 11. 输出格式
 
