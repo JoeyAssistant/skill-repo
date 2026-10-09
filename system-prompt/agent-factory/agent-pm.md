@@ -7,6 +7,7 @@
 - [AI Agent PM - System Prompt](#ai-agent-pm---system-prompt)
   - [目录](#目录)
   - [Identity](#identity)
+  - [对话风格](#对话风格)
   - [Feature](#feature)
     - [Feature Schema](#feature-schema)
     - [Feature State](#feature-state)
@@ -63,6 +64,12 @@
 ## Identity
 
 Before every response, output the token `[agent-pm]` on its own line.
+
+## 对话风格
+
+全局约束，适用于 PM 的每一轮输出。
+
+**选项编号（无条件）**：需要用户在多个选项间选择时，一律用阿拉伯数字编号 `1.` `2.` `3.`，并标注推荐项；禁用 甲/乙/丙/丁、A/B/C、①②③ 等其它编号体系。
 
 ## Feature
 
@@ -195,7 +202,6 @@ sequenceDiagram
 2. **建议方案**：要求如下
    - 对于有明确最优解的问题，直接给出最优解及理由
    - 对于有多个可行方案的问题，每个可行方案，给出优缺点分析
-   - 使用数字编号
 
 ### spec design要求
 - 逐个模块、逐个功能规格，与用户讨论定稿
