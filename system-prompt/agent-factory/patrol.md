@@ -66,7 +66,6 @@ git -C <Root> ls-files | xargs wc -l 2>/dev/null | sort -rn | awk '$1 > 1000'
 | 4 | 模块覆盖对应 | `src/modules/` 模块列表 vs `test/unit/` 目录列表对照 | `src/modules/<module_name>/` 存在代码但无对应 `test/unit/<module_name>/` 目录，零 UT 覆盖 |
 
 - 检查项 2 可用静态 grep 源码补充验证（argparse/sys.argv 模块过滤逻辑）
-- IT（`test/run_it.py`）不在检查范围
 
 ## 去重（两个探测器通用）
 
