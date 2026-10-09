@@ -8,7 +8,7 @@
 - [1. 设计工作原则](#1-设计工作原则)
 - [2. 模块定义](#2-模块定义)
 - [3. Agent参考架构](#3-agent参考架构)
-- [4. doc/<module_name>/ 章节契约](#4-docmodule_name-章节契约)
+- [4. doc/modules/<module_name>/ 章节契约](#4-docmodulesmodule_name-章节契约)
   - [4.1 README.md（模块门面）](#41-readmemd模块门面)
   - [4.2 schema.md（业务数据结构定义）](#42-schemamd业务数据结构定义)
     - [4.2.1 文件结构](#421-文件结构)
@@ -49,11 +49,11 @@
 | # | 要件 | 路径 | 条件 |
 |---|------|------|------|
 | 1 | 独立源码 | `src/modules/<module_name>/` | 所有模块 |
-| 2 | 独立文档 | `doc/<module_name>/` | 所有模块 |
+| 2 | 独立文档 | `doc/modules/<module_name>/` | 所有模块 |
 | 3 | 独立单元测试 | `test/unit/<module_name>/` | 所有模块 |
 | 4 | 独立 CLI | `src/modules/<module_name>/cli.py`（单文件） | 仅暴露 CLI 的模块 |
 
-`doc/<module_name>/` 下的文件：
+`doc/modules/<module_name>/` 下的文件：
 
 | 文件 | 内容 |
 |------|------|
@@ -65,7 +65,7 @@
 
 **命名**：`<module_name>` 统一使用下划线（`module_name`），四处路径同名。
 
-**判别**：`src/` 下 `modules/` 之内的是模块；`src/` 下其余目录（`backend` / `frontend` / `skill` / `mcp`）不是模块。
+**判别**：`modules/` 之内的是模块（`src/modules/<module_name>/`、`doc/modules/<module_name>/`）；其余目录不是模块（`src/` 下 `backend` / `frontend` / `skill` / `mcp`，`doc/` 下与 src 同名的非模块目录）。
 
 ## 3. Agent参考架构
 
@@ -94,9 +94,9 @@ graph TD
     SrcModules <--> Data
 ```
 
-## 4. doc/<module_name>/ 章节契约
+## 4. doc/modules/<module_name>/ 章节契约
 
-每个 doc/<module_name>/ 文件按以下章节组织。撰写前对照契约，撰写后自检章节是否合规。
+每个 doc/modules/<module_name>/ 文件按以下章节组织。撰写前对照契约，撰写后自检章节是否合规。
 
 ### 4.1 README.md（模块门面）
 
@@ -389,7 +389,7 @@ class <EntityName>:
 
 ## 6. 设计文档产出清单
 
-设计完成后，产出以下文件到 `{Root}/doc/<module_name>/`：
+设计完成后，产出以下文件到 `{Root}/doc/modules/<module_name>/`：
 
 | 产出 | 条件 |
 |------|------|
@@ -408,7 +408,7 @@ class <EntityName>:
     - **输入说明**：参数、选项、结构化输入格式
     - **输出说明**：成功/失败响应结构、错误码定义
     - **使用示例**：典型调用场景
-- **设计期契约在 `doc/<module_name>/cli.md`**：暴露 CLI 的模块，设计期写 `cli.md`，含每个命令的 JSON I/O schema、错误码、使用示例，作为 developer 实现 `cli.py` 的契约。developer 实现完成后，`cli.md` 与 `--help` 输出应一致（QA 验收时机械比对）
+- **设计期契约在 `doc/modules/<module_name>/cli.md`**：暴露 CLI 的模块，设计期写 `cli.md`，含每个命令的 JSON I/O schema、错误码、使用示例，作为 developer 实现 `cli.py` 的契约。developer 实现完成后，`cli.md` 与 `--help` 输出应一致（QA 验收时机械比对）
 - data-oriented：CLI 以数据为中心，提供 `data layer` 数据相关的操作，如查询、修改、新增、删除等，command 与入参设计保持精简，避免过度设计
 - 结构化输入输出：除了常规 CLI 的 arguments/options，提供 json 格式输入全量入参，输出格式统一使用 json，方便代码或 agent 解析
 - 使用 `click` 框架
@@ -421,7 +421,7 @@ class <EntityName>:
 
 | 阶段 | 文件 | 内容 |
 |------|------|------|
-| `designing`（设计） | `doc/<module_name>/cli.md` | 命令清单（产品级，要做哪些命令）+ 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
+| `designing`（设计） | `doc/modules/<module_name>/cli.md` | 命令清单（产品级，要做哪些命令）+ 每命令的详细 JSON I/O schema、错误码、使用示例（设计期契约） |
 | `implementing`（developer 实现） | `src/modules/<module_name>/cli.py` docstring + click decorators → 运行时 `--help` | 实现 `cli.py`，运行 `--help` 输出应与 `cli.md` 一致 |
 
 产品级命令清单在讨论中与用户确定后直接写入 `cli.md`；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
@@ -431,8 +431,8 @@ class <EntityName>:
 - 使用 Claude SDK (Anthropic SDK) 或 Claude Agent SDK 构建 Agent
 - **Agent 职责边界**：Agent 负责理解用户意图、编排任务流程、调用工具（执行实际业务逻辑的工具）
 - **Agent 调用模块能力的两条路径**：
-  - 经 CLI：执行 `python3 src/modules/<module_name>/cli.py <command>`（跨进程；模块未暴露 CLI 时不可用；契约见该模块的 `doc/<module_name>/cli.md`）
-  - 直接 import：`from src.modules.<module_name> import ...`（同进程；`__init__.py` 的公开符号即模块对外接口，契约见该模块的 `doc/<module_name>/api.md`）
+  - 经 CLI：执行 `python3 src/modules/<module_name>/cli.py <command>`（跨进程；模块未暴露 CLI 时不可用；契约见该模块的 `doc/modules/<module_name>/cli.md`）
+  - 直接 import：`from src.modules.<module_name> import ...`（同进程；`__init__.py` 的公开符号即模块对外接口，契约见该模块的 `doc/modules/<module_name>/api.md`）
 - Agent 通过模块的公开接口完成数据操作
 - 定义目标 Agent 的 system prompt，可通过 Claude Code 的 append-system-prompt 使用，也可通过 Anthropic SDK 或 Claude Agent SDK 使用，根据实际需求决定
 - 实现时可参考 `/claude-api` skill
@@ -454,19 +454,20 @@ class <EntityName>:
       <module_name>/
         __init__.py         # 对外接口：re-export 公开符号（__all__）—— api.md 的落点
         models.py           # 数据结构：dataclass + enum —— schema.md 的落点
-        *.py                # 业务逻辑：按模块自身形态命名与拆分（service.py / resolver.py / service/ …）
+        *.py                # 业务逻辑：按模块自身形态命名与拆分
         cli.py              # 仅暴露 CLI 的模块才有：python3 src/modules/<module_name>/cli.py --help
     backend/                # 非模块
     frontend/               # 非模块
     skill/                  # 非模块
     mcp/                    # 非模块
   doc/
-    <module_name>/
-      README.md
-      schema.md
-      persistence.md
-      api.md
-      cli.md                # 仅暴露 CLI 的模块才有
+    modules/
+      <module_name>/
+        README.md
+        schema.md
+        persistence.md
+        api.md
+        cli.md              # 仅暴露 CLI 的模块才有
   test/
     unit/
       <module_name>/

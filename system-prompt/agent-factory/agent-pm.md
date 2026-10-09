@@ -661,7 +661,7 @@ Root: <代码工作区路径>
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 ## Project Root 为基准）
+1. Read doc/ files (modified by PM during designing: doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 ## Project Root 为基准）
 2. Implement all code per doc/
 3. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 4. Git commit (one feature = one commit, see Git 提交规范)

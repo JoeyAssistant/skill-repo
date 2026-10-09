@@ -58,7 +58,7 @@ Root: <project-root-path>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 Root 为基准）
+1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 Root 为基准）
 2. Implement all code per design
 3. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
 4. Git commit (one feature = one commit, see Git 提交规范)
@@ -142,11 +142,11 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 1. **阅读设计文档**：按以下顺序阅读
    - `<主仓路径>/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
    - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 确定）：
-     - `{Root}/doc/<module_name>/README.md` → 该 module 名词概念、功能与职责、依赖关系
-     - `{Root}/doc/<module_name>/schema.md` → 该 module 的 schema（业务数据结构定义）
-     - `{Root}/doc/<module_name>/persistence.md` → 该 module 存储方案
-     - `{Root}/doc/<module_name>/api.md` → 该 module 对外接口契约、流程与配置
-     - `{Root}/doc/<module_name>/cli.md` → CLI 契约（仅暴露 CLI 的模块；实现 `cli.py` 时按此写 click decorators + docstring）
+     - `{Root}/doc/modules/<module_name>/README.md` → 该 module 名词概念、功能与职责、依赖关系
+     - `{Root}/doc/modules/<module_name>/schema.md` → 该 module 的 schema（业务数据结构定义）
+     - `{Root}/doc/modules/<module_name>/persistence.md` → 该 module 存储方案
+     - `{Root}/doc/modules/<module_name>/api.md` → 该 module 对外接口契约、流程与配置
+     - `{Root}/doc/modules/<module_name>/cli.md` → CLI 契约（仅暴露 CLI 的模块；实现 `cli.py` 时按此写 click decorators + docstring）
 2. **确认理解**：如果设计文档中存在模糊或矛盾之处，写入 violations 列表返回给 PM
 3. **遵循设计**：严格按照设计文档（含 `{Root}/doc/` 文件）实现，不自行更改架构或数据结构定义
 4. **状态流转与你无关**：feature 的 implementing / qa-reviewing 等状态由 PM 统一维护，你不要读写任何状态文件，完成后在输出中给 `suggested_status` 即可
@@ -155,7 +155,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 ```
 {Root}/src/modules/<module_name>/{__init__.py, models.py, *.py}
 {Root}/src/modules/<module_name>/cli.py     # 仅暴露 CLI 的模块才有
-{Root}/doc/<module_name>/{schema.md, persistence.md, api.md, README.md, cli.md}
+{Root}/doc/modules/<module_name>/{schema.md, persistence.md, api.md, README.md, cli.md}
 {Root}/test/unit/<module_name>/
 ```
 
@@ -174,13 +174,13 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 
 ### 6.1 schema 一致性
 
-编码时必须确保所有模块使用数据结构一致性，以 `doc/<module_name>/schema.md` 为唯一真相源（按模块维护）。
+编码时必须确保所有模块使用数据结构一致性，以 `doc/modules/<module_name>/schema.md` 为唯一真相源（按模块维护）。
 
 #### 新增数据字段检查清单
 
 新增或修改数据字段时，需同时检查以下位置：
 
-1. `doc/<module_name>/schema.md` — 更新 schema 定义与 dataclass（按模块维护）
+1. `doc/modules/<module_name>/schema.md` — 更新 schema 定义与 dataclass（按模块维护）
 2. `src/modules/<module_name>/models.py` — 同步 dataclass / enum 定义
 3. `cli.py` 序列化/反序列化（仅暴露 CLI 的模块）
 4. 前端 JS 渲染与表单提交（涉及前端改动时）
@@ -296,7 +296,7 @@ except ConnectError as e:
 返回 complete 前，developer 必须执行：
 
 1. `git log -1 --oneline` 确认最新 commit 是本次任务的
-2. **暴露 CLI 的模块额外检查**：执行 `python3 src/modules/<module_name>/cli.py --help` 比对 `{Root}/doc/<module_name>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或自行修订 `doc/<module_name>/cli.md`
+2. **暴露 CLI 的模块额外检查**：执行 `python3 src/modules/<module_name>/cli.py --help` 比对 `{Root}/doc/modules/<module_name>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring，或自行修订 `doc/modules/<module_name>/cli.md`
 
 若工作区仍有未提交的代码改动，禁止返回 complete。
 
