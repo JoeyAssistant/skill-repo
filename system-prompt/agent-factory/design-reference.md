@@ -31,7 +31,7 @@
         - [5.2.2.2 类型选型原则](#5222-类型选型原则)
         - [5.2.2.3 注释原则](#5223-注释原则)
         - [5.2.2.4 一致性原则](#5224-一致性原则)
-    - [5.3 persistence.md（数据存储方案）](#53-persistencemd数据存储方案)
+    - [5.3 persistence.md（数据存储方案，仅含持久化对象的模块才有）](#53-persistencemd数据存储方案仅含持久化对象的模块才有)
       - [5.3.1 应有章节](#531-应有章节)
       - [5.3.2 存储介质选型](#532-存储介质选型)
     - [5.4 api.md（对外接口契约 + 流程 + 配置）](#54-apimd对外接口契约--流程--配置)
@@ -153,7 +153,7 @@ graph TD
       <module_name>/
         README.md
         schema.md
-        persistence.md
+        persistence.md      # 仅含持久化对象的模块才有
         api.md
         cli.md              # 仅暴露 CLI 的模块才有
   test/
@@ -186,7 +186,7 @@ from src.modules.<module_name> import <公开接口>
 |------|------|
 | `README.md` | 所有模块 |
 | `schema.md` | 所有模块 |
-| `persistence.md` | 所有模块 |
+| `persistence.md` | 仅含持久化对象的模块 |
 | `api.md` | 所有模块 |
 | `cli.md` | 仅暴露 CLI 的模块 |
 | `python3 src/modules/<module_name>/cli.py --help` 运行时输出 | 仅暴露 CLI 的模块 |
@@ -404,7 +404,7 @@ class <EnumName>(str, Enum):
 - `schema.md` 是该 module 数据结构（dataclass / enum）的**唯一真值**，跨文档一致性以本文件为准
 - 与 `README.md`「名词概念」表**不要求互相覆盖**；两边都出现的概念，名称必须一致（英文名 ↔ class 名）、定义不得矛盾，冲突时以本文件 docstring 为准
 
-### 5.3 persistence.md（数据存储方案）
+### 5.3 persistence.md（数据存储方案，仅含持久化对象的模块才有）
 
 > 聚焦"怎么存"。以**持久化对象**为单元组织：逐个对象讲清它的持久化方案、存储形式、存储内容、序列化与持久化操作。**引用 `schema.md` 的 dataclass，不重复定义字段语义**。
 
@@ -415,7 +415,7 @@ class <EnumName>(str, Enum):
   | # | 持久化对象 | 英文名 | 落盘文件 | 说明 |
   |---|-----------|--------|---------|------|
 
-  表下按需附边界说明（有需排除的落盘内容时才写）。**模块无持久化对象时**，本节只写一句说明，不设对象章节。
+  表下按需附边界说明（有需排除的落盘内容时才写）。
 
 - N × `## N. <中文名>（<英文名>）` —— 每个持久化对象一节，`N` 从 `2` 起；每节含 5 个子章节：
 
