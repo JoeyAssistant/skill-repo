@@ -303,12 +303,12 @@ from src.modules.<module_name> import <公开接口>
 
 本节固定 `schema.md` 的四个术语。后文一律使用这四个词，不再使用「实体」「属性」等别名。
 
-| 术语 | 对应代码 | 定义 |
-|---|---|---|
-| **entity** | `class` | `schema.md` 的数据结构定义单元 —— 每个 **dataclass** 或 **enum** 各是一个 entity。一个 entity 在文档中落两处：`## 数据结构总览` 图中的一个节点、正文中的一节 `## <EntityName>`。命名用 `PascalCase` |
-| **field** | `attribute` | **dataclass** entity 的成员项。每个 field 一行 `名: 类型 = 默认值`，下跟缩进注释（描述 / 约束 / 示例）。field 可引用其它 entity。命名用 `snake_case` |
-| **dataclass** | `@dataclass` | 承载业务数据的 entity 形态，由若干 field 组成；可嵌套其它 entity |
-| **enum** | `(str, Enum)` | 取值受限的 entity 形态，由若干**成员**（member，形如 `NAME = "value"`，行尾注释）组成；继承 `str` 以便与字符串直接比较与序列化；总览图中标注 `<<enumeration>>` |
+| 术语 | 定义 |
+|---|---|
+| **entity** | `schema.md` 的数据结构定义单元 —— 每个 **dataclass** 或 **enum** 各是一个 entity。一个 entity 在文档中落两处：`## 数据结构总览` 图中的一个节点、正文中的一节 `## <EntityName>`。命名用 `PascalCase` |
+| **field** | **dataclass** entity 的成员项。每个 field 一行 `名: 类型 = 默认值`，下跟缩进注释（描述 / 约束 / 示例）。field 可引用其它 entity。命名用 `snake_case` |
+| **dataclass** | 承载业务数据的 entity 形态，由若干 field 组成；可嵌套其它 entity |
+| **enum** | 取值受限的 entity 形态，由若干**成员**（member，形如 `NAME = "value"`，行尾注释）组成；继承 `str` 以便与字符串直接比较与序列化；总览图中标注 `<<enumeration>>` |
 
 判定：`schema.md` 里出现的每个 `class` 定义都是一个 entity；总览图中的节点数 = 正文 `## <EntityName>` 节数 = entity 数。
 
