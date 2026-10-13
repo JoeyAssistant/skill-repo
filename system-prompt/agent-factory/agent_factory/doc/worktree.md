@@ -7,7 +7,7 @@ feature 绑定的 git worktree 生命周期管理。
 - 一 feature ↔ 一分支 ↔ 一 worktree，同名同源
 - 目录：`.worktrees/feat-<NNN>-<slug>`（入 .gitignore）
 - 分支：`feature/<NNN>-<slug>`
-- 绑定记录写在 FEATURE.yaml 的 `worktree` 字段（name/branch/path，相对路径），由 CLI 自动写入/清除
+- 绑定记录写在 FEATURE.yaml 的 `worktree` field（name/branch/path，相对路径），由 CLI 自动写入/清除
 - 使用前以 `git worktree list` 为准校验记录是否仍然有效（记录是描述，git 登记是证据）
 
 ## 命令

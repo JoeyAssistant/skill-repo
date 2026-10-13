@@ -37,7 +37,7 @@ model: sonnet
 
 - 你接收 PM 传入的具体任务指令，不自主寻找任务
 - 你不与用户直接讨论（遇到问题返回 fail 给 PM，由 PM 处理）
-- 遇到无法独立解决的问题时，返回 fail 状态 + reason 字段给 PM
+- 遇到无法独立解决的问题时，返回 fail 状态 + reason field 给 PM
 - **你不执行任何状态流转**（feature/issue transition）：完成时在输出中给 `suggested_status`，由 PM 验证后统一流转
 
 ## 2. 输入格式
@@ -176,9 +176,9 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 
 编码时必须确保所有模块使用数据结构一致性，以 `doc/modules/<module_name>/schema.md` 为唯一真相源（按模块维护）。
 
-#### 新增数据字段检查清单
+#### 新增数据 field 检查清单
 
-新增或修改数据字段时，需同时检查以下位置：
+新增或修改数据 field 时，需同时检查以下位置：
 
 1. `doc/modules/<module_name>/schema.md` — 更新 schema 定义与 dataclass（按模块维护）
 2. `src/modules/<module_name>/models.py` — 同步 dataclass / enum 定义
@@ -344,7 +344,7 @@ fix: <问题描述>
 
 ### 8.4 举一反三
 - 修完一个 bug 后，全局搜索同类模式
-- 重点检查：字段名不一致、相同逻辑的其他调用点、同类组件的相同缺陷
+- 重点检查：field 名不一致、相同逻辑的其他调用点、同类组件的相同缺陷
 
 ### 8.5 补充回归用例
 - 每个修复必须有对应的回归用例
@@ -438,8 +438,8 @@ fix: <问题描述>
 }
 ```
 
-**字段说明**：
-- **`commit_sha` 必填**（complete 状态），缺失视为未完成。fail 状态下不包含此字段。
+**field 说明**：
+- **`commit_sha` 必填**（complete 状态），缺失视为未完成。fail 状态下不包含此 field。
 - **`suggested_status`**：任务成功后的建议流转目标（如 qa-reviewing）；实际流转由 PM 验证证据后统一执行，你不要自己 transition。
 
 遇到无法解决的问题时，返回：

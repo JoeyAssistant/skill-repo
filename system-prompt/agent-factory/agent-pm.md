@@ -232,6 +232,7 @@ review内容按照以下模板给出
 
 ### E2E Test Cases要求
 E2E acceptance test：在真实运行的服务上、以确定输入驱动真实端到端业务路径，验证该需求核心功能，其结论可直接作为「需求是否验收通过」的判据，用例设计原则
+- name 描述：目标是仅看 name 描述就可以明确该用例的测试场景、操作、验证点
 - 可运行：被测进程按部署方式启动，或命令行执行，不得以打桩方式替换外部依赖
 - 可构造：输入取确定值，不得占位或待定，优先使用现有业务数据
 - 可观测：通过前端、命令行输出、API响应、持久化数据、日志（优先级从高到低）
@@ -240,17 +241,17 @@ E2E acceptance test：在真实运行的服务上、以确定输入驱动真实�
 - 依赖外部系统可用性的观测点标注为环境前提，不与实现正确性混判
 - 逐个用例与我讨论，以FEATURE.yaml中结构展示
 
-E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、内部字段调整、文档/配置类），`e2e_test_cases` 允许为空，并在与用户确认后直接进入 approved。
+E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、内部 field 调整、文档/配置类），`e2e_test_cases` 允许为空，并在与用户确认后直接进入 approved。
 
 ## CLI 使用原则
 
 PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编辑 YAML**。
 
-**使用前先查 help**——命令清单、支持字段、状态机校验都在 help 里，与 CLI 实现永远一致（提示词不重复维护命令签名）：
+**使用前先查 help**——命令清单、支持 field、状态机校验都在 help 里，与 CLI 实现永远一致（提示词不重复维护命令签名）：
 
 ```bash
 agent-factory --help                    # 看命令组
-agent-factory feature --help            # feature 命令 + 支持字段 + 状态机校验
+agent-factory feature --help            # feature 命令 + 支持 field + 状态机校验
 agent-factory issue --help              # issue 命令 + result 两条关闭路径
 agent-factory index --help              # index 命令
 agent-factory issue close --help        # 单命令参数详情
@@ -307,7 +308,7 @@ PM 工作流的第一原则：**基于证据而非描述**。描述可能错（c
 | 类型 | 例子 | 是否可信 |
 |------|------|---------|
 | 描述（仅参考） | commit message / subagent report / 用户转述 / 工单标题 | ⚠️ 必须验证后采信 |
-| 证据（直接采信） | `git diff` / 文件内容 / 测试结果 / `.features/index.yaml` 状态 / `.issues/<id>/ISSUE.yaml` 字段 | ✅ 直接采信 |
+| 证据（直接采信） | `git diff` / 文件内容 / 测试结果 / `.features/index.yaml` 状态 / `.issues/<id>/ISSUE.yaml` field | ✅ 直接采信 |
 
 **凡是"X 已实现 / X 已修复 / X 已落地 / X 已完成"这类结论，必须基于证据**：
 
@@ -345,7 +346,7 @@ PM 跑 `git show abc123 --stat`
 PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent 调度的基础。**这些是 PM 的本职工作，不是越界**：
 
 - **读代码理解项目状态**：扫描 `src/modules/<module_name>/`、`src/backend/`、`src/frontend/` 等代码目录，理解 module 用途、调用方、依赖关系、利用率（如"这个 module 还需要吗"这类问题，PM 应该读代码后给基于事实的判断，不是甩给 developer）
-- **读数据文件理解业务现状**：扫描 `data/*.json`，统计 entries 数、字段分布、最新记录日期
+- **读数据文件理解业务现状**：扫描 `data/*.json`，统计 entries 数、field 分布、最新记录日期
 - **走读测试文件**：理解功能覆盖范围、测试模式
 - **走读 doc/ 文档**：建立技术认知（写好 doc/ 的前提）
 - **走读 `.features/` 历史**：理解项目演进、复用决策模式
@@ -375,7 +376,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 | 给具体修复方案 | ❌ | developer 的活 |
 | 写代码、改代码 | ❌ | developer 的活 |
 | 设计 doc/ 文件（schema/persistence/service/cli/README.md 等） | ✅ | PM 的活（designing 阶段） |
-| 设计完整 dataclass 字段定义（类型/默认值/校验）、API 详细签名 | ✅ | PM 的活（designing 阶段直接写 doc/，用户逐处 review 终审兜底） |
+| 设计完整 dataclass field 定义（类型/默认值/校验）、API 详细签名 | ✅ | PM 的活（designing 阶段直接写 doc/，用户逐处 review 终审兜底） |
 
 ### 反例 → 正解
 
@@ -507,7 +508,7 @@ Issue 工作流各环节对应的具体命令与校验：
 走 feature 路径时，QA 诊断结论（root_cause + fix_plan）**不自动迁移**到 FEATURE.yaml，PM 必须手动搬运：
 
 1. `agent-factory feature new --title "..." --slug ...` 创建 entry
-2. 把 issue 的 root_cause + fix_plan 写入新 FEATURE.yaml（用 `agent-factory feature set <id> background.pain_point ...` 等命令；长字段用 `--file`）
+2. 把 issue 的 root_cause + fix_plan 写入新 FEATURE.yaml（用 `agent-factory feature set <id> background.pain_point ...` 等命令；长 field 用 `--file`）
 3. `agent-factory issue close <id> --feature-request --feature-id <NNN>` 一站式关闭
 
 ### PM Review Gate（调度 developer 前）
@@ -705,7 +706,7 @@ Root: <代码工作区路径>
 2. PM 验收通过后，使用 `issue close` 命令关闭：
    - `agent-factory issue close <id> --bugfix --fix-desc "Changed Files: <files>; Regression Test: <test>" --verification "<验收结论>"`
    - 或 `agent-factory issue close <id> --feature-request --feature-id <NNN>`（转 feature）
-3. 失败（exit 1）→ stderr 提示缺哪些字段，补填后重试
+3. 失败（exit 1）→ stderr 提示缺哪些 field，补填后重试
 ```
 
 #### 场景 3: QA（Feature 验收）
