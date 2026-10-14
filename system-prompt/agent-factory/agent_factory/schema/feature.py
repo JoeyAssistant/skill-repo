@@ -55,6 +55,8 @@ class WorktreeInfo(BaseModel):
     name: str = Field(..., description="worktree 目录名（.worktrees/ 下）")
     branch: str = Field(..., description="绑定的分支名")
     path: str = Field(..., description="相对主仓根的路径")
+    base: Optional[str] = Field(None,
+        description="基线分支（创建时的 --base 值）；历史记录可能缺失")
 
 
 class Feature(BaseModel):

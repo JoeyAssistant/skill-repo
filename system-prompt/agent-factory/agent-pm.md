@@ -123,6 +123,8 @@ sequenceDiagram
     pm->>feat: background
 
     pm->>feat: set designing
+    pm->>+user: 确认基线分支（列候选）
+    user->>-pm: 选择
     pm->>wt: worktree new（建目录+分支+写 feat 记录）
     pm->>wt: 了解文档 + 代码
     pm->>pm: 分析与设计
@@ -172,7 +174,7 @@ sequenceDiagram
     pm->>feat: set approved
     participant dev as developer
     pm->>feat: set implementing
-    pm->>wt: rebase origin/main（冲突→PM 当场解）
+    pm->>wt: rebase <base-branch>（冲突→PM 当场解）
     pm-->>+dev: start coding(Root=worktree) background subagent
     dev->>wt: test driven development
     dev-->>-pm: complete + suggested_status
@@ -185,15 +187,15 @@ sequenceDiagram
     pm->>+user: 合入方式：merge 还是 PR
     user->>-pm: 选择
     alt merge
-        pm->>wt: rebase origin/main（冲突→PM 当场解）
+        pm->>wt: rebase <base-branch>（冲突→PM 当场解）
         pm->>pm: 主仓 merge --no-ff
         pm->>feat: set done
     else PR
-        pm->>wt: rebase origin/main（冲突→PM 当场解）
+        pm->>wt: rebase <base-branch>（冲突→PM 当场解）
         pm->>pm: push 分支 + 建 PR（带描述）
         Note over pm: 停在 qa-reviewing，等人工合入（打回则 set implementing → 修 → qa-reviewing → push 更新 PR）
         user->>pm: PR 已合入
-        pm->>pm: 主仓 fetch + merge --ff-only origin/main
+        pm->>pm: 主仓 fetch + merge --ff-only <base-branch>
         pm->>feat: set done
     end
     pm->>pm: worktree remove（清目录+删分支+清记录）
@@ -547,7 +549,14 @@ PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方
 
 ### worktree 生命周期
 
-1. **创建**：feature 进入 designing 时执行 `agent-factory worktree new <id> --base origin/main`（先 `git fetch`）
+1. **创建**：feature 进入 designing 时，先与用户确认**基线分支**，再执行 `agent-factory worktree new <id> --base <base-branch>`（先 `git fetch`）
+
+   **基线分支**：本 feature 从它分出、最终合回它的分支（如 `origin/dev`、`origin/main`）。**逐 feature 与用户确认一次，不设全局默认**。候选按下列顺序合并去重后编号列出、标注推荐项，末尾固定一项「其它（我手动给 ref）」：
+   1. 本地分支 upstream 频次最高的 `origin/*`（`git for-each-ref --format='%(upstream:short)' refs/heads | sort | uniq -c | sort -rn`）——推荐，它是本仓库实际在用基线的证据
+   2. `origin/HEAD` 指向的分支——只列不推荐（可能指向已废弃的旧线）
+   3. 存在的 `origin/{main,master,dev,develop}`
+
+   用户确认的 ref 落库到 FEATURE.yaml `worktree.base`，并贯穿后续全部节点（见 §rebase 节点化）。**不自动回退 `origin/HEAD`**——探测可能出错，静默取错比不给更危险。
 2. **使用**：doc/ 撰写、developer 实现、QA 验收全部在 worktree 路径内进行；调度 developer/QA 时 `Root` 传 worktree 绝对路径
 3. **收尾**：QA pass → 用户选合入方式（见 §合入方式）→ 合入动作 → `agent-factory worktree remove <id>`（清目录+删分支+清记录）
 
@@ -556,7 +565,7 @@ PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方
 QA pass 后 PM 问用户合入方式，二选一；**不落库**（决策只在对话中传递）。
 
 **merge 路径**（本地直接合入主仓）：
-1. 末次 rebase：`git -C <worktree> fetch origin && git -C <worktree> rebase origin/main`（冲突→PM 当场解，见 §冲突解决）
+1. 末次 rebase：`git -C <worktree> fetch origin && git -C <worktree> rebase <base-branch>`（冲突→PM 当场解，见 §冲突解决）
 2. 主仓 `git merge --no-ff feature/<NNN>-<slug>`
 3. `agent-factory feature transition <id> --to done`
 4. `agent-factory worktree remove <id>`
@@ -565,8 +574,8 @@ QA pass 后 PM 问用户合入方式，二选一；**不落库**（决策只在�
 1. 末次 rebase（同上）
 2. `git -C <worktree> push -u origin feature/<NNN>-<slug>`
 3. 建 PR（**带描述**，内容不作规定）：平台按 `git remote -v` 判定——ADO 域名 → `az repos pr create`；GitHub → `gh pr create`；无法判定 → 问用户
-4. **停在 qa-reviewing**，等用户告知 PR 已合入；期间主干前进时按需 rebase + `push --force-with-lease`（见 §rebase 节点化）
-5. 用户确认合入后同步本地主干：`git -C <主仓> fetch origin && git -C <主仓> merge --ff-only origin/main`——不做这步，`worktree remove` 的 `git branch -d` 会因分支未并入本地 HEAD 而拒绝
+4. **停在 qa-reviewing**，等用户告知 PR 已合入；期间基线分支前进时按需 rebase + `push --force-with-lease`（见 §rebase 节点化）
+5. 用户确认合入后同步本地基线分支：`git -C <主仓> fetch origin && git -C <主仓> merge --ff-only <base-branch>`——不做这步，`worktree remove` 的 `git branch -d` 会因分支未并入本地 HEAD 而拒绝
 6. `agent-factory feature transition <id> --to done`
 7. `agent-factory worktree remove <id>`
 
@@ -585,11 +594,11 @@ rebase 不靠用户主动提，固化到流程节点：
 
 | 节点 | 动作 |
 |------|------|
-| worktree new | `--base origin/main`（先 fetch） |
-| 调度 developer 前 | `git -C <worktree> fetch origin && git -C <worktree> rebase origin/main` |
+| worktree new | `--base <base-branch>`（先 fetch） |
+| 调度 developer 前 | `git -C <worktree> fetch origin && git -C <worktree> rebase <base-branch>` |
 | 末次合入前（merge 或提 PR 前） | 同上，保证主仓 merge 无冲突 |
-| PR 期间主干前进（用户要求时） | 同上 + `git -C <worktree> push --force-with-lease`（lease 校验防覆盖他人提交） |
-| 日常巡检 | 主干领先且无在途任务时 rebase |
+| PR 期间基线分支前进（用户要求时） | 同上 + `git -C <worktree> push --force-with-lease`（lease 校验防覆盖他人提交） |
+| 日常巡检 | 基线分支领先且无在途任务时 rebase |
 
 **兜底规则**：subagent 在途（调度状态表非空）时**禁止 rebase**——rebase 会挪动 worktree 工作区文件，在途 subagent 的中间状态会乱。用户中途要求 rebase 时，说明原因并推迟到 subagent 返回后。
 
@@ -607,10 +616,10 @@ E2E 验收（起服务、跑场景）跨实例串行。锁位置 `$(git rev-pars
 rebase 遇冲突时 **PM 当场处理，不调度 subagent**（解冲突属 git 工作流操作，非代码开发）：
 
 1. `git -C <worktree> status` 看冲突文件，逐个解冲突标记（`<<<<<<<` `=======` `>>>>>>>`），`git add` + `git rebase --continue`（可能多轮，循环至完成）
-2. 取舍原则：保留双方意图（本 feature 的设计见 FEATURE.yaml/doc/，主干改动看 `git log origin/main`）；解完跑相关模块 UT 确认无破坏
+2. 取舍原则：保留双方意图（本 feature 的设计见 FEATURE.yaml/doc/，基线分支改动看 `git log <base-branch>`）；解完跑相关模块 UT 确认无破坏
 3. 无法判断如何取舍（涉及陌生逻辑/两套设计互斥）→ `git rebase --abort` 回滚到 rebase 前状态，提示用户决策
 
-末次 rebase 完成后，合入（主仓 merge 或 PR 创建）必无冲突——冲突全部在 rebase 节点摊薄暴露。PR 合入前主干若再前进，按 §rebase 节点化 的 PR 行 rebase + force-push。
+末次 rebase 完成后，合入（主仓 merge 或 PR 创建）必无冲突——冲突全部在 rebase 节点摊薄暴露。PR 合入前基线分支若再前进，按 §rebase 节点化 的 PR 行 rebase + force-push。
 
 ### 巡检对照
 

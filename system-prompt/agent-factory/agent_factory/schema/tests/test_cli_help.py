@@ -48,6 +48,14 @@ def test_issue_help_shows_design_doc():
     assert "feature_id" in out
 
 
+def test_worktree_help_shows_design_doc():
+    """worktree group help 直接展示 doc/worktree.md 原文（目录约定 + 基线分支）."""
+    out = _help_output("worktree")
+    assert "feat-<NNN>-<slug>" in out
+    assert "--base" in out
+    assert "基线分支" in out
+
+
 def test_index_help_contains_fields():
     out = _help_output("index")
     assert "priority" in out

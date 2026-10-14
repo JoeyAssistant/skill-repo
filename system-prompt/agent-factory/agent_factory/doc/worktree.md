@@ -7,12 +7,12 @@ feature 绑定的 git worktree 生命周期管理。
 - 一 feature ↔ 一分支 ↔ 一 worktree，同名同源
 - 目录：`.worktrees/feat-<NNN>-<slug>`（入 .gitignore）
 - 分支：`feature/<NNN>-<slug>`
-- 绑定记录写在 FEATURE.yaml 的 `worktree` field（name/branch/path，相对路径），由 CLI 自动写入/清除
+- 绑定记录写在 FEATURE.yaml 的 `worktree` field（name/branch/path/base，相对路径），由 CLI 自动写入/清除。`base` 是创建时确认的**基线分支**（worktree 从它分出）
 - 使用前以 `git worktree list` 为准校验记录是否仍然有效（记录是描述，git 登记是证据）
 
 ## 命令
 
-- `worktree new <id> [--base <ref>]`：创建 worktree + 分支，写 FEATURE.yaml 记录。已绑定则报错。
+- `worktree new <id> [--base <ref>]`：创建 worktree + 分支，写 FEATURE.yaml 记录（含基线分支 `base`；`--base` 缺省 `HEAD`）。已绑定则报错。
 - `worktree list [--format table|json]`：git 登记的 worktree 与 FEATURE.yaml 记录的对照（纯数据输出；孤儿/悬空判断留给 PM）
 - `worktree remove <id> [--force]`：校验 feature=done → 移除 worktree → 删分支（-d）→ 清记录。非 done 拒绝（exit 3），确认要删用 --force（同时 git remove --force + branch -D）；分支已不存在时跳过删除（幂等）
 

@@ -57,13 +57,29 @@ def test_worktree_new_creates_dir_branch_and_record(tmp_path, monkeypatch):
     branches = _git(tmp_path, "branch", "--list").stdout
     assert "feature/001-income-module" in branches
 
-    # FEATURE.yaml 记录写入
+    # FEATURE.yaml 记录写入（未传 --base 时基线分支为 HEAD）
     data = load_yaml(tmp_path / ".features" / "001-income-module" / "FEATURE.yaml")
     assert data["worktree"] == {
         "name": "feat-001-income-module",
         "branch": "feature/001-income-module",
         "path": ".worktrees/feat-001-income-module",
+        "base": "HEAD",
     }
+
+
+def test_worktree_new_records_base_branch(tmp_path, monkeypatch):
+    """基线分支随 --base 落库，便于会话中断后回溯 worktree 从何分出。"""
+    monkeypatch.chdir(tmp_path)
+    _init_repo(tmp_path)
+    _git(tmp_path, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    runner = CliRunner()
+    _new_feature(runner)
+
+    result = runner.invoke(main, ["worktree", "new", "1", "--base", "origin/dev"])
+    assert result.exit_code == 0, result.output
+
+    data = load_yaml(tmp_path / ".features" / "001-income-module" / "FEATURE.yaml")
+    assert data["worktree"]["base"] == "origin/dev"
 
 
 def test_worktree_new_rejects_duplicate_binding(tmp_path, monkeypatch):

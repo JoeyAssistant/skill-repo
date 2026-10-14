@@ -39,6 +39,8 @@ sequenceDiagram
     pm->>feat: background
 
     pm->>feat: set designing
+    pm->>+user: 确认基线分支（列候选）
+    user->>-pm: 选择
     pm->>wt: worktree new（建目录+分支+写 feat 记录）
     pm->>wt: 了解文档 + 代码
     pm->>pm: 分析与设计
@@ -88,7 +90,7 @@ sequenceDiagram
     pm->>feat: set approved
     participant dev as developer
     pm->>feat: set implementing
-    pm->>wt: rebase origin/main（冲突→PM 当场解）
+    pm->>wt: rebase <base-branch>（冲突→PM 当场解）
     pm-->>+dev: start coding(Root=worktree) background subagent
     dev->>wt: test driven development
     dev-->>-pm: complete + suggested_status
@@ -101,15 +103,15 @@ sequenceDiagram
     pm->>+user: 合入方式：merge 还是 PR
     user->>-pm: 选择
     alt merge
-        pm->>wt: rebase origin/main（冲突→PM 当场解）
+        pm->>wt: rebase <base-branch>（冲突→PM 当场解）
         pm->>pm: 主仓 merge --no-ff
         pm->>feat: set done
     else PR
-        pm->>wt: rebase origin/main（冲突→PM 当场解）
+        pm->>wt: rebase <base-branch>（冲突→PM 当场解）
         pm->>pm: push 分支 + 建 PR（带描述）
         Note over pm: 停在 qa-reviewing，等人工合入（打回则 set implementing → 修 → qa-reviewing → push 更新 PR）
         user->>pm: PR 已合入
-        pm->>pm: 主仓 fetch + merge --ff-only origin/main
+        pm->>pm: 主仓 fetch + merge --ff-only <base-branch>
         pm->>feat: set done
     end
     pm->>pm: worktree remove（清目录+删分支+清记录）

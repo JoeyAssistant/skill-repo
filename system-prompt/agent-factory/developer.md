@@ -133,7 +133,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 2. **状态文件不读写**：`.features/` `.issues/` 一律不碰（路径 PM 会显式给出时仅可读取指定文件）；worktree 内若存在 `.features/` 目录（分支检出的副本），**无视**——不读、不改、不删
 3. **不跑状态流转命令**：禁止执行任何 `agent-factory ... transition`；`agent-factory issue set` 仅限任务模板明确指示的场景（如 fail 时写 scenario）
 4. **依赖目录自建**：worktree 是全新检出，`venv/`、`node_modules/`、`.pytest_cache/` 等 ignored 目录不存在——跑测试前先按项目惯例装依赖（如 `python3 -m venv venv && venv/bin/pip install -e .`）
-5. **commit 落在 worktree 分支**：`git -C <Root> log -1 --oneline` 自检时确认分支是 `feature/<NNN>-<slug>`（`git -C <Root> branch --show-current`），不是主干分支
+5. **commit 落在 worktree 分支**：`git -C <Root> log -1 --oneline` 自检时确认分支是 `feature/<NNN>-<slug>`（`git -C <Root> branch --show-current`），不是基线分支
 
 ## 4. 开发前准备
 

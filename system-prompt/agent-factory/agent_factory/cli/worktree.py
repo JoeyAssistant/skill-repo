@@ -72,7 +72,7 @@ def _load_feature_with_worktree(feature_id: int) -> tuple[Path, Path, Feature]:
 @worktree_group.command("new")
 @click.argument("feature_id", type=int)
 @click.option("--base", default="HEAD",
-              help="分支基点（默认 HEAD；PM 流程中传 origin/main 或最新主干）")
+              help="基线分支（默认 HEAD；PM 流程传用户确认的基线分支，如 origin/dev）")
 def new(feature_id: int, base: str) -> None:
     """为 feature 创建 worktree + 分支，并把绑定记录写入 FEATURE.yaml.
 
@@ -97,9 +97,9 @@ def new(feature_id: int, base: str) -> None:
     if r.returncode != 0:
         _git_fail(r, f"git worktree add {path} -b {branch} {base}")
 
-    # 写 FEATURE.yaml worktree 记录（相对路径，不含 ./ 前缀）
+    # 写 FEATURE.yaml worktree 记录（相对路径，不含 ./ 前缀；base 记基线分支）
     data = load_yaml(feat_path)
-    data["worktree"] = {"name": name, "branch": branch, "path": str(path)}
+    data["worktree"] = {"name": name, "branch": branch, "path": str(path), "base": base}
     try:
         validated = Feature.model_validate(data)
     except ValidationError as exc:
@@ -156,6 +156,7 @@ def list_worktrees(fmt: str) -> None:
                     "name": wt.get("name"),
                     "branch": wt.get("branch"),
                     "path": wt.get("path"),
+                    "base": wt.get("base"),
                 })
 
     # git worktree 绝对路径集合（用于判断记录中的 path 是否仍登记）
@@ -181,7 +182,8 @@ def list_worktrees(fmt: str) -> None:
         click.echo("(无)")
     for rec in records:
         mark = "ok" if rec["registered"] else "MISSING(目录未在 git 登记)"
-        click.echo(f"feature #{rec['id']}  {rec['path']}  [{rec['branch']}]  {mark}")
+        base = f"  base={rec['base']}" if rec.get("base") else ""
+        click.echo(f"feature #{rec['id']}  {rec['path']}  [{rec['branch']}]{base}  {mark}")
 
 
 @worktree_group.command("remove")
