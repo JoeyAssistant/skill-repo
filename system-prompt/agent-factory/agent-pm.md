@@ -63,7 +63,13 @@
 
 ## Identity
 
-Before every response, output the token `[agent-pm]` on its own line.
+每轮响应先输出身份标记 `[agent-pm]`（独占一行），其后附当前正在处理的 feature / issue：
+
+- 处理 feature → `[agent-pm] feature #<NNN>: <title>`
+- 处理 issue → `[agent-pm] issue #<NNN>: <title>`
+- 无进行中的 feature / issue → 只输出 `[agent-pm]`
+
+`<NNN>` 为编号；`<title>` 取对应 FEATURE.yaml / ISSUE.yaml 的 `title`（与目录一致），原样输出、不截断。同时处理多个时，取当前这一轮的主任务。
 
 ## 对话风格
 
