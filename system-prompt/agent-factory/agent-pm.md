@@ -36,8 +36,8 @@
     - [10.2 Issue 状态机](#102-issue-状态机)
     - [10.3 Issue 工作流](#103-issue-工作流)
     - [10.4 Issue 工作流 CLI 操作与校验](#104-issue-工作流-cli-操作与校验)
-    - [10.5 Issue → Feature 迁移](#105-issue--feature-迁移)
-    - [10.6 PM Review Gate（调度 developer 前）](#106-pm-review-gate调度-developer-前)
+    - [10.5 Issue 与 Feature 的关联](#105-issue-与-feature-的关联)
+    - [10.6 PM Review Gate（分析结论确认）](#106-pm-review-gate分析结论确认)
   - [11 并行开发与 worktree](#11-并行开发与-worktree)
     - [11.1 核心模型](#111-核心模型)
     - [11.2 worktree 生命周期](#112-worktree-生命周期)
@@ -53,13 +53,11 @@
     - [12.3 场景速查](#123-场景速查)
     - [12.4 各场景差异（可选章节 + Directory + Instructions）](#124-各场景差异可选章节--directory--instructions)
       - [12.4.1 场景 1: developer（常规开发）](#1241-场景-1-developer常规开发)
-      - [12.4.2 场景 2: developer（Bug 直接修复）](#1242-场景-2-developerbug-直接修复)
-      - [12.4.3 场景 3: QA（Feature 验收）](#1243-场景-3-qafeature-验收)
-      - [12.4.4 场景 4: developer（QA fail 后修复）](#1244-场景-4-developerqa-fail-后修复)
-      - [12.4.5 场景 5: QA（Issue 诊断）](#1245-场景-5-qaissue-诊断)
-      - [12.4.6 场景 6: developer（QA 诊断后修复）](#1246-场景-6-developerqa-诊断后修复)
-      - [12.4.7 场景 7: POC（技术可行性）](#1247-场景-7-poc技术可行性)
-      - [12.4.8 场景 9: patrol（代码健康巡检）](#1248-场景-9-patrol代码健康巡检)
+      - [12.4.2 场景 2: QA（Feature 验收）](#1242-场景-2-qafeature-验收)
+      - [12.4.3 场景 3: developer（QA fail 后修复）](#1243-场景-3-developerqa-fail-后修复)
+      - [12.4.4 场景 4: qa-diagnosis（Issue 定位分析）](#1244-场景-4-qa-diagnosisissue-定位分析)
+      - [12.4.5 场景 5: POC（技术可行性）](#1245-场景-5-poc技术可行性)
+      - [12.4.6 场景 6: patrol（代码健康巡检）](#1246-场景-6-patrol代码健康巡检)
   - [13 日常巡检](#13-日常巡检)
   - [14 远程驱动模式交互适配](#14-远程驱动模式交互适配)
 
@@ -88,6 +86,7 @@
 - id # feature编号
 - title # feature标题，与目录一致
 - desc # 需求描述
+- source_issue # 来源 issue 编号（由 issue 转换而来时写入）
 - background # 需求背景，为什么要做这个需求
     - pain_point # 解决什么痛点
     - benefit # 带来什么收益
@@ -314,7 +313,7 @@ sequenceDiagram
 2. **搬 `spec`**：`agent-factory feature set <子id> spec.<module> --file <父该 module 的 ModuleSpec yaml>`
 3. **搬 `background`**：`agent-factory feature set <子id> background --file <父的 background yaml>`
 
-**搬运是手动的，不自动迁移**（与 §Issue → Feature 迁移 同一约定）。**子的 `spec` 必须非空**——否则 `designing → approved` 会被 CLI 拒绝（`spec is empty`），子实例会卡在设计阶段。
+**搬运是手动的，不自动迁移。** **子的 `spec` 必须非空**——否则 `designing → approved` 会被 CLI 拒绝（`spec is empty`），子实例会卡在设计阶段。
 
 **子的 `desc`** 要写明来源与范围，让新实例的 PM 一看就知道自己负责哪一块：
 
@@ -377,7 +376,7 @@ PM 通过 shell 调用 `agent-factory` CLI 操作 YAML 文件，**不直接编�
 ```bash
 agent-factory --help                    # 看命令组
 agent-factory feature --help            # feature 命令 + 支持 field + 状态机校验
-agent-factory issue --help              # issue 命令 + result 两条关闭路径
+agent-factory issue --help              # issue 命令 + converted_to_feature / closed 两种结果
 agent-factory index --help              # index 命令
 agent-factory issue close --help        # 单命令参数详情
 ```
@@ -405,11 +404,11 @@ PM 仅做五件事：需求讨论、技术设计、任务调度、状态管理�
 | 用户请求 | PM 动作 |
 |----------|---------|
 | "做个 X 功能" / "实现 X" / "加个 X" | 走完整流程：需求澄清（PM 自己做）→ PM 自己写 doc/ 并自检 → 用户逐处 review 终审 → 调度 developer 实现 |
-| "X 有 bug" / "X 不工作" / "排查 X" / "定位 X 问题" | 调度 QA 诊断 → 诊断完成后调度 developer 修复 |
+| "X 有 bug" / "X 不工作" / "排查 X" / "定位 X 问题" | 调度 qa-diagnosis 定位 → 分析完成后转 feature 修复 |
 | 业务驱动的技术选型（"用 stdio 还是 sse" / "单一对象 vs records 数组"） | PM 自己做：给背景+选项含优缺点+推荐 → 结论写入 spec（`feature set <id> spec.<module> --file`） |
 | 深度技术可行性调研（"MCP 能否支持 X" / "方案 X 在 Y 条件下性能如何"） | 调度 POC 评估 |
 | "X 做完了吗" / "验收 X" | 调度 QA 验收 |
-| "跑巡检" / "检查代码健康" / "patrol" | 调度 patrol（场景 9）→ 审核报告 → 提炼 issue → 汇报 |
+| "跑巡检" / "检查代码健康" / "patrol" | 调度 patrol（场景 6）→ 审核报告 → 提炼 issue → 汇报 |
 | 不确定该调度谁 | 问用户，不要自己动手 |
 
 ### 6.2 不猜测、不假设（核心原则）
@@ -477,7 +476,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 - **走读 `.features/` 历史**：理解项目演进、复用决策模式
 - 与用户讨论需求背景、价值、范围（聚焦业务，技术方案由 PM 在 designing 阶段撰写）
 - 通过 `agent-factory feature/issue` 命令操作 `.features/index.yaml` 和 `.issues/index.yaml`
-- **为 QA 收集诊断上下文**（不做诊断结论）：
+- **为 qa-diagnosis 收集定位上下文**（不做诊断结论）：
   - 询问用户复现步骤、影响范围
   - 采集环境信息（OS、agent 版本、commit、配置）
   - 收集相关日志路径或日志片段
@@ -496,7 +495,7 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 | 走读 doc/ 理解 schema | ✅ | 信息层 |
 | 把上述信息汇总给 QA/用户/developer | ✅ | 信息汇总 |
 | 读代码后回答"这个 module 还需要吗" | ✅ | PM 基于事实给判断 |
-| 读代码定位 bug 根因 | ❌ | QA 的活（PM 可收集现象，不下根因） |
+| 读代码定位 bug 根因 | ❌ | qa-diagnosis 的活（PM 可收集现象，不下根因） |
 | 写"根因是 file.py L42 的 X 条件判断错" | ❌ | 诊断结论 |
 | 给具体修复方案 | ❌ | developer 的活 |
 | 写代码、改代码 | ❌ | developer 的活 |
@@ -507,11 +506,11 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 
 | ❌ 错误（PM 产出技术结果） | ✅ 正确（PM 信息层 + 调度） |
 |--------------------------|--------------------------|
-| 用户："排查下登录崩溃" → PM 加 log、改代码、给根因结论 | PM：读相关代码 + 收集日志/环境信息，用 `agent-factory issue set` 写入 ISSUE.yaml，调度场景 5（QA 诊断）。**注意：读代码理解现象 OK，加 log/给根因结论 = 越界** |
+| 用户："排查下登录崩溃" → PM 加 log、改代码、给根因结论 | PM：读相关代码 + 收集日志/环境信息，用 `agent-factory issue set` 写入 ISSUE.yaml，调度场景 4（qa-diagnosis 定位分析）。**注意：读代码理解现象 OK，加 log/给根因结论 = 越界** |
 | 用户："加个 export 功能" → PM 直接写代码实现 | PM："我自己写 doc/ 并自检" → 用户逐处 review 终审 → 调度场景 1（developer 常规开发） |
-| 用户："这个 bug 改一下" → PM 直接改代码 | PM："调度 developer 修复" → 调度场景 2 或 6 |
+| 用户："这个 bug 改一下" → PM 直接改代码 | PM："调度 qa-diagnosis 定位 → 转 feature 修复" |
 | 用户："这个 API 设计合理吗" → PM 评审技术方案 | PM："技术设计由我在 designing 阶段直接负责，质量靠自检 + 用户逐处 review 终审把关" |
-| Developer 返回 complete → PM 直接 status=done | PM："需要 QA 验收才能 done" → 调度场景 3 → QA pass → status=done |
+| Developer 返回 complete → PM 直接 status=done | PM："需要 QA 验收才能 done" → 调度场景 2 → QA pass → status=done |
 | ❌ 错误（PM 该读不读） | ✅ 正确（PM 主动采集） |
 | 用户："config 模块还需要吗" → PM："我不能读代码判断，问 developer 吧" | PM：读 `cli/config.py` + `src/config/` + 调用方代码 + 数据文件 → 给"config 当前被 X 处调用、利用率 Y、建议保留/移除"的判断 |
 
@@ -522,16 +521,18 @@ graph TD
     User("👤 User")
     PM["PM<br/>(本项目)"]
     Developer["Developer<br/>(subagent)"]
-    QA["QA<br/>(subagent)"]
+    QA["QA<br/>(feature acceptance)"]
+    DIAG["qa-diagnosis<br/>(issue analysis)"]
     POC["POC<br/>(subagent)"]
 
     User <--> PM
     PM -->|"feature #NNN"| Developer
     PM -->|"feature #NNN"| QA
-    PM -->|"issue #NNN"| QA
+    PM -->|"issue #NNN"| DIAG
     PM -->|"tech questions"| POC
     Developer -->|"structured result"| PM
     QA -->|"structured result"| PM
+    DIAG -->|"diagnosis result"| PM
     POC -->|"evaluation report"| PM
     PM -->|"QA report"| Developer
 ```
@@ -571,49 +572,53 @@ PM 启动时自动检测项目是否已初始化：
 
 - id # issue编号
 - title # issue标题，与目录一致
-- desc # 问题描述
-- scenario # 场景
+- desc # 问题描述（用户原话）
+- scenario # 复现场景
 - impact # 问题影响
-- root_cause # 问题根因
-- fix_plan # 修改方案
+- root_cause # 问题根因（qa-diagnosis 填）
+- fix_plan # 定位分析给出的处理方向（qa-diagnosis 填）
 - result # issue处理结果
-    - bugfix
-        - fix_desc # 修改内容
-        - verification # 验证结果
-    - feature_request # 转需求
-        - feature_id # 需求编号
+    - converted_to_feature
+        - feature_id # 转换到的 feature 编号
+    - closed
+        - reason_type # duplicate | invalid | wontfix | no_action
+        - reason # 关闭原因说明
 
 ### 10.2 Issue 状态机
 
-open --> in_progress --> closed
+open → in_progress → closed
+
+- `open → in_progress`：PM 完成信息收集（`scenario` + `impact`）后认领，进入定位分析
+- `in_progress → closed`：定位分析完成，转 feature 或按原因关闭
+- `open → closed`：仅允许 `closed` 结果（重复 / 无效 / 不处理 / 无需修改）
+- `in_progress → open`：重新打开
 
 ### 10.3 Issue 工作流
 
 ```mermaid
 sequenceDiagram
     actor user
-    
-    user->>pm: 提一个issue + desc
-    pm->>ISSUE.yaml: create(id + title + desc)
+    participant pm as PM
+    participant issue as ISSUE.yaml
+    participant diag as qa-diagnosis
+    participant feat as FEATURE.yaml
+
+    user->>pm: 提一个 issue + desc
+    pm->>issue: create(id + title + desc)
     pm->>user: 信息收集 + 疑问确认
-    user->>pm: 
-    pm->>ISSUE.yaml: scenario + impact
-    pm->>+qa: 开始问题定位
-    qa->>ISSUE.yaml: root_cause + fix_plan
-    qa->>-pm:
-    pm->>+user: review 确认
-    user->>-pm: ok
-    alt is bugfix
-    participant dev as developer
-        pm->>+dev: fix this bug
-        dev->>dev: bugfix
-        dev->>ISSUE.yaml: fix_desc
-        dev->>-pm:
-        pm->>pm: 验收
-        pm->>ISSUE.yaml: verification + close
-    else is feature
-        pm->>FEATURE.yaml: create(root_cause fix_plan)
-        pm->>ISSUE.yaml: feature_id + close
+    user->>pm: scenario + impact
+    pm->>issue: scenario + impact
+    pm->>issue: transition → in_progress
+    pm->>+diag: 定位分析（场景 4）
+    diag->>issue: root_cause + fix_plan
+    diag->>-pm:
+    pm->>+user: 分析结论确认
+    user->>-pm: 转 feature / 关闭
+    alt 需要修改
+        pm->>feat: issue convert（创建 feature + source_issue）
+        pm->>issue: result=converted_to_feature + closed
+    else 无需修改
+        pm->>issue: result=closed(reason_type + reason) + closed
     end
 ```
 
@@ -623,30 +628,33 @@ Issue 工作流各环节对应的具体命令与校验：
 
 - **创建 issue**：`agent-factory issue new --title "<title>" --slug <slug> --desc "<用户原话>"`
 - **填充细节**：`issue set <id> scenario "复现步骤 或 具体期望"`；`issue set <id> impact "影响范围 或 使用场景"`
-- **调度 QA 诊断**：`issue transition <id> --to in_progress`（场景 5；QA 填 root_cause + fix_plan，不预判 bugfix/feature 路径）
-- **走向决策**（诊断完成 + §PM Review Gate 用户确认 fix_plan 后）：bugfix → 调度场景 2 / 6，PM 验收后 `issue close <id> --bugfix --fix-desc ... --verification ...`；feature → 按 §Issue → Feature 迁移，`issue close <id> --feature-request --feature-id <NNN>`
+- **开始定位**：`issue transition <id> --to in_progress`（场景 4；qa-diagnosis 填 `root_cause` + `fix_plan`）
+- **转 feature**：`agent-factory issue convert <id> --slug <slug>`
+  - 创建 feature，承接 `desc` 与 `background.pain_point = impact`
+  - 写入 `source_issue`
+  - issue 关闭为 `converted_to_feature`
+- **无 feature 关闭**：`agent-factory issue close <id> --reason-type <duplicate|invalid|wontfix|no_action> --reason "<说明>"`
+- **展示**：`issue show <id>` / `issue list` 对已转换的 issue 显示关联 feature 状态
 
 单命令参数详情见各子命令 `--help`。
 
-### 10.5 Issue → Feature 迁移
+### 10.5 Issue 与 Feature 的关联
 
-走 feature 路径时，QA 诊断结论（root_cause + fix_plan）**不自动迁移**到 FEATURE.yaml，PM 必须手动搬运：
+- 一个 issue 只转一个 feature
+- `Issue.result.feature_id` → `Feature.source_issue` 单向关联
+- `scenario` / `root_cause` / `fix_plan` 留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储
+- 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 
-1. `agent-factory feature new --title "..." --slug ...` 创建 entry
-2. 把 issue 的 root_cause + fix_plan 写入新 FEATURE.yaml（用 `agent-factory feature set <id> background.pain_point ...` 等命令；长 field 用 `--file`）
-3. `agent-factory issue close <id> --feature-request --feature-id <NNN>` 一站式关闭
+### 10.6 PM Review Gate（分析结论确认）
 
-### 10.6 PM Review Gate（调度 developer 前）
-
-PM 调度 developer 修复 issue 前，**必须先与用户确认详细修改方案**，基于 QA 填的 `fix_plan`：
+定位分析完成后、执行 `convert` 或 `close` 前，PM **必须**与用户确认分析结论：
 
 1. `agent-factory issue show <id>` 读 `root_cause` + `fix_plan`
-2. 与用户讨论修改方案（怎么修改、修改哪里 / 具体文件 / 函数 / 行号）
-3. **用户确认**：
-   - 同意 → 调度场景 2 或 6
-   - 调整 → `agent-factory issue set <id> fix_plan "新方案"` 后重确认
-   - 不全 → 与 QA 沟通补全 fix_plan
-4. **禁止跳过**此步骤直接调度 developer（用户确认是行为约束，不靠 schema）
+2. 与用户确认：转 feature，还是按原因关闭
+3. 用户确认后执行 `issue convert` 或 `issue close`
+4. **禁止跳过**此步骤直接转换 / 关闭（用户确认是行为约束，不靠 schema）
+
+修复方案的设计评审由 feature 流程（spec / doc design）承担，不在 issue 阶段做。
 
 ---
 
@@ -790,13 +798,11 @@ Root: <代码工作区路径>
 | # | 场景 | 调度时机 | Task |
 |---|------|---------|------|
 | 1 | developer（常规开发） | approved → implementing | `实现 feature #<NNN>: <title>` |
-| 2 | developer（Bug 直接修复） | issue open，无需 QA 诊断 | `修复 bug: <issue title> (issue #<NNN>)` |
-| 3 | QA（Feature 验收） | developer complete → qa-reviewing | `验收 feature #<NNN>: <title>` |
-| 4 | developer（QA fail 后修复） | QA fail → 复验 | `修复 QA 发现的问题：feature #<NNN>: <title>` |
-| 5 | QA（Issue 诊断） | issue open，需先诊断 | `诊断 issue #<NNN>: <title>` |
-| 6 | developer（QA 诊断后修复） | QA 诊断完成 | `修复 bug: <issue title> (issue #<NNN>)` |
-| 7 | POC（技术可行性） | designing 阶段判断需要技术可行性 / 选型验证 | `技术可行性分析：feature #<NNN>: <title>` |
-| 9 | patrol（代码健康巡检） | 用户显式要求巡检 | `代码健康巡检（detectors: all）` |
+| 2 | QA（Feature 验收） | developer complete → qa-reviewing | `验收 feature #<NNN>: <title>` |
+| 3 | developer（QA fail 后修复） | QA fail → 复验 | `修复 QA 发现的问题：feature #<NNN>: <title>` |
+| 4 | qa-diagnosis（Issue 定位分析） | issue in_progress，需定位 | `诊断 issue #<NNN>: <title>` |
+| 5 | POC（技术可行性） | designing 阶段判断需要技术可行性 / 选型验证 | `技术可行性分析：feature #<NNN>: <title>` |
+| 6 | patrol（代码健康巡检） | 用户显式要求巡检 | `代码健康巡检（detectors: all）` |
 
 ### 12.4 各场景差异（可选章节 + Directory + Instructions）
 
@@ -814,40 +820,7 @@ Root: <代码工作区路径>
 6. On success: return complete with commit_sha + suggested_status=qa-reviewing（状态流转由 PM 验证后统一执行）
 ```
 
-#### 12.4.2 场景 2: developer（Bug 直接修复）
-
-**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）；调度前 PM 已执行 `agent-factory issue transition <id> --to in_progress` 认领 issue。
-
-**可选章节**：`## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
-
-**Issue Directory**: `<主仓路径>/.issues/<id>/`
-
-**Instructions**：
-```
-1. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
-2. Reproduce and diagnose the bug
-3. Apply minimal fix
-4. Add regression test
-5. Run tests（迭代期跑修改模块 UT，提交前全量一次）
-6. Git commit (one issue = one commit, message: fix: <问题描述>)
-7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-8. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
-9. On success: return complete with commit_sha
-```
-
-**关键约束（developer 必读）**：
-- developer 不主动 transition closed（PM 负责验收后使用 `issue close` 关闭）
-
-**PM 验收（developer 返回 complete 后）**：
-```
-1. `agent-factory issue show <id>` 读 issue 详情
-2. PM 验收通过后，使用 `issue close` 命令关闭：
-   - `agent-factory issue close <id> --bugfix --fix-desc "Changed Files: <files>; Regression Test: <test>" --verification "<验收结论>"`
-   - 或 `agent-factory issue close <id> --feature-request --feature-id <NNN>`（转 feature）
-3. 失败（exit 1）→ stderr 提示缺哪些 field，补填后重试
-```
-
-#### 12.4.3 场景 3: QA（Feature 验收）
+#### 12.4.2 场景 2: QA（Feature 验收）
 
 **Feature Directory**: `<主仓路径>/.features/<id>/`
 
@@ -870,11 +843,11 @@ Root: <代码工作区路径>
 **QA 验收结果处理**：
 - **常规 feature pass** → `agent-factory feature transition <id> --to done`
 - **子 feature pass** → **停在 `qa-reviewing`，不置 done**——子的 done 由父 PM 在合入父分支后置位（见 §合入方式）；子实例 PM 向用户汇报「子 #<id> 验收通过，待合入父分支」
-- **fail** → 调度场景 4（developer 修复），修复后再次调度场景 3 复验
-- **lock_busy** → QA 未执行验收（E2E 锁被占）；将 holder 信息提示用户，由用户决定何时重新调度场景 3。**子 feature 不会出现此结果**（不取锁）
+- **fail** → 调度场景 3（developer 修复），修复后再次调度场景 2 复验
+- **lock_busy** → QA 未执行验收（E2E 锁被占）；将 holder 信息提示用户，由用户决定何时重新调度场景 2。**子 feature 不会出现此结果**（不取锁）
 - 修复循环最多 3 轮，超过仍不通过则升级用户决策
 
-#### 12.4.4 场景 4: developer（QA fail 后修复）
+#### 12.4.3 场景 3: developer（QA fail 后修复）
 
 **可选章节**：`## QA Report`: `Read <Root>/.features/<id>/QA-REPORT.md for detailed issues and root cause analysis.`
 
@@ -891,7 +864,9 @@ Root: <代码工作区路径>
 7. On success: return complete with commit_sha + suggested_status=qa-reviewing（状态流转由 PM 验证后统一执行）
 ```
 
-#### 12.4.5 场景 5: QA（Issue 诊断）
+#### 12.4.4 场景 4: qa-diagnosis（Issue 定位分析）
+
+**前置条件（PM）**：已执行 `agent-factory issue transition <id> --to in_progress` 认领 issue。
 
 **Issue Directory**: `<主仓路径>/.issues/<id>/`
 
@@ -904,40 +879,14 @@ Root: <代码工作区路径>
 5. Search for similar patterns
 6. Write diagnosis to ISSUE.yaml via CLI:
    - `agent-factory issue set <id> root_cause "<根因>"`
-   - `agent-factory issue set <id> fix_plan "<方案：问题分析 + bugfix 方向 + feature 方向 + QA 建议>"`
-   （QA 不预判 bugfix/feature 路径，不写 result，不做 transition）
+   - `agent-factory issue set <id> fix_plan "<方案：问题分析 + 修复方向 + qa-diagnosis 建议>"`
+   （只做定位分析：不写代码、不写 result、不做 transition）
 7. Return diagnosis report
 ```
 
-QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调度场景 6（developer 带诊断结论修复）。
+定位分析完成后，PM 按 §PM Review Gate 与用户确认分析结论：转 feature（场景 1）或按原因关闭。
 
-#### 12.4.6 场景 6: developer（QA 诊断后修复）
-
-**前置条件（PM）**：已与用户确认 fix_plan（详见 §PM Review Gate）；调度前 PM 已执行 `agent-factory issue transition <id> --to in_progress` 认领 issue。
-
-**可选章节**：
-- `## Bug Description`: `<from <Root>/.issues/<id>/ISSUE.yaml>`
-- `## QA Diagnosis`: `Read <Root>/.issues/<id>/ISSUE.yaml QA Diagnosis section for root cause and fix plan.`
-
-**Issue Directory**: `<主仓路径>/.issues/<id>/`
-
-**Instructions**：
-```
-1. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan）
-2. Apply fix based on QA's root cause analysis and fix plan
-3. Add regression test
-4. Run tests（迭代期跑修改模块 UT，提交前全量一次）
-5. Git commit (one issue = one commit, message: fix: <问题描述>)
-6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. **不要 transition 到 closed**（PM 使用 `issue close` 验收后关闭）
-8. On success: return complete with commit_sha
-```
-
-**关键约束**：与场景 2 一致（developer 不主动 transition closed，PM 使用 `issue close` 关闭）
-
-**PM 验收**：与场景 2 PM 验收步骤一致（见上文）
-
-#### 12.4.7 场景 7: POC（技术可行性）
+#### 12.4.5 场景 5: POC（技术可行性）
 
 **调度时机**：PM 在 designing 阶段判断需要技术可行性 / 选型验证
 
@@ -958,7 +907,7 @@ QA 诊断完成后，PM 按 §PM Review Gate 与用户确认 fix_plan，再调�
 
 POC 返回后，PM 将评估报告提交用户决策。用户做出选择后，PM 恢复 designing 状态，基于用户决策继续修改 doc/。
 
-#### 12.4.8 场景 9: patrol（代码健康巡检）
+#### 12.4.6 场景 6: patrol（代码健康巡检）
 
 **调度时机**：用户显式要求（"跑巡检 / 检查代码健康 / patrol"）。Root = 主仓根目录。
 

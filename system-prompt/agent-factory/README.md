@@ -9,7 +9,8 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 ```
 User ←→ PM (agent-pm.md, system prompt)
             ├── developer (subagent, .claude/agents/developer.md)
-            ├── qa (subagent, .claude/agents/qa.md)
+            ├── qa (subagent, .claude/agents/qa.md)                      # feature 验收
+            ├── qa-diagnosis (subagent, .claude/agents/qa-diagnosis.md)  # issue 定位分析
             └── poc (subagent, .claude/agents/poc.md)
 
 PM 在 designing 阶段直接修改 doc/ 并自检，向用户展示 git diff 终审。
@@ -23,9 +24,10 @@ User ←→ PM (agent-pm.md, system prompt)
             ├── Project A (独立 git 仓) ──┐
             ├── Project B (独立 git 仓) ──┤── 共享 subagents
             └── ...                       │
-            ├── developer (subagent) ──┤
-            ├── qa (subagent)           │
-            └── poc (subagent)          ┘
+            ├── developer (subagent)     ──┤
+            ├── qa (subagent)               │
+            ├── qa-diagnosis (subagent)     │
+            └── poc (subagent)              ┘
 ```
 
 ## 安装
@@ -45,11 +47,11 @@ script/init-project.sh <target-project-dir> [--prod <prod-root>]
 
 ### 2. 安装 subagents 与设计资产
 
-将三个 subagent 和 PM 设计参考资产复制到项目的 `.claude/agents/` 目录（agent-factory 资产落点，不进项目根）：
+将 subagents 与 PM 设计参考资产复制到项目的 `.claude/agents/` 目录（agent-factory 资产落点，不进项目根）：
 
 ```bash
 mkdir -p <project-root>/.claude/agents
-cp developer.md qa.md poc.md design-reference.md agent-architecture.drawio <project-root>/.claude/agents/
+cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architecture.drawio <project-root>/.claude/agents/
 ```
 
 ### 3. 初始化目录结构
@@ -75,6 +77,7 @@ cp <agent-factory>/agent-pm.md CLAUDE.md
 mkdir -p .claude/agents
 cp <agent-factory>/developer.md .claude/agents/
 cp <agent-factory>/qa.md .claude/agents/
+cp <agent-factory>/qa-diagnosis.md .claude/agents/
 cp <agent-factory>/poc.md .claude/agents/
 
 # 初始化 workspace
@@ -104,7 +107,7 @@ subagents 与配置统一放在 `.claude/agents/`（agent-factory 资产落点�
 
 ```bash
 mkdir -p <project>/.claude/agents
-cp developer.md qa.md poc.md design-reference.md agent-architecture.drawio <project>/.claude/agents/
+cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architecture.drawio <project>/.claude/agents/
 ```
 
 状态目录与（如被跟踪的）`.claude/` 加入本地排除——**不写 .gitignore**（.gitignore 本身进仓，暴露痕迹）：
@@ -170,7 +173,7 @@ PM:   [调度 developer]
 ```
 用户: 登录页面点击提交就崩溃了
 PM:   [创建 issue #NNN，确认复现步骤]
-PM:   [triage: bug → 调度 QA 诊断 → 调度 developer 修复]
+PM:   [triage: bug → 调度 qa-diagnosis 定位 → 分析完成后转 feature]
 ```
 
 ### 直接调用 subagent
@@ -200,6 +203,7 @@ project-root/
     agents/
       developer.md
       qa.md
+      qa-diagnosis.md
       poc.md
   src/
     modules/
@@ -231,6 +235,7 @@ agent-workspace/
 │   └── agents/
 │       ├── developer.md
 │       ├── qa.md
+│       ├── qa-diagnosis.md
 │       └── poc.md
 ├── .workspace/
 │   └── projects.md
@@ -254,7 +259,8 @@ agent-workspace/
 | `agent-pm.md` | PM system prompt，用户主入口（含设计阶段直接修改 doc/） |
 | `design-reference.md` | PM 设计阶段按需参考手册 |
 | `developer.md` | Developer subagent 定义，负责代码实现 |
-| `qa.md` | QA subagent 定义，负责功能验收和问题诊断 |
+| `qa.md` | QA subagent 定义，负责 feature 验收 |
+| `qa-diagnosis.md` | Issue 定位分析 subagent 定义 |
 | `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
 
 ## Schema 模块

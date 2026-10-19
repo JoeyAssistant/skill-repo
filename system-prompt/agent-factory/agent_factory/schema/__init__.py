@@ -12,9 +12,10 @@ from agent_factory.schema.feature import FeatureStatus
 from agent_factory.schema.issue import IssueStatus
 from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Feature, Observation, WorktreeInfo
 from agent_factory.schema.issue import (
-    BugfixResult,
-    FeatureRequestResult,
+    ClosedResult,
+    ConvertedResult,
     Issue,
+    IssueCloseReason,
     IssueResult,
 )
 from agent_factory.schema.index import (
@@ -38,8 +39,9 @@ __all__ = [
     "WorktreeInfo",
     # Issue
     "Issue",
-    "BugfixResult",
-    "FeatureRequestResult",
+    "IssueCloseReason",
+    "ConvertedResult",
+    "ClosedResult",
     "IssueResult",
     # Index 系列
     "FeatureIndex",

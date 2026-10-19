@@ -68,6 +68,8 @@ class Feature(BaseModel):
     desc: str = Field(..., description="用户原始需求描述（create 时必填）")
 
     background: Optional[Background] = Field(None, description="需求背景（draft 阶段填）")
+    source_issue: Optional[int] = Field(None, ge=1, le=999,
+        description="来源 issue 编号（由 issue 转换而来时写入）")
     spec: dict[str, ModuleSpec] = Field(default_factory=dict,
         description="需求规格，按模块组织（designing 阶段逐模块写入）")
     e2e_test_cases: list[E2ETestCase] = Field(default_factory=list,

@@ -24,19 +24,15 @@ fix_plan: |
   ## 问题分析
   前端假设 token 一定存在，后端在错误响应里省略了 token。
 
-  ## 处理方向
-  - bugfix 路径：前端加 token 存在性校验（单点修复）
-  - feature 路径：后端规范化错误响应 schema（跨多个调用方）
+  ## 修复方向
+  - 文件：cli/login.py
+  - 函数：handle_login (L40-L60)
+  - 改动：加 token 存在性校验
+  - 回归测试：test_login_wrong_password_returns_error
 
-  ## QA 建议
-  bugfix（影响面小，回滚成本低）。
+  ## qa-diagnosis 建议
+  建议转 feature，按 feature 流程设计并验收。
 
 result:
-  type: bugfix
-  fix_desc: |
-    Changed Files: cli/login.py (+5)
-    Regression Test: test_login_wrong_password_returns_error
-  verification: |
-    git show abc123 --stat: cli/login.py +5 符合描述
-    pytest test_login_failure.py: 8 passed
-    手动验证：错误密码不再崩溃，显示错误提示
+  type: converted_to_feature
+  feature_id: 1

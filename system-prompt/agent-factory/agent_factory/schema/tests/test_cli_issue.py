@@ -179,99 +179,89 @@ def test_issue_close_requires_result(tmp_path, monkeypatch):
     assert idx["issues"][0]["status"] == "in_progress"  # unchanged
 
 
-def test_issue_close_bugfix(tmp_path, monkeypatch):
-    """Close issue as bugfix via --bugfix flag."""
+def test_issue_close_with_reason(tmp_path, monkeypatch):
+    """Close issue without feature via --reason-type + --reason."""
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
     runner = CliRunner()
-    # Fill required fields
-    runner.invoke(main, ["issue", "set", "1", "scenario", "复现"])
-    runner.invoke(main, ["issue", "set", "1", "impact", "影响"])
-    runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
-    runner.invoke(main, ["issue", "set", "1", "root_cause", "根因"])
-    runner.invoke(main, ["issue", "set", "1", "fix_plan", "方案"])
-
-    # Close as bugfix
     result = runner.invoke(main, [
         "issue", "close", "1",
-        "--bugfix",
-        "--fix-desc", "改了 x.py",
-        "--verification", "git show + test passed",
+        "--reason-type", "wontfix",
+        "--reason", "暂不处理",
     ])
     assert result.exit_code == 0
 
-    # Verify
     issue = load_yaml(tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml")
-    assert issue["result"]["type"] == "bugfix"
-    assert issue["result"]["fix_desc"] == "改了 x.py"
+    assert issue["result"]["type"] == "closed"
+    assert issue["result"]["reason_type"] == "wontfix"
+    assert issue["result"]["reason"] == "暂不处理"
     idx = load_yaml(tmp_path / ".issues" / "index.yaml")
     assert idx["issues"][0]["status"] == "closed"
 
 
-def test_issue_close_feature_request(tmp_path, monkeypatch):
-    """Close issue as feature_request via --feature-request flag."""
+def test_issue_close_requires_reason(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
     runner = CliRunner()
-    runner.invoke(main, ["issue", "set", "1", "scenario", "x"])
-    runner.invoke(main, ["issue", "set", "1", "impact", "y"])
-    runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
-    runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
-    runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
+    result = runner.invoke(main, ["issue", "close", "1", "--reason-type", "invalid"])
+    assert result.exit_code != 0  # --reason required
 
-    result = runner.invoke(main, [
-        "issue", "close", "1",
-        "--feature-request",
-        "--feature-id", "70",
-    ])
+
+def test_issue_convert_creates_feature_and_closes(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+    runner = CliRunner()
+    runner.invoke(main, ["issue", "set", "1", "scenario", "复现步骤"])
+    runner.invoke(main, ["issue", "set", "1", "impact", "影响范围"])
+    runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
+    runner.invoke(main, ["issue", "set", "1", "root_cause", "根因"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan", "修复方向"])
+
+    result = runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
     assert result.exit_code == 0
+    assert "Converted issue 1 to feature 1" in result.output
 
     issue = load_yaml(tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml")
-    assert issue["result"]["type"] == "feature_request"
-    assert issue["result"]["feature_id"] == 70
+    assert issue["result"]["type"] == "converted_to_feature"
+    assert issue["result"]["feature_id"] == 1
+
+    feature = load_yaml(tmp_path / ".features" / "001-login-crash" / "FEATURE.yaml")
+    assert feature["id"] == 1
+    assert feature["desc"] == "用户原始描述"
+    assert feature["source_issue"] == 1
+    assert feature["background"]["pain_point"] == "影响范围"
+
+    feat_idx = load_yaml(tmp_path / ".features" / "index.yaml")
+    assert feat_idx["features"][0]["status"] == "draft"
+
+    idx = load_yaml(tmp_path / ".issues" / "index.yaml")
+    assert idx["issues"][0]["status"] == "closed"
 
 
-def test_issue_close_requires_exactly_one_path(tmp_path, monkeypatch):
-    """--bugfix and --feature-request are mutually exclusive."""
+def test_issue_convert_requires_in_progress(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
-
     runner = CliRunner()
-    result = runner.invoke(main, [
-        "issue", "close", "1",
-        "--bugfix", "--feature-request",
-    ])
-    assert result.exit_code == 4  # invalid args
+    result = runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
+    assert result.exit_code == 3  # invalid transition
+    assert not (tmp_path / ".features" / "001-login-crash").exists()
 
 
-def test_issue_close_neither_flag(tmp_path, monkeypatch):
-    """Must specify either --bugfix or --feature-request."""
+def test_issue_convert_requires_analysis(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
-
     runner = CliRunner()
-    result = runner.invoke(main, [
-        "issue", "close", "1",
-    ])
-    assert result.exit_code == 4  # invalid args
+    runner.invoke(main, ["issue", "set", "1", "scenario", "x"])
+    runner.invoke(main, ["issue", "set", "1", "impact", "y"])
+    runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
+
+    result = runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
+    assert result.exit_code == 1  # root_cause/fix_plan missing
+    assert not (tmp_path / ".features" / "001-login-crash").exists()
 
 
-def test_issue_close_bugfix_requires_fix_desc_and_verification(tmp_path, monkeypatch):
-    """--bugfix requires both --fix-desc and --verification."""
-    monkeypatch.chdir(tmp_path)
-    _setup_issue(tmp_path)
-
-    runner = CliRunner()
-    result = runner.invoke(main, [
-        "issue", "close", "1",
-        "--bugfix",
-        "--fix-desc", "改了",
-    ])
-    assert result.exit_code == 4  # missing --verification
-
-
-def test_issue_show_with_result(tmp_path, monkeypatch):
-    """show renders result fields."""
+def test_issue_show_with_converted_result(tmp_path, monkeypatch):
+    """show renders converted result and linked feature status."""
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
     runner = CliRunner()
@@ -280,14 +270,11 @@ def test_issue_show_with_result(tmp_path, monkeypatch):
     runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
     runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
     runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
-    runner.invoke(main, [
-        "issue", "close", "1",
-        "--bugfix",
-        "--fix-desc", "改了 x.py",
-        "--verification", "通过",
-    ])
+    runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
 
     result = runner.invoke(main, ["issue", "show", "1"])
     assert result.exit_code == 0
-    assert "bugfix" in result.output
-    assert "改了 x.py" in result.output
+    assert "converted_to_feature" in result.output
+    assert "feature_id" in result.output
+    assert "feature_status" in result.output
+    assert "draft" in result.output

@@ -11,8 +11,7 @@ model: sonnet
 - [1. 角色约束](#1-角色约束)
 - [2. 输入格式](#2-输入格式)
   - [2.1 常规开发任务](#21-常规开发任务)
-  - [2.2 Bug 直接修复任务](#22-bug-直接修复任务)
-  - [2.3 QA 修复任务（验收失败后）](#23-qa-修复任务验收失败后)
+  - [2.2 QA 修复任务（验收失败后）](#22-qa-修复任务验收失败后)
 - [3. worktree 工作规范](#3-worktree-工作规范)
 - [4. 开发前准备](#4-开发前准备)
 - [5. 按模块实现](#5-按模块实现)
@@ -38,11 +37,11 @@ model: sonnet
 - 你接收 PM 传入的具体任务指令，不自主寻找任务
 - 你不与用户直接讨论（遇到问题返回 fail 给 PM，由 PM 处理）
 - 遇到无法独立解决的问题时，返回 fail 状态 + reason field 给 PM
-- **你不执行任何状态流转**（feature/issue transition）：完成时在输出中给 `suggested_status`，由 PM 验证后统一流转
+- **你不执行任何状态流转**（feature transition）：完成时在输出中给 `suggested_status`，由 PM 验证后统一流转
 
 ## 2. 输入格式
 
-PM 通过 prompt 传入以下信息。`## Project Root` 是**代码工作区路径**（feature 任务 = worktree 绝对路径；issue 任务 = 主仓根目录）：你的一切代码操作限定在 Root 内。状态文件（`.features/` `.issues/`）的路径 PM 会在 prompt 中显式给出，与工作区可能不同。
+PM 通过 prompt 传入以下信息。`## Project Root` 是**代码工作区路径**（feature 任务 = worktree 绝对路径）：你的一切代码操作限定在 Root 内。状态文件（`.features/`）的路径 PM 会在 prompt 中显式给出，与工作区可能不同。
 
 ### 2.1 常规开发任务
 
@@ -67,36 +66,7 @@ Root: <project-root-path>
 7. On fail: return fail with reason (status unchanged for review)
 ```
 
-### 2.2 Bug 直接修复任务
-
-```
-## Task
-修复 bug: <issue title> (issue #<NNN>)
-
-## Project
-Name: <project-name>
-Root: <project-root-path>
-
-## Bug Description
-<from <Root>/.issues/<NNN>-<issue-name>/ISSUE.yaml>
-
-## Instructions
-1. Read ISSUE.yaml 的 root_cause + fix_plan（PM 已和用户确认 fix_plan；issue 认领 transition 由 PM 调度前完成）
-2. Reproduce and diagnose the bug
-3. Apply minimal fix
-4. Add regression test
-5. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
-6. Git commit (one issue = one commit, message: fix: <问题描述>)
-7. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-8. **不要 transition 到 closed**（PM 使用 `agent-factory issue close` 验收后关闭）
-9. On success: return complete with commit_sha
-10. On fail: `agent-factory issue set <NNN> scenario "failure reason"`, return fail with reason
-```
-
-**关键约束**：
-- 不主动 transition closed（PM 使用 `agent-factory issue close --bugfix` 验收后关闭）
-
-### 2.3 QA 修复任务（验收失败后）
+### 2.2 QA 修复任务（验收失败后）
 
 QA 验收发现问题后，PM 调度你修复：
 
@@ -131,7 +101,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 
 1. **代码操作限定 Root 内**：读写文件用绝对路径（一律 `<Root>/...`）；git 命令用 `git -C <Root>` 或先 `cd <Root>`
 2. **状态文件不读写**：`.features/` `.issues/` 一律不碰（路径 PM 会显式给出时仅可读取指定文件）；worktree 内若存在 `.features/` 目录（分支检出的副本），**无视**——不读、不改、不删
-3. **不跑状态流转命令**：禁止执行任何 `agent-factory ... transition`；`agent-factory issue set` 仅限任务模板明确指示的场景（如 fail 时写 scenario）
+3. **不跑状态流转命令**：禁止执行任何 `agent-factory ... transition`；不读写 `.issues/`
 4. **依赖目录自建**：worktree 是全新检出，`venv/`、`node_modules/`、`.pytest_cache/` 等 ignored 目录不存在——跑测试前先按项目惯例装依赖（如 `python3 -m venv venv && venv/bin/pip install -e .`）
 5. **commit 落在 worktree 分支**：`git -C <Root> log -1 --oneline` 自检时确认分支是 `feature/<NNN>-<slug>`（`git -C <Root> branch --show-current`），不是基线分支
 
@@ -298,7 +268,6 @@ except ConnectError as e:
 所有代码修改完成后必须 commit：
 - Feature 实现完成 → 1 个 commit
 - QA 修复完成 → 1 个 commit
-- Bug 修复（issue）完成 → 1 个 commit
 
 ### 7.3 Commit 前自检
 
@@ -325,14 +294,6 @@ QA 修复：
 fix: 修复 QA 发现的 <问题描述>
 
 QA round N: <修复内容>
-```
-
-Bug 修复（issue）：
-
-```
-fix: <问题描述>
-
-<修复概要>
 ```
 
 ## 8. Bug 修复流程

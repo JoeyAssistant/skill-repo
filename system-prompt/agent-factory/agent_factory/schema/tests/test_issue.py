@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from agent_factory.schema.issue import (
-    Issue, BugfixResult, FeatureRequestResult,
+    ClosedResult, ConvertedResult, Issue, IssueCloseReason,
 )
 from agent_factory.schema.issue import IssueStatus
 
@@ -33,32 +33,40 @@ def test_issue_extra_field_forbidden():
         Issue(id=1, title="001-test", desc="x", extra="y")
 
 
-def test_bugfix_result_valid():
-    r = BugfixResult(fix_desc="改了 x.py", verification="git show 通过 + 测试 8 passed")
-    assert r.type == "bugfix"
+def test_converted_result_valid():
+    r = ConvertedResult(feature_id=70)
+    assert r.type == "converted_to_feature"
+    assert r.feature_id == 70
 
 
-def test_feature_request_result_valid():
-    r = FeatureRequestResult(feature_id=70)
-    assert r.type == "feature_request"
+def test_closed_result_valid():
+    r = ClosedResult(reason_type=IssueCloseReason.DUPLICATE, reason="与 #3 重复")
+    assert r.type == "closed"
+    assert r.reason_type == IssueCloseReason.DUPLICATE
+    assert r.reason == "与 #3 重复"
 
 
-def test_issue_with_bugfix_result():
+def test_closed_result_invalid_reason_type():
+    with pytest.raises(ValidationError):
+        ClosedResult(reason_type="other", reason="x")
+
+
+def test_issue_with_converted_result():
     issue = Issue(
         id=1, title="001-test", desc="x",
-        result=BugfixResult(fix_desc="...", verification="..."),
+        result=ConvertedResult(feature_id=5),
     )
-    assert issue.result.type == "bugfix"
-    assert issue.result.fix_desc == "..."
-
-
-def test_issue_with_feature_request_result():
-    issue = Issue(
-        id=1, title="001-test", desc="x",
-        result=FeatureRequestResult(feature_id=5),
-    )
-    assert issue.result.type == "feature_request"
+    assert issue.result.type == "converted_to_feature"
     assert issue.result.feature_id == 5
+
+
+def test_issue_with_closed_result():
+    issue = Issue(
+        id=1, title="001-test", desc="x",
+        result=ClosedResult(reason_type="invalid", reason="非缺陷"),
+    )
+    assert issue.result.type == "closed"
+    assert issue.result.reason_type == IssueCloseReason.INVALID
 
 
 def test_issue_status_enum_renamed():

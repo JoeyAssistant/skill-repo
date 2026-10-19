@@ -8,7 +8,7 @@
 # 做的事:
 #   1. git init（如目标还不是 git 仓）
 #   2. 创建 .features/ .issues/ .claude/agents/
-#   3. 复制 subagents（developer/qa/poc.md）到 .claude/agents/
+#   3. 复制 subagents（developer/qa/qa-diagnosis/poc/patrol.md）到 .claude/agents/
 #   4. 复制 agent-pm.md（PM system prompt）到 .claude/agents/（PM 提示词随项目仓走，启动命令自包含）
 #   5. 复制 design-reference.md + agent-architecture.drawio 到 .claude/agents/（PM 设计阶段引用，资产落点）
 #   6. --prod 时生成 .claude/agents/agent-factory.yaml（topology: split）
@@ -55,7 +55,7 @@ if ! grep -qx '.patrol/' .gitignore 2>/dev/null; then
 fi
 
 # 3. subagents
-cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/poc.md" "$SCRIPT_DIR/patrol.md" .claude/agents/
+cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/qa-diagnosis.md" "$SCRIPT_DIR/poc.md" "$SCRIPT_DIR/patrol.md" .claude/agents/
 
 # 4. PM system prompt（随项目仓走，远程部署时启动命令自包含）
 cp "$SCRIPT_DIR/agent-pm.md" .claude/agents/
@@ -82,7 +82,7 @@ fi
 
 echo ""
 echo "部署完成："
-echo "  .claude/agents/{developer,qa,poc,patrol}.md   subagents"
+echo "  .claude/agents/{developer,qa,qa-diagnosis,poc,patrol}.md   subagents"
 echo "  .claude/agents/agent-pm.md   PM system prompt"
 echo "  .claude/agents/{design-reference.md,agent-architecture.drawio}   PM 设计参考"
 echo "  .features/ .issues/   状态目录"

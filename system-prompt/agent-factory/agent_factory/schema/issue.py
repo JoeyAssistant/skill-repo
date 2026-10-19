@@ -14,24 +14,32 @@ class IssueStatus(str, Enum):
     CLOSED = "closed"
 
 
-class BugfixResult(BaseModel):
-    """bugfix 路径的处理结果."""
-    model_config = ConfigDict(extra="forbid")
-    type: Literal["bugfix"] = "bugfix"
-    fix_desc: str = Field(..., description="修改内容（developer 填）")
-    verification: str = Field(..., description="PM 验收结果（基于 git show diff + 测试）")
+class IssueCloseReason(str, Enum):
+    """issue 无 feature 关闭的原因分类."""
+    DUPLICATE = "duplicate"
+    INVALID = "invalid"
+    WONTFIX = "wontfix"
+    NO_ACTION = "no_action"
 
 
-class FeatureRequestResult(BaseModel):
-    """feature_request 路径的处理结果."""
+class ConvertedResult(BaseModel):
+    """转 feature 的处理结果."""
     model_config = ConfigDict(extra="forbid")
-    type: Literal["feature_request"] = "feature_request"
+    type: Literal["converted_to_feature"] = "converted_to_feature"
     feature_id: int = Field(..., description="转换到的 feature 编号")
+
+
+class ClosedResult(BaseModel):
+    """无 feature 关闭的处理结果."""
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["closed"] = "closed"
+    reason_type: IssueCloseReason = Field(..., description="关闭原因分类")
+    reason: str = Field(..., description="关闭原因说明")
 
 
 # Discriminated union for result
 IssueResult = Annotated[
-    Union[BugfixResult, FeatureRequestResult],
+    Union[ConvertedResult, ClosedResult],
     Field(discriminator="type"),
 ]
 
@@ -53,8 +61,8 @@ class Issue(BaseModel):
     # QA 诊断产出
     root_cause: Optional[str] = Field(None, description="根因")
     fix_plan: Optional[str] = Field(None,
-        description="QA 给的方案（不预判 bugfix/feature，含问题分析 + 处理方向）")
+        description="qa-diagnosis 给的定位结论与修复方向（含问题分析 + 处理方向）")
 
-    # 处理结果（in_progress → closed 时必填）
+    # 处理结果（closed 时必填）
     result: Optional[IssueResult] = Field(None,
-        description="issue 处理结果（bugfix 或 feature_request）")
+        description="issue 处理结果（converted_to_feature 或 closed）")

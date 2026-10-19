@@ -129,7 +129,7 @@ def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None) 
 
 
 # Fields that route to FEATURE.yaml (plain scalars)
-SCALAR_FIELDS = {"desc"}
+SCALAR_FIELDS = {"desc", "source_issue"}
 
 # Subfields of background that can be set individually
 BACKGROUND_SUBFIELDS = {"pain_point", "benefit"}
@@ -211,7 +211,7 @@ def _read_value(value: str | None, file_path: Path | None) -> str:
 def _invalid_field(field: str) -> None:
     """Exit with invalid field error."""
     click.echo(format_error("InvalidField",
-        f"Field '{field}' not supported. 合法形式：desc / background "
+        f"Field '{field}' not supported. 合法形式：desc / source_issue / background "
         f"/ background.pain_point / background.benefit / spec.<module> / e2e_test_cases",
         None), err=True)
     sys.exit(4)

@@ -61,10 +61,13 @@ def test_index_help_contains_fields():
     assert "title" in out  # 不允许改 title 的说明
 
 
-def test_issue_close_help_shows_both_paths():
+def test_issue_close_help_shows_reason_options():
     out = _help_output("issue", "close")
-    assert "--bugfix" in out
-    assert "--feature-request" in out
-    assert "--fix-desc" in out
-    assert "--verification" in out
-    assert "--feature-id" in out
+    assert "--reason-type" in out
+    assert "--reason" in out
+    assert "--bugfix" not in out
+
+
+def test_issue_convert_help():
+    out = _help_output("issue", "convert")
+    assert "--slug" in out
