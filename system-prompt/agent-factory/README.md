@@ -201,13 +201,26 @@ project-root/
       developer.md
       qa.md
       poc.md
-  agent/
-  cli/
+  src/
+    modules/
+      <module_name>/
+    backend/
+      app.py
+      common/
+      <service_name>/
+    frontend/
+    skill/
+    mcp/
   doc/
-  backend/
-  frontend/
-  script/
+    modules/
+      <module_name>/
+    backend/
+      README.md
+      <service_name>/
   test/
+    unit/
+      <module_name>/
+  script/
 ```
 
 ## 多项目工作区目录结构
@@ -224,8 +237,7 @@ agent-workspace/
 ├── football-agent/         ← 独立 git 仓
 │   ├── .features/
 │   ├── .issues/
-│   ├── agent/
-│   ├── cli/
+│   ├── src/
 │   ├── doc/
 │   └── ...
 ├── news-agent/             ← 独立 git 仓

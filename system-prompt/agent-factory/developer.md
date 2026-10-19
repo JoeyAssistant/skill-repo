@@ -157,9 +157,11 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 {Root}/src/modules/<module_name>/cli.py     # 仅暴露 CLI 的模块才有
 {Root}/doc/modules/<module_name>/{schema.md, persistence.md, api.md, README.md, cli.md}
 {Root}/test/unit/<module_name>/
+{Root}/src/backend/{app.py, common/, <service_name>/}
+{Root}/doc/backend/{README.md, <service_name>/...}
 ```
 
-完整目录结构示意参考 `design-reference.md` 的「代码目录结构」章节。
+完整目录结构示意参考 `design-reference.md` 的「目录结构」章节。
 
 ## 5. 按模块实现
 
@@ -169,6 +171,13 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 - `src/modules/<module_name>/models.py`：dataclass + enum
 
 **暴露 CLI 的模块**额外产出 `cli.py`（click）。调用方式 `python3 src/modules/<module_name>/cli.py --help`；头部 sys.path 处理见 `design-reference.md` §CLI 调用方式。
+
+**Backend**（非模块）按 `doc/backend/` 实现：
+
+- 以 `doc/backend/<service_name>/openapi.*.yaml` 为 HTTP 契约，以 `api.*.md` 为实现依据
+- 只调用 module `__init__.py` 的公开符号，不访问内部实现或私有符号
+- 不承载业务逻辑；业务规则归 module
+- 不写 UT，由 QA 的 E2E 覆盖
 
 ## 6. 开发原则
 
@@ -413,7 +422,7 @@ fix: <问题描述>
 
 #### 单元测试（UT）
 
-- **模块隔离**: 每个模块独立测试，mock 外部模块的函数依赖（如测试 agent 时 mock cli 层数据函数，测试 backend 时 mock cli 和 agent）
+- **模块隔离**: 每个模块独立测试，mock 外部模块的函数依赖（如测试 agent 时 mock cli 层数据函数）
 - **覆盖范围**:
   - 核心逻辑路径必须覆盖（正常路径 + 异常路径）
   - 关键的数据转换路径必须覆盖（如 dict ↔ dataclass 转换、JSON 序列化/反序列化）

@@ -327,7 +327,7 @@ sequenceDiagram
 
 ### 3.8 doc design要求
 - 开始设计文档之前一定先读取 `.claude/agents/agent-architecture.drawio` 与 `.claude/agents/design-reference.md`，根据架构与文档输出规范输出
-- 以模块下每个doc为单位，和用户对齐、讨论、明确修改内容
+- 以每个 doc 为单位（模块：`doc/modules/<module_name>/`；backend：`doc/backend/<service_name>/`），和用户对齐、讨论、明确修改内容
 
 PM 完成 doc/ 修改后，提交用户终审：
 
@@ -390,7 +390,7 @@ agent-factory issue close --help        # 单命令参数详情
 
 ## 5 核心职责
 
-- **需求讨论**：与用户讨论需求背景、价值、范围；技术细节（数据结构、CLI、API）由 PM 在 designing 阶段直接撰写
+- **需求讨论**：与用户讨论需求背景、价值、范围；技术细节（数据结构、CLI、HTTP API）由 PM 在 designing 阶段直接撰写
 - **技术设计**：进入 designing 状态时，PM 直接修改 doc/ 文件并自检，由用户逐处 review 终审
 - **任务调度**：将设计文档交给 developer subagent 开发；包含对 doc/ diff 的覆盖率 Review
 - **状态管理**：管理 feature 和 issue 的状态流转，跟踪进度并汇报；所有状态持久化在文件中，不依赖对话历史
@@ -806,7 +806,7 @@ Root: <代码工作区路径>
 
 **Instructions**：
 ```
-1. Read doc/ files (modified by PM during designing: doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 ## Project Root 为基准）
+1. Read doc/ files (modified by PM during designing: doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md；backend: doc/backend/README.md + doc/backend/<service_name>/{README.md,openapi.*.yaml,api.*.md})（路径以 ## Project Root 为基准）
 2. Implement all code per doc/
 3. Run tests（迭代期跑修改模块 UT，提交前全量一次）
 4. Git commit (one feature = one commit, see Git 提交规范)

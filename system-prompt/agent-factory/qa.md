@@ -54,7 +54,7 @@ Root: <worktree 绝对路径>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml and doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（以 Root 为基准）
+1. Read FEATURE.yaml and doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md；backend: doc/backend/README.md + doc/backend/<service_name>/{README.md,openapi.*.yaml,api.*.md})（以 Root 为基准）
 2. Verify design compliance（see 阶段 1 矩阵）（静态检查，无需持锁）
 3. 分支（按 FEATURE.yaml 有无 `parent`）：
    - **有 `parent`（子 feature）** → 跑该 module 的 UT（Root 内），**不取锁、不跑阶段 2**；跳到第 7 步
@@ -141,8 +141,10 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 | 数据持久化 | `doc/modules/<module_name>/persistence.md` |
 | 接口契约 | `doc/modules/<module_name>/api.md` |
 | CLI 接口 | `python3 src/modules/<module_name>/cli.py --help` 实际输出，与 `doc/modules/<module_name>/cli.md` 比对一致（仅暴露 CLI 的模块） |
+| Backend HTTP 契约 | `doc/backend/<service_name>/openapi.*.yaml`，核对路径 / 请求 / 响应 |
+| Backend 实现 | `doc/backend/<service_name>/api.*.md`，核对 operationId 覆盖与实现一致性 |
 
-> Backend / Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
+> Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；backend 的 doc 契约见 `doc/backend/<service_name>/`。页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
 
 ### 阶段 2：E2E 场景验收
 
@@ -159,7 +161,7 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 **经 HTTP（backend / frontend）**：
 1. 启动 backend 服务（涉及 frontend 时同时启动）
 2. 通过 HTTP API 调用（涉及 frontend 时用 Playwright 操作 UI）
-3. 验证响应结构
+3. 验证响应结构，并与 `doc/backend/<service_name>/openapi.*.yaml` 契约一致
 4. 验证完整链路（Web UI / API → Backend → `src/modules/<module_name>` → Data Layer）
 
 **经 MCP**：
@@ -228,7 +230,8 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 | Persistence | doc/modules/<module_name>/persistence.md | PASS/FAIL | ... |
 | API Contract | doc/modules/<module_name>/api.md | PASS/FAIL | ... |
 | CLI Interface | src/modules/<module_name>/cli.py vs doc/modules/<module_name>/cli.md | PASS/FAIL/N/A | ... |
-| Backend API | 行为验证 | PASS/FAIL/N/A | ... |
+| Backend Contract | doc/backend/<service_name>/openapi.*.yaml | PASS/FAIL/N/A | ... |
+| Backend Implementation | doc/backend/<service_name>/api.*.md | PASS/FAIL/N/A | ... |
 | Frontend UI | 行为验证 | PASS/FAIL/N/A | ... |
 | MCP Tools | 行为验证 | PASS/FAIL/N/A | ... |
 
