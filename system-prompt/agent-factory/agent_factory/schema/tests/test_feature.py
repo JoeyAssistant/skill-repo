@@ -132,6 +132,29 @@ def test_feature_id_range():
         Feature(**kw)
 
 
+def test_feature_parent_children_defaults():
+    """拆分字段默认空：存量 FEATURE.yaml 不受影响。"""
+    feature = Feature(**_valid_feature_kwargs())
+    assert feature.parent is None
+    assert feature.children == []
+
+
+def test_feature_parent_children_roundtrip():
+    """子记 parent（权威），父记 children（派生视图）。"""
+    child = Feature(**_valid_feature_kwargs(), parent=1)
+    assert child.parent == 1
+    parent = Feature(**_valid_feature_kwargs(), children=[2, 3])
+    assert parent.children == [2, 3]
+
+
+def test_feature_parent_out_of_range():
+    for bad in (0, 1000):
+        kw = _valid_feature_kwargs()
+        kw["parent"] = bad
+        with pytest.raises(ValidationError):
+            Feature(**kw)
+
+
 def test_feature_status_enum_values():
     """7 states: draft/designing/approved/implementing/qa-reviewing/done/cancelled."""
     from agent_factory.schema.feature import FeatureStatus

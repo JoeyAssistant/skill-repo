@@ -535,3 +535,134 @@ def _setup_feature_with_spec_and_cases(tmp_path):
 def _setup_feature_with_full_data(tmp_path):
     """Create feature with background + spec + e2e_test_cases for show test."""
     _setup_feature_with_spec_and_cases(tmp_path)
+
+
+# --- 拆分（--parent）---
+
+def _init_features(tmp_path):
+    """初始化 .features/index.yaml（不需要 git 仓库）。"""
+    (tmp_path / ".features").mkdir()
+    (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
+
+
+def _inject_worktree_record(tmp_path, dir_name):
+    """往 FEATURE.yaml 注入 worktree 记录。
+
+    `feature new --parent` 只校验父的 worktree 记录是否存在，不碰 git；
+    worktree 的真实创建由 test_cli_worktree.py 覆盖。
+    """
+    feat = tmp_path / ".features" / dir_name / "FEATURE.yaml"
+    data = load_yaml(feat)
+    data["worktree"] = {
+        "name": f"feat-{dir_name}",
+        "branch": f"feature/{dir_name}",
+        "path": f".worktrees/feat-{dir_name}",
+        "base": "origin/dev",
+    }
+    feat.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+
+
+def _new_feature(runner, slug, parent=None):
+    """Invoke `feature new` with the given slug; optional --parent."""
+    args = ["feature", "new", "--title", slug, "--slug", slug, "--desc", "d"]
+    if parent is not None:
+        args += ["--parent", str(parent)]
+    return runner.invoke(main, args)
+
+
+def test_feature_new_with_parent_writes_both_sides(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+    assert _new_feature(runner, "parent-req").exit_code == 0
+    _inject_worktree_record(tmp_path, "001-parent-req")
+
+    result = _new_feature(runner, "child-a", parent=1)
+    assert result.exit_code == 0, result.output
+
+    # 子侧：权威字段
+    child = load_yaml(tmp_path / ".features" / "002-child-a" / "FEATURE.yaml")
+    assert child["parent"] == 1
+    assert child["children"] == []
+
+    # 父侧：派生视图
+    parent = load_yaml(tmp_path / ".features" / "001-parent-req" / "FEATURE.yaml")
+    assert parent["children"] == [2]
+    assert parent["parent"] is None
+
+
+def test_feature_new_parent_without_worktree_fails(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+    assert _new_feature(runner, "parent-req").exit_code == 0
+
+    result = _new_feature(runner, "child-a", parent=1)
+    assert result.exit_code == 1
+    assert "尚无 worktree" in result.output
+    # fail fast：校验失败时不建目录
+    assert not (tmp_path / ".features" / "002-child-a").exists()
+
+
+def test_feature_new_parent_not_found(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+
+    result = _new_feature(runner, "child-a", parent=99)
+    assert result.exit_code == 2
+    assert not (tmp_path / ".features" / "001-child-a").exists()
+
+
+def test_feature_new_rejects_grandchild(tmp_path, monkeypatch):
+    """只允许一级拆分：父自身是子 feature 时拒绝。"""
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+    assert _new_feature(runner, "parent-req").exit_code == 0
+    _inject_worktree_record(tmp_path, "001-parent-req")
+    assert _new_feature(runner, "child-a", parent=1).exit_code == 0
+
+    result = _new_feature(runner, "grand", parent=2)
+    assert result.exit_code == 1
+    assert "只允许一级拆分" in result.output
+
+
+def test_feature_show_children_rollup(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+    assert _new_feature(runner, "parent-req").exit_code == 0
+    _inject_worktree_record(tmp_path, "001-parent-req")
+    assert _new_feature(runner, "child-a", parent=1).exit_code == 0
+
+    result = runner.invoke(main, ["feature", "show", "1"])
+    assert result.exit_code == 0, result.output
+    assert "## Children" in result.output
+    assert "002-child-a" in result.output
+    assert "draft" in result.output
+
+
+def test_feature_show_child_prints_parent(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+    assert _new_feature(runner, "parent-req").exit_code == 0
+    _inject_worktree_record(tmp_path, "001-parent-req")
+    assert _new_feature(runner, "child-a", parent=1).exit_code == 0
+
+    result = runner.invoke(main, ["feature", "show", "2"])
+    assert result.exit_code == 0, result.output
+    assert "**Parent**: feature #1" in result.output
+
+
+def test_feature_new_without_parent_is_unchanged(tmp_path, monkeypatch):
+    """回归：普通 feature 的 parent / children 保持空。"""
+    monkeypatch.chdir(tmp_path)
+    _init_features(tmp_path)
+    runner = CliRunner()
+    assert _new_feature(runner, "solo").exit_code == 0
+
+    data = load_yaml(tmp_path / ".features" / "001-solo" / "FEATURE.yaml")
+    assert data["parent"] is None
+    assert data["children"] == []

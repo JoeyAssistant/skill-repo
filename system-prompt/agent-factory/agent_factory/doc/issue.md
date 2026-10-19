@@ -1,47 +1,9 @@
 # Issue
-## schema
-- id # issue编号
-- title # issue标题，与目录一致
-- desc # 问题描述
-- scenario # 场景
-- impact # 问题影响
-- root_cause # 问题根因
-- fix_plan # 修改方案
-- result # issue处理结果
-    - bugfix
-        - fix_desc # 修改内容
-        - verification # 验证结果
-    - feature_request # 转需求
-        - feature_id # 需求编号
 
-## state
-open --> in_progress --> closed
+ISSUE.yaml 的 schema / state / workflow 见 PM system prompt（部署于 `.claude/agents/agent-pm.md`）——它是这三项的**唯一真源**。
+本文件不重复维护它们：重复会导致提示词与 CLI 文档漂移，而漂移没人发现。
 
-## workflow
-```mermaid
-sequenceDiagram
-    actor user
-    
-    user->>pm: 提一个issue + desc
-    pm->>ISSUE.yaml: create(id + title + desc)
-    pm->>user: 信息收集 + 疑问确认
-    user->>pm: 
-    pm->>ISSUE.yaml: scenario + impact
-    pm->>+qa: 开始问题定位
-    qa->>ISSUE.yaml: root_cause + fix_plan
-    qa->>-pm:
-    pm->>+user: review 确认
-    user->>-pm: ok
-    alt is bugfix
-    participant dev as developer
-        pm->>+dev: fix this bug
-        dev->>dev: bugfix
-        dev->>ISSUE.yaml: fix_desc
-        dev->>-pm:
-        pm->>pm: 验收
-        pm->>ISSUE.yaml: verification + close
-    else is feature
-        pm->>FEATURE.yaml: create(root_cause fix_plan)
-        pm->>ISSUE.yaml: feature_id + close
-    end
-```
+CLI 侧约定：
+
+- 状态文件：`.issues/<NNN>-<slug>/ISSUE.yaml`（单条）+ `.issues/index.yaml`（索引行）
+- 子命令与参数见 `agent-factory issue <cmd> --help`

@@ -1,6 +1,10 @@
 """CLI help 输出必须含关键信息（help 是命令文档唯一真值）.
 
 防止 docstring 改动后 help 丢失关键字段说明。
+
+注意：feature / issue 的 schema / state / workflow 唯一真源是 agent-pm.md
+（PM system prompt），其 group help 只留指针；worktree / lock 的 help 仍是
+doc/*.md 原文（命令签名与退出码，agent-pm.md 不重复维护）。
 """
 from click.testing import CliRunner
 
@@ -20,32 +24,26 @@ def test_main_help_lists_groups():
     assert "index" in out
 
 
-def test_feature_help_contains_fields_and_state_machine():
-    """feature group help 直接展示 doc/feature.md 原文（schema 字段 + 状态机）."""
+def test_feature_help_points_to_single_source():
+    """feature group help 指向 agent-pm.md（schema / state / workflow 的唯一真源）.
+
+    doc/feature.md 不再重复维护这三项，只留指针 + CLI 侧约定。
+    """
     out = _help_output("feature")
-    # schema 字段（feature.md 原文）
-    for field in ["desc", "background", "spec", "e2e_test_cases"]:
-        assert field in out, f"feature help missing field: {field}"
-    # 嵌套字段（feature.md 用 yaml 风格列表，dot 路径由嵌套层级表达）
-    assert "pain_point" in out
-    assert "benefit" in out
-    assert "module" in out  # spec 下模块名占位符
-    # 状态机
-    assert "designing" in out
-    assert "approved" in out
+    assert "agent-pm.md" in out
+    assert "唯一真源" in out
+    # 命令清单由 click 自动生成（不来自 doc/feature.md），必须完整
+    for cmd in ["new", "set", "show", "list", "transition", "delete"]:
+        assert cmd in out, f"feature help missing command: {cmd}"
 
 
-def test_issue_help_shows_design_doc():
-    """issue group help 直接展示 doc/issue.md 原文（schema 字段 + workflow）."""
+def test_issue_help_points_to_single_source():
+    """issue group help 指向 agent-pm.md（唯一真源），命令清单完整."""
     out = _help_output("issue")
-    # schema 字段（issue.md 原文）
-    for field in ["desc", "scenario", "impact", "root_cause", "fix_plan", "result"]:
-        assert field in out, f"issue help missing field: {field}"
-    # workflow 关键节点（issue.md 原文 mermaid）
-    assert "提一个issue" in out
-    assert "root_cause + fix_plan" in out
-    assert "bugfix" in out
-    assert "feature_id" in out
+    assert "agent-pm.md" in out
+    assert "唯一真源" in out
+    for cmd in ["new", "set", "show", "list", "transition", "close"]:
+        assert cmd in out, f"issue help missing command: {cmd}"
 
 
 def test_worktree_help_shows_design_doc():

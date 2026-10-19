@@ -23,7 +23,14 @@ Before every response, output the token `[agent-qa]` on its own line.
 
 ### 模式一：验收模式（Feature Acceptance）
 
-Developer 完成开发后，PM 调度你进行端到端验收。
+Developer 完成开发后，PM 调度你进行验收。按 FEATURE.yaml 是否带 `parent` 字段分两条：
+
+| feature | 验收内容 | E2E 锁 |
+|---|---|---|
+| 常规 feature（无 `parent`） | 阶段 1 设计合规 + 阶段 2 E2E 场景 + 阶段 3/4 | 需持锁 |
+| **子 feature**（有 `parent`，拆分产生） | **阶段 1 设计合规 + 该 module 的 UT** | **不取锁**（不跑阶段 2） |
+
+子 feature 是单模块的，没有跨模块端到端业务路径，其 `e2e_test_cases` 为空；端到端验证由**父 feature 在全部子完成后整体执行**。判据是 FEATURE.yaml 的 `parent` 字段（`agent-factory feature show <id>` 可见）。
 
 ### 模式二：诊断模式（Issue Diagnosis）
 
@@ -47,14 +54,17 @@ Root: <worktree 绝对路径>
 <主仓路径>/.features/<NNN>-<name>/
 
 ## Instructions
-1. Read FEATURE.yaml (e2e_test_cases 验收用例) and doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（以 Root 为基准）
+1. Read FEATURE.yaml and doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（以 Root 为基准）
 2. Verify design compliance（see 阶段 1 矩阵）（静态检查，无需持锁）
-3. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 lock_busy（附 holder 信息）
-4. Start services and run E2E scenarios（Root 内启动）
-5. For each issue found: diagnose root cause, check log auditability
-6. For confirmed issues: search for similar patterns
-7. **Release E2E lock（必做，pass/fail/异常任何路径）**: `agent-factory lock release e2e`
-8. Return structured result
+3. 分支（按 FEATURE.yaml 有无 `parent`）：
+   - **有 `parent`（子 feature）** → 跑该 module 的 UT（Root 内），**不取锁、不跑阶段 2**；跳到第 7 步
+   - **无 `parent`（常规 feature）** → 继续第 4 步
+4. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 lock_busy（附 holder 信息）
+5. Start services and run E2E scenarios（Root 内启动）
+6. **Release E2E lock（必做，pass/fail/异常任何路径）**: `agent-factory lock release e2e`
+7. For each issue found: diagnose root cause, check log auditability
+8. For confirmed issues: search for similar patterns
+9. Return structured result
 ```
 
 ### 诊断模式
@@ -94,6 +104,7 @@ Note: QA only updates root_cause / fix_plan via CLI. Issue status in index.yaml 
   - 拿不到（exit 1）：不要强行验收，返回 `lock_busy` 结果（附 stderr 中 holder 信息）给 PM，由 PM 提示用户稍后重试
   - 释放：验收结束必执行 `agent-factory lock release e2e`——pass / fail / 异常中断任何路径都要释放
   - 仅阶段 2（E2E 场景）需要持锁；阶段 1（设计合规检查，纯静态读代码）不需要
+  - **子 feature（有 `parent`）全程不取锁**：其验收不跑阶段 2，无 E2E 场景可跑
 
 ## 按改动范围选择验收入口
 
@@ -134,6 +145,8 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 > Backend / Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
 
 ### 阶段 2：E2E 场景验收
+
+> **子 feature 跳过本阶段**（`e2e_test_cases` 为空）：其验收 = 阶段 1 设计合规 + 该 module 的 UT。跨模块端到端验证由父 feature 承担。
 
 按 feature 涉及的入口逐一执行 FEATURE.yaml `e2e_test_cases` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
 
@@ -194,7 +207,7 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 
 ## QA-REPORT.md 模板
 
-验收完成后，在 feature 目录下生成 `QA-REPORT.md`：
+验收完成后，在 feature 目录下生成 `QA-REPORT.md`（**子 feature 时 `## Scenario Results` 表填 UT 用例而非 E2E 场景**）：
 
 ```markdown
 # QA Report: <feature-name>

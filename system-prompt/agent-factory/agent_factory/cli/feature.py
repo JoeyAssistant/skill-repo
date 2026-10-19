@@ -46,11 +46,16 @@ def feature_group() -> None:
     default=Priority.P2.value,
     help="Priority (default: P2)",
 )
-def new(title: str, slug: str, desc: str, priority: str) -> None:
+@click.option("--parent", "parent_id", type=int, default=None,
+              help="父 feature 编号（拆分出的子 feature 才有；同时把本 feature 登记进父的 children）")
+def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None) -> None:
     """Create new feature (status=draft).
 
     Directory name: <NNN>-<slug> (e.g., 001-income-module).
     Both FEATURE.yaml 'title' field and index 'title' field use the directory name.
+
+    --parent: 拆分子 feature 时指定父。父必须已建 worktree（拆分发生在父建 worktree 之后），
+    且父自身不能再有 parent（只允许一级拆分）。
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -68,12 +73,32 @@ def new(title: str, slug: str, desc: str, priority: str) -> None:
         click.echo(format_error("FileExists", f"Directory already exists: {feature_dir}", str(feature_dir)), err=True)
         sys.exit(1)
 
+    # 拆分子 feature：先校验父（fail fast，早于建目录）
+    parent_dir: Path | None = None
+    parent_feature: Feature | None = None
+    if parent_id is not None:
+        try:
+            parent_dir = find_feature_dir(parent_id)
+        except FileNotFoundError as exc:
+            click.echo(format_error("NotFound", str(exc), None), err=True)
+            sys.exit(2)
+        parent_feature = Feature.model_validate(load_yaml(parent_dir / "FEATURE.yaml"))
+        if parent_feature.parent is not None:
+            click.echo(format_error("ValidationError",
+                f"父 feature {parent_id} 自身也是子 feature，只允许一级拆分", None), err=True)
+            sys.exit(1)
+        if parent_feature.worktree is None:
+            click.echo(format_error("ValidationError",
+                f"父 feature {parent_id} 尚无 worktree；拆分须在父建 worktree 之后", None), err=True)
+            sys.exit(1)
+
     # Build Feature object (validates immediately)
     try:
         feature = Feature(
             id=feature_id,
             title=dir_name,  # title field = directory name
             desc=desc,
+            parent=parent_id,
         )
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
@@ -94,6 +119,11 @@ def new(title: str, slug: str, desc: str, priority: str) -> None:
         priority=Priority(priority),
     ))
     dump_yaml(idx_path, idx)
+
+    # 回写父的 children（派生视图；权威是子的 parent）
+    if parent_feature is not None and parent_dir is not None:
+        parent_feature.children.append(feature_id)
+        dump_yaml(parent_dir / "FEATURE.yaml", parent_feature)
 
     click.echo(f"Created feature {feature_id}: {dir_name}")
 
@@ -277,6 +307,24 @@ def show(feature_id: int, fmt: str) -> None:
         click.echo(_render_feature_markdown(feature))
 
 
+def _children_rollup(children: list[int]) -> list[str]:
+    """Render children rollup table (status/priority read from index.yaml)."""
+    idx_path = Path(".features") / "index.yaml"
+    by_id: dict[int, FeatureIndexItem] = {}
+    if idx_path.exists():
+        idx = FeatureIndex.model_validate(load_yaml(idx_path))
+        by_id = {i.id: i for i in idx.features}
+    lines = ["## Children", "", "| ID | STATUS | PRIORITY | TITLE |", "|---|---|---|---|"]
+    for cid in children:
+        item = by_id.get(cid)
+        if item is None:
+            lines.append(f"| {cid} | (未在 index) | - | - |")
+        else:
+            lines.append(f"| {cid} | {item.status.value} | {item.priority.value} | {item.title} |")
+    lines.append("")
+    return lines
+
+
 def _render_feature_markdown(feature: Feature) -> str:
     lines = [
         f"# Feature {feature.id}: {feature.title}",
@@ -284,6 +332,10 @@ def _render_feature_markdown(feature: Feature) -> str:
         f"**Desc**: {feature.desc}",
         "",
     ]
+    if feature.parent is not None:
+        lines += [f"**Parent**: feature #{feature.parent}", ""]
+    if feature.children:
+        lines += _children_rollup(feature.children)
     if feature.worktree:
         lines += [
             f"**Worktree**: {feature.worktree.path} (branch: {feature.worktree.branch})",
