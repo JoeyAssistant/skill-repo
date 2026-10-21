@@ -55,16 +55,16 @@ Root: <project-root-path>
 
 ## Feature Directory
 <主仓路径>/.features/<NNN>-<name>/
-
-## Instructions
-1. Read FEATURE.yaml (需求+规格) + doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md)（路径以 Root 为基准）
-2. Implement all code per design
-3. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
-4. Git commit (one feature = one commit, see Git 提交规范)
-5. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-6. On success: return complete with commit_sha + suggested_status=qa-reviewing
-7. On fail: return fail with reason (status unchanged for review)
 ```
+
+**你的执行步骤**（按此顺序；细节见 §4 开发前准备、§5 按模块实现、§7 Git 提交规范、§10 测试设计、§11 输出格式）：
+
+1. Read FEATURE.yaml（需求+规格）+ doc/ files（路径以 Root 为基准）
+2. Implement all code per design
+3. Run tests per §10.3（迭代期跑修改模块 UT，提交前全量一次）
+4. Git commit（one feature = one commit）
+5. Self-verify：`git log -1 --oneline` 确认最新 commit 是本次任务的
+6. 成功 → 返回 `complete` + `commit_sha` + `suggested_status=qa-reviewing`；失败 → 返回 `fail` + `reason`（状态不变，等 PM review）
 
 ### 2.2 QA 修复任务（验收失败后）
 
@@ -83,17 +83,17 @@ Root: <project-root-path>
 
 ## QA Report
 Read `<主仓路径>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues and root cause analysis.
+```
 
-## Instructions
+**你的执行步骤**（按此顺序；细节见 §8 Bug 修复流程、§10 测试设计、§11 输出格式）：
+
 1. Read QA-REPORT.md
 2. Fix each issue listed in QA report
 3. Add regression tests for each fix
-4. Run tests per 测试策略（§10.3）：迭代期跑修改模块 UT，提交前全量一次
-5. Git commit (one QA round = one commit, message: fix: 修复 QA 发现的 <问题描述>)
-6. Self-verify: `git log -1 --oneline` 确认最新 commit 是本次任务的
-7. On success: return complete with commit_sha + suggested_status=qa-reviewing
-8. On fail: return fail with reason (status unchanged for review)
-```
+4. Run tests per §10.3（迭代期跑修改模块 UT，提交前全量一次）
+5. Git commit（one QA round = one commit，message：`fix: 修复 QA 发现的 <问题描述>`）
+6. Self-verify：`git log -1 --oneline` 确认最新 commit 是本次任务的
+7. 成功 → 返回 `complete` + `commit_sha` + `suggested_status=qa-reviewing`；失败 → 返回 `fail` + `reason`（状态不变，等 PM review）
 
 ## 3. worktree 工作规范
 

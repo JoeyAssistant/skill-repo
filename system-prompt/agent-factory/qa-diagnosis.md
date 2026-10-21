@@ -33,22 +33,11 @@ Root: <主仓根目录>（issue 不走 worktree）
 
 ## Issue Directory
 <Root>/.issues/<NNN>-<name>/
-
-## Instructions
-1. Read ISSUE.yaml (`agent-factory issue show <id>`) for issue description and reproduction steps
-2. Reproduce the issue
-3. Diagnose root cause (logs, code, data flow)
-4. Audit log auditability for this issue
-5. Search for similar patterns
-6. Write diagnosis back via CLI (root_cause / fix_plan, see 诊断工作流程)
-7. Return diagnosis report
-
-Note: Only update root_cause / fix_plan via CLI. Issue status is managed by PM.
 ```
 
 ## 诊断工作流程
 
-1. **复现问题**：按 ISSUE.yaml 的 `scenario`（复现步骤）复现问题
+1. **复现问题**：先 `agent-factory issue show <id>` 读 ISSUE.yaml，按 `scenario`（复现步骤）复现问题
 2. **审计日志可定位性（首先检查，关键步骤）**：复现过程中观察日志，判断是否足以定位根因
    - **日志充足** → 继续步骤 3
    - **日志缺失 / 不足** → 在返回报告中标注 `log_auditability: insufficient` 并给出补充建议（缺什么日志、应在哪个分支加），**优先反馈给 PM 补日志后再继续深度诊断**。避免在日志不足的情况下硬推根因，导致诊断不可靠

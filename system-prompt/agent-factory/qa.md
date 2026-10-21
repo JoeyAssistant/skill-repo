@@ -47,20 +47,21 @@ Root: <worktree 绝对路径>
 
 ## Feature Directory
 <主仓路径>/.features/<NNN>-<name>/
-
-## Instructions
-1. Read FEATURE.yaml and doc/ files (doc/modules/<module_name>/{schema,persistence,api}.md + README.md + cli.md；backend: doc/backend/README.md + doc/backend/<service_name>/{README.md,openapi.*.yaml,api.*.md})（以 Root 为基准）
-2. Verify design compliance（see 阶段 1 矩阵）（静态检查，无需持锁）
-3. 分支（按 FEATURE.yaml 有无 `parent`）：
-   - **有 `parent`（子 feature）** → 跑该 module 的 UT（Root 内），**不取锁、不跑阶段 2**；跳到第 7 步
-   - **无 `parent`（常规 feature）** → 继续第 4 步
-4. Acquire E2E lock: `agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 lock_busy（附 holder 信息）
-5. Start services and run E2E scenarios（Root 内启动）
-6. **Release E2E lock（必做，pass/fail/异常任何路径）**: `agent-factory lock release e2e`
-7. For each issue found: diagnose root cause, check log auditability
-8. For confirmed issues: search for similar patterns
-9. Return structured result
 ```
+
+**你的执行步骤**（按此顺序；细节见「worktree 与 E2E 锁」「验收工作流程」「输出格式」）：
+
+1. Read FEATURE.yaml and doc/ files（以 Root 为基准）
+2. Verify design compliance（见阶段 1 矩阵；静态检查，无需持锁）
+3. 按 FEATURE.yaml 有无 `parent` 分支：
+   - **有 `parent`（子 feature）** → 跑该 module 的 UT（Root 内），不取锁、不跑阶段 2；跳到第 7 步
+   - **无 `parent`（常规 feature）** → 继续第 4 步
+4. 取 E2E 锁：`agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 `lock_busy`
+5. 启动服务并跑 E2E 场景（Root 内）
+6. 释放 E2E 锁（pass / fail / 异常任何路径）
+7. 每个发现的问题：定位根因，审计日志可定位性
+8. 对确认的问题：举一反三搜索同类模式
+9. 返回结构化结果
 
 ## worktree 与 E2E 锁
 
