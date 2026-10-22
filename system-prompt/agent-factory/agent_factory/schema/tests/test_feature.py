@@ -47,10 +47,29 @@ def test_e2e_test_case_valid():
         inputs={"device_name": "XYANGS-RT-AS5PR-008"},
         steps=["step1", "step2"],
         observations=[Observation(check="日志行", expect="含 xxx")],
+        cleanup=["rm -f /tmp/qa-case1.json", "stop backend service"],
     )
     assert tc.name == "t1"
     assert isinstance(tc.steps, list) and len(tc.steps) == 2
     assert len(tc.observations) == 1
+    assert len(tc.cleanup) == 2
+
+
+def test_e2e_test_case_cleanup_defaults_empty():
+    """历史 FEATURE.yaml 无 cleanup 字段仍可解析；非空约束在写入/审批时校验。"""
+    tc = E2ETestCase(name="t1", precondition="p")
+    assert tc.cleanup == []
+
+
+def test_e2e_test_case_cleanup_na_valid():
+    """不需要/不涉及清理时，显式写 "N/A"。"""
+    tc = E2ETestCase(name="t1", precondition="p", cleanup="N/A")
+    assert tc.cleanup == "N/A"
+
+
+def test_e2e_test_case_cleanup_invalid_sentinel_fails():
+    with pytest.raises(ValidationError):
+        E2ETestCase(name="t1", precondition="p", cleanup="n/a")
 
 
 def test_observation_missing_expect_fails():

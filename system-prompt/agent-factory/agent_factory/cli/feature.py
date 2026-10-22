@@ -195,7 +195,7 @@ def set_field(feature_id: int, field: str, value: str | None,
     if field == "e2e_test_cases":
         if not file_path:
             click.echo(format_error("InvalidArgs",
-                "e2e_test_cases 整列表替换需 --file（yaml: list of {name, precondition, inputs, steps, observations[{check, expect}]}）",
+                "e2e_test_cases 整列表替换需 --file（yaml: list of {name, precondition, inputs, steps, observations[{check, expect}], cleanup}；cleanup 为非空步骤列表或 \"N/A\"）",
                 None), err=True)
             sys.exit(4)
         _set_e2e_test_cases(feature_id, file_path); return
@@ -283,9 +283,35 @@ def _spec_remove(feature_id: int, module: str) -> None:
     _save(feature_id, path, data)
 
 
+def _validate_e2e_cleanup(cases: list) -> list[str]:
+    """每条 E2E 用例必须声明非空 cleanup（防测试产物残留）。"""
+    if not isinstance(cases, list):
+        return ["e2e_test_cases 必须是列表"]
+    issues = []
+    for i, tc in enumerate(cases, 1):
+        if isinstance(tc, dict):
+            cleanup, name = tc.get("cleanup"), tc.get("name")
+        else:
+            cleanup, name = getattr(tc, "cleanup", None), getattr(tc, "name", None)
+        if cleanup == "N/A":
+            continue
+        if not isinstance(cleanup, list) or not any(
+            isinstance(item, str) and item.strip() for item in cleanup
+        ):
+            issues.append(
+                f"e2e_test_cases[{i}]（{name or f'#{i}'}）cleanup 为空："
+                f"必须声明清理步骤，或写 \"N/A\"（不需要/不涉及）")
+    return issues
+
+
 def _set_e2e_test_cases(feature_id: int, file_path: Path) -> None:
     path, data = _load_feature(feature_id)
-    data["e2e_test_cases"] = yaml.safe_load(file_path.read_text())
+    cases = yaml.safe_load(file_path.read_text())
+    issues = _validate_e2e_cleanup(cases)
+    if issues:
+        click.echo(format_error("ValidationError", "; ".join(issues), str(file_path)), err=True)
+        sys.exit(1)
+    data["e2e_test_cases"] = cases
     _save(feature_id, path, data)
 
 
@@ -382,6 +408,15 @@ def _render_feature_markdown(feature: Feature) -> str:
             else:
                 lines.append("  无")
             lines.append("")
+            lines.append("**cleanup**:")
+            if tc.cleanup == "N/A":
+                lines.append("  N/A（不需要/不涉及清理）")
+            elif tc.cleanup:
+                for k, step in enumerate(tc.cleanup, 1):
+                    lines.append(f"  {k}. {step}")
+            else:
+                lines.append("  无")
+            lines.append("")
     return "\n".join(lines)
 
 
@@ -435,7 +470,8 @@ def _validate_transition_requirements(current: FeatureStatus, target: FeatureSta
     elif current == FeatureStatus.DESIGNING and target == FeatureStatus.APPROVED:
         if not feature.spec:
             issues.append("spec is empty（至少 1 个模块）")
-        # e2e_test_cases 不作硬性要求：部分需求无可运行的 E2E 场景，允许为空
+        # e2e_test_cases 可为空（无 E2E 场景的需求）；非空时每条用例必须声明 cleanup
+        issues.extend(_validate_e2e_cleanup(feature.e2e_test_cases))
     # approved→implementing: no check (decisions removed)
     return issues
 
@@ -448,7 +484,7 @@ def transition(feature_id: int, target: str) -> None:
 
     Cross-field checks:
     - draft → designing: background.pain_point + benefit must be non-empty
-    - designing → approved: spec >= 1 module（e2e_test_cases 可选，无 E2E 场景的需求允许为空）
+    - designing → approved: spec >= 1 module（e2e_test_cases 可为空；非空时每条用例 cleanup 必填非空）
     - approved → implementing: no extra check
     """
     try:

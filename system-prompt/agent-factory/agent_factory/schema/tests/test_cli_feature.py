@@ -224,8 +224,8 @@ def test_feature_set_e2e_test_cases(tmp_path, monkeypatch):
 
     tc_file = tmp_path / "cases.yaml"
     tc_file.write_text(yaml.safe_dump([
-        {"name": "用例1", "precondition": "空", "inputs": {"project": "XYANGS_RT"}, "steps": ["触发诊断"], "observations": [{"check": "日志行", "expect": "含 xxx"}]},
-        {"name": "用例2", "precondition": "有数据", "inputs": {}, "steps": ["查询"], "observations": [{"check": "结果", "expect": "返回列表"}]},
+        {"name": "用例1", "precondition": "空", "inputs": {"project": "XYANGS_RT"}, "steps": ["触发诊断"], "observations": [{"check": "日志行", "expect": "含 xxx"}], "cleanup": ["rm -f /tmp/qa-1.json"]},
+        {"name": "用例2", "precondition": "有数据", "inputs": {}, "steps": ["查询"], "observations": [{"check": "结果", "expect": "返回列表"}], "cleanup": ["停止 backend 服务"]},
     ]))
 
     runner = CliRunner()
@@ -237,6 +237,49 @@ def test_feature_set_e2e_test_cases(tmp_path, monkeypatch):
     feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
     assert len(feat["e2e_test_cases"]) == 2
     assert feat["e2e_test_cases"][0]["name"] == "用例1"
+    assert feat["e2e_test_cases"][0]["cleanup"] == ["rm -f /tmp/qa-1.json"]
+
+
+def test_feature_set_e2e_test_cases_requires_cleanup(tmp_path, monkeypatch):
+    """每条 E2E 用例必须声明非空 cleanup，否则拒绝写入。"""
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    tc_file = tmp_path / "cases.yaml"
+    tc_file.write_text(yaml.safe_dump([
+        {"name": "用例1", "precondition": "空", "steps": ["执行"], "observations": [{"check": "x", "expect": "y"}]},
+    ]))
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "set", "1", "e2e_test_cases", "--file", str(tc_file),
+    ])
+    assert result.exit_code == 1
+    assert "cleanup 为空" in result.output
+
+    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
+    assert "e2e_test_cases" not in feat or feat["e2e_test_cases"] == []
+
+
+def test_feature_set_e2e_test_cases_accepts_na_cleanup(tmp_path, monkeypatch):
+    """不需要/不涉及清理时，cleanup 允许显式写 "N/A"。"""
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    tc_file = tmp_path / "cases.yaml"
+    tc_file.write_text(yaml.safe_dump([
+        {"name": "只读查询", "precondition": "服务已启动", "steps": ["GET /health"],
+         "observations": [{"check": "status", "expect": "200"}], "cleanup": "N/A"},
+    ]))
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "set", "1", "e2e_test_cases", "--file", str(tc_file),
+    ])
+    assert result.exit_code == 0, result.output
+
+    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
+    assert feat["e2e_test_cases"][0]["cleanup"] == "N/A"
 
 
 def test_feature_set_invalid_field(tmp_path, monkeypatch):
@@ -441,6 +484,34 @@ def test_feature_transition_designing_to_approved_requires_spec_only(tmp_path, m
     assert "designing → approved" in result.output
 
 
+def test_feature_transition_designing_to_approved_requires_cleanup(tmp_path, monkeypatch):
+    """非空 e2e_test_cases 中每条用例必须声明非空 cleanup 才能进入 approved。"""
+    monkeypatch.chdir(tmp_path)
+    _setup_feature_with_background(tmp_path)
+    runner = CliRunner()
+    runner.invoke(main, ["feature", "transition", "1", "--to", "designing"])
+
+    spec_file = tmp_path / "m.yaml"
+    spec_file.write_text(yaml.safe_dump({"functions": ["录入"]}))
+    runner.invoke(main, ["feature", "set", "1", "spec.income", "--file", str(spec_file)])
+
+    # 历史/手写数据：用例缺少 cleanup
+    feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
+    data = load_yaml(feat_file)
+    data["e2e_test_cases"] = [{"name": "t1", "precondition": "p", "steps": ["s"]}]
+    feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
+
+    result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
+    assert result.exit_code == 1
+    assert "cleanup 为空" in result.output
+
+    data["e2e_test_cases"][0]["cleanup"] = ["rm -f /tmp/qa-t1"]
+    feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
+
+    result = runner.invoke(main, ["feature", "transition", "1", "--to", "approved"])
+    assert result.exit_code == 0, result.output
+
+
 def test_feature_transition_approved_to_implementing_no_check(tmp_path, monkeypatch):
     """approved → implementing has no extra check (decisions removed)."""
     monkeypatch.chdir(tmp_path)
@@ -528,7 +599,7 @@ def _setup_feature_with_spec_and_cases(tmp_path):
     feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
     data = load_yaml(feat_file)
     data["spec"] = {"income": {"functions": ["录入"]}}
-    data["e2e_test_cases"] = [{"name": "t1", "precondition": "p", "inputs": {}, "steps": ["s"], "observations": [{"check": "obs", "expect": "e"}]}]
+    data["e2e_test_cases"] = [{"name": "t1", "precondition": "p", "inputs": {}, "steps": ["s"], "observations": [{"check": "obs", "expect": "e"}], "cleanup": ["rm -f /tmp/qa-t1"]}]
     feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
 
 

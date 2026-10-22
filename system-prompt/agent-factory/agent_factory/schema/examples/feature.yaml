@@ -29,3 +29,6 @@ e2e_test_cases:
     observations:
       - check: "list 输出"
         expect: "含 amount=5000、type=salary 的条目"
+    cleanup:
+      - "python3 cli/income.py delete --month 2026-08 --type salary（或恢复 data/income.json 为执行前的空数组）"
+      - "rm -f /tmp/qa-income-*.json"

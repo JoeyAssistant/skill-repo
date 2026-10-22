@@ -2,7 +2,7 @@
 """Feature 模型（对应 .features/<id>/FEATURE.yaml）."""
 from __future__ import annotations
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -47,6 +47,8 @@ class E2ETestCase(BaseModel):
     steps: list[str] = Field(default_factory=list, description="测试步骤（可运行，逐步）")
     observations: list[Observation] = Field(default_factory=list,
         description="观测点列表（可观测，每条 {check, expect}）")
+    cleanup: Union[list[str], Literal["N/A"]] = Field(default_factory=list,
+        description="清理步骤（删除 /tmp 测试文件、停止服务、恢复测试数据等）；不需要/不涉及清理时写 \"N/A\"。E2E 用例必填")
 
 
 class WorktreeInfo(BaseModel):
