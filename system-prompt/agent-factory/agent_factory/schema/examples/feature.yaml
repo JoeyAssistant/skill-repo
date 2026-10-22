@@ -4,6 +4,8 @@ title: 001-income-module
 desc: |
   用户原话："我想记收入，现在只有支出模块，月底看不到净收支。"
 
+summary: 解决月底看不到净收支的问题，新增收入模块，方案是收入录入 + 按月汇总，与支出联合分析。
+
 background:
   pain_point: |
     现有 expense 模块只记支出，无法看到完整财务画像。

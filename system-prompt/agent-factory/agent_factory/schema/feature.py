@@ -68,6 +68,8 @@ class Feature(BaseModel):
     id: int = Field(..., ge=1, le=999, description="feature 编号")
     title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
     desc: str = Field(..., description="用户原始需求描述（create 时必填）")
+    summary: Optional[str] = Field(None,
+        description="一句话总结：解决什么问题、做了什么优化、大致方案（需求收集阶段由 PM 提炼；列表/续接时用于快速判断需求内容）")
 
     background: Optional[Background] = Field(None, description="需求背景（draft 阶段填）")
     source_issue: Optional[int] = Field(None, ge=1, le=999,

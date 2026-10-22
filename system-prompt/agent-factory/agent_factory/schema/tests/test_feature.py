@@ -102,6 +102,18 @@ def test_feature_minimal_valid():
     assert feature.e2e_test_cases == []
 
 
+def test_feature_summary_optional():
+    """summary 可选：存量 FEATURE.yaml 无 summary 仍合法。"""
+    feature = Feature(**_valid_feature_kwargs())
+    assert feature.summary is None
+
+
+def test_feature_summary_roundtrip():
+    feature = Feature(**_valid_feature_kwargs(),
+                      summary="解决 X，通过 Y 优化，方案是 Z")
+    assert feature.summary == "解决 X，通过 Y 优化，方案是 Z"
+
+
 def test_feature_missing_desc_fails():
     kw = _valid_feature_kwargs()
     del kw["desc"]

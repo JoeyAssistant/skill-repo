@@ -103,6 +103,7 @@
 - id # feature编号
 - title # feature标题，与目录一致
 - desc # 需求描述
+- summary # 一句话总结：解决什么问题、做了什么优化、大致方案（需求收集阶段 PM 提炼；列表与续接时用于快速判断需求内容）
 - source_issue # 来源 issue 编号（由 issue 转换而来时写入）
 - background # 需求背景，为什么要做这个需求
     - pain_point # 解决什么痛点

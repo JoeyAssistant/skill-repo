@@ -100,6 +100,39 @@ def test_feature_new_default_priority(tmp_path, monkeypatch):
     assert idx["features"][0]["priority"] == "P2"  # default
 
 
+def test_feature_new_with_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".features").mkdir()
+    (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "new",
+        "--title", "收入管理",
+        "--slug", "income-module",
+        "--desc", "用户原话：我想记收入",
+        "--summary", "解决看不到净收支的问题，新增收入模块，方案是录入+按月汇总",
+    ])
+    assert result.exit_code == 0, result.output
+
+    data = load_yaml(tmp_path / ".features" / "001-income-module" / "FEATURE.yaml")
+    assert data["summary"] == "解决看不到净收支的问题，新增收入模块，方案是录入+按月汇总"
+
+
+def test_feature_new_without_summary_is_unchanged(tmp_path, monkeypatch):
+    """回归：不传 --summary 时不写 summary 键。"""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".features").mkdir()
+    (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x", "--desc", "d"])
+    assert result.exit_code == 0, result.output
+
+    data = load_yaml(tmp_path / ".features" / "001-x" / "FEATURE.yaml")
+    assert data.get("summary") is None
+
+
 def test_feature_new_increments_id(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".features").mkdir()
@@ -127,6 +160,22 @@ def test_feature_set_desc(tmp_path, monkeypatch):
 
     feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
     assert feat["desc"] == "新的需求描述"
+
+
+def test_feature_set_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "set", "1", "summary",
+        "解决看不到净收支的问题，新增收入模块，方案是录入+按月汇总",
+    ])
+    assert result.exit_code == 0, result.output
+    assert "Updated feature 1" in result.output
+
+    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
+    assert feat["summary"] == "解决看不到净收支的问题，新增收入模块，方案是录入+按月汇总"
 
 
 def test_feature_set_background_sub(tmp_path, monkeypatch):
@@ -363,6 +412,20 @@ def test_feature_show_markdown_default(tmp_path, monkeypatch):
     assert "test desc" in result.output
 
 
+def test_feature_show_renders_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+    feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
+    data = load_yaml(feat_file)
+    data["summary"] = "解决看不到净收支的问题，新增收入模块"
+    feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "show", "1"])
+    assert result.exit_code == 0, result.output
+    assert "**Summary**: 解决看不到净收支的问题，新增收入模块" in result.output
+
+
 def test_feature_show_renders_new_structure(tmp_path, monkeypatch):
     """Verify markdown show renders background, spec, e2e_test_cases."""
     monkeypatch.chdir(tmp_path)
@@ -422,6 +485,36 @@ def test_feature_list_default_table(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "1" in result.output
     assert "001-test-feature" in result.output
+
+
+def test_feature_list_table_includes_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+    feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
+    data = load_yaml(feat_file)
+    data["summary"] = "解决看不到净收支的问题"
+    feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "list"])
+    assert result.exit_code == 0, result.output
+    assert "解决看不到净收支的问题" in result.output
+
+
+def test_feature_list_json_includes_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+    feat_file = tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml"
+    data = load_yaml(feat_file)
+    data["summary"] = "解决看不到净收支的问题"
+    feat_file.write_text(yaml.safe_dump(data, allow_unicode=True))
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "list", "--format", "json"])
+    assert result.exit_code == 0, result.output
+    import json
+    rows = json.loads(result.output)
+    assert rows[0]["summary"] == "解决看不到净收支的问题"
 
 
 def test_feature_list_filter_by_status(tmp_path, monkeypatch):

@@ -48,7 +48,10 @@ def feature_group() -> None:
 )
 @click.option("--parent", "parent_id", type=int, default=None,
               help="父 feature 编号（拆分出的子 feature 才有；同时把本 feature 登记进父的 children）")
-def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None) -> None:
+@click.option("--summary", default=None,
+              help="一句话总结：解决什么问题、做了什么优化、大致方案（后续可用 feature set 补）")
+def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None,
+        summary: str | None) -> None:
     """Create new feature (status=draft).
 
     Directory name: <NNN>-<slug> (e.g., 001-income-module).
@@ -98,6 +101,7 @@ def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None) 
             id=feature_id,
             title=dir_name,  # title field = directory name
             desc=desc,
+            summary=summary,
             parent=parent_id,
         )
     except ValidationError as exc:
@@ -129,7 +133,7 @@ def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None) 
 
 
 # Fields that route to FEATURE.yaml (plain scalars)
-SCALAR_FIELDS = {"desc", "source_issue"}
+SCALAR_FIELDS = {"desc", "summary", "source_issue"}
 
 # Subfields of background that can be set individually
 BACKGROUND_SUBFIELDS = {"pain_point", "benefit"}
@@ -360,6 +364,10 @@ def _render_feature_markdown(feature: Feature) -> str:
     lines = [
         f"# Feature {feature.id}: {feature.title}",
         "",
+    ]
+    if feature.summary:
+        lines += [f"**Summary**: {feature.summary}", ""]
+    lines += [
         f"**Desc**: {feature.desc}",
         "",
     ]
@@ -420,6 +428,21 @@ def _render_feature_markdown(feature: Feature) -> str:
     return "\n".join(lines)
 
 
+def _summary_for(title: str) -> str | None:
+    """从 FEATURE.yaml 读取 summary（index 不维护 summary，避免双写）。"""
+    path = Path(".features") / title / "FEATURE.yaml"
+    if not path.exists():
+        return None
+    try:
+        data = load_yaml(path)
+    except (OSError, yaml.YAMLError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    value = data.get("summary")
+    return value if isinstance(value, str) else None
+
+
 @feature_group.command("list")
 @click.option("--status", type=click.Choice([s.value for s in FeatureStatus]), help="Filter by status")
 @click.option("--priority", type=click.Choice([p.value for p in Priority]), help="Filter by priority")
@@ -438,12 +461,20 @@ def list_features(status: str | None, priority: str | None, fmt: str) -> None:
     if priority:
         items = [i for i in items if i.priority.value == priority]
 
+    summaries = {item.id: _summary_for(item.title) for item in items}
+
     if fmt == "json":
-        click.echo(json.dumps([i.model_dump(mode="json") for i in items], ensure_ascii=False, indent=2))
-    else:
-        click.echo(f"{'ID':<5} {'STATUS':<15} {'PRIORITY':<10} TITLE")
+        rows = []
         for item in items:
-            click.echo(f"{item.id:<5} {item.status.value:<15} {item.priority.value:<10} {item.title}")
+            row = item.model_dump(mode="json")
+            row["summary"] = summaries[item.id]
+            rows.append(row)
+        click.echo(json.dumps(rows, ensure_ascii=False, indent=2))
+    else:
+        click.echo(f"{'ID':<5} {'STATUS':<15} {'PRIORITY':<10} {'TITLE':<45} SUMMARY")
+        for item in items:
+            summary = summaries[item.id] or "-"
+            click.echo(f"{item.id:<5} {item.status.value:<15} {item.priority.value:<10} {item.title:<45} {summary}")
 
 
 # State machine: allowed transitions
