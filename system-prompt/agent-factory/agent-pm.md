@@ -107,7 +107,7 @@
 - source_issue # 来源 issue 编号（由 issue 转换而来时写入）
 - background # 需求背景，为什么要做这个需求
     - pain_point # 业务痛点：谁+场景+阻碍/代价+后果，≤150 字；PM 在需求收集阶段提炼写入（可基于用户原话与 issue 结论，禁止机械搬运），不写根因/方案/证据清单
-    - benefit # 带来什么收益
+    - benefit # 收益：做完后谁/什么系统能怎样、不再付出什么代价；与 pain_point 对应（代价的消除），不写改动动作与工作量（动作进 spec）
 - spec # 需求规格
     - module # 改动所在模块名，或 backend / frontend / skill / mcp
         - functions # 功能、修改点
