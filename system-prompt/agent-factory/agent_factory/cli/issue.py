@@ -106,7 +106,12 @@ def new(title: str, slug: str, desc: str, priority: str) -> None:
 @click.option("--file", "file_path", type=click.Path(exists=True, path_type=Path),
               help="Read value from file")
 def set_field(issue_id: int, field: str, value: str | None, file_path: Path | None) -> None:
-    """Update a field in ISSUE.yaml. Title is immutable (equals directory name)."""
+    """Update a field in ISSUE.yaml. Title is immutable (equals directory name).
+
+    传值约定：多行长文本（desc / scenario / impact 等）统一 `--file <path>` 传值——
+    inline 传参在含引号 / $ / 反引号 / # 时 shell 转义不可靠，内容会静默截断或损坏；
+    --file 原样读入零转义。
+    """
     if field not in ISSUE_FIELDS:
         click.echo(format_error("InvalidField",
                                 f"Field '{field}' not supported. Valid: {sorted(ISSUE_FIELDS)}",

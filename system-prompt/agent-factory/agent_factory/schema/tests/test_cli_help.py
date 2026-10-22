@@ -71,3 +71,39 @@ def test_issue_close_help_shows_reason_options():
 def test_issue_convert_help():
     out = _help_output("issue", "convert")
     assert "--slug" in out
+
+
+def test_feature_help_shows_exit_codes():
+    """feature group help 含退出码表（与 worktree / lock 对齐）."""
+    out = _help_output("feature")
+    assert "退出码" in out
+    assert "0 成功 / 1 校验失败 / 2 资源不存在 / 3 状态机违规 / 4 参数错误" in out
+
+
+def test_issue_help_shows_exit_codes():
+    """issue group help 含退出码表."""
+    out = _help_output("issue")
+    assert "退出码" in out
+    assert "0 成功 / 1 校验失败 / 2 资源不存在 / 3 状态机违规 / 4 参数错误" in out
+
+
+def test_feature_set_help_shows_file_convention():
+    """set help 含 --file 传值约定（多行长文本不用 inline）."""
+    out = _help_output("feature", "set")
+    assert "--file" in out
+    assert "转义" in out
+
+
+def test_issue_set_help_shows_file_convention():
+    out = _help_output("issue", "set")
+    assert "--file" in out
+    assert "转义" in out
+
+
+def test_missing_option_exits_4():
+    """框架层参数解析错误（缺必填参数）映射为 exit 4「参数错误」.
+
+    click UsageError 默认 exit 2，会与「资源不存在」撞车；CLI 在入口统一改映射。
+    """
+    result = CliRunner().invoke(main, ["feature", "new"])
+    assert result.exit_code == 4

@@ -145,7 +145,12 @@ BACKGROUND_SUBFIELDS = {"pain_point", "benefit"}
               help="Delete spec.<module>（仅对 spec.<module> 路径生效）")
 def set_field(feature_id: int, field: str, value: str | None,
               file_path: Path | None, remove: bool) -> None:
-    """Update FEATURE.yaml. 支持嵌套路径：background.pain_point / spec.<module>"""
+    """Update FEATURE.yaml. 支持嵌套路径：background.pain_point / spec.<module>
+
+    传值约定：多行长文本（desc / background / spec 等）统一 `--file <path>` 传值——
+    inline 传参在含引号 / $ / 反引号 / # 时 shell 转义不可靠，内容会静默截断或损坏；
+    --file 原样读入零转义。
+    """
     # --- parse field path ---
     head, _, sub = field.partition(".")
 

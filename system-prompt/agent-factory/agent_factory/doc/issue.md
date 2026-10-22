@@ -7,3 +7,7 @@ CLI 侧约定：
 
 - 状态文件：`.issues/<NNN>-<slug>/ISSUE.yaml`（单条）+ `.issues/index.yaml`（索引行）
 - 子命令与参数见 `agent-factory issue <cmd> --help`
+
+## 退出码
+
+0 成功 / 1 校验失败 / 2 资源不存在 / 3 状态机违规 / 4 参数错误
