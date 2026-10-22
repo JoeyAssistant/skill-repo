@@ -229,7 +229,7 @@ def test_issue_convert_creates_feature_and_closes(tmp_path, monkeypatch):
     assert feature["id"] == 1
     assert feature["desc"] == "用户原始描述"
     assert feature["source_issue"] == 1
-    assert feature["background"]["pain_point"] == "影响范围"
+    assert feature.get("background") is None  # pain_point 由 PM 重新提炼写入，不从 impact 搬运
 
     feat_idx = load_yaml(tmp_path / ".features" / "index.yaml")
     assert feat_idx["features"][0]["status"] == "draft"

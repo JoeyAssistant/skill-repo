@@ -106,7 +106,7 @@
 - summary # 一句话总结：解决什么问题、做了什么优化、大致方案（需求收集阶段 PM 提炼；列表与续接时用于快速判断需求内容）
 - source_issue # 来源 issue 编号（由 issue 转换而来时写入）
 - background # 需求背景，为什么要做这个需求
-    - pain_point # 解决什么痛点
+    - pain_point # 业务痛点：谁+场景+阻碍/代价+后果，≤150 字；PM 在需求收集阶段提炼写入（可基于用户原话与 issue 结论，禁止机械搬运），不写根因/方案/证据清单
     - benefit # 带来什么收益
 - spec # 需求规格
     - module # 改动所在模块名，或 backend / frontend / skill / mcp
@@ -723,7 +723,7 @@ sequenceDiagram
 
 - 一个 issue 只转一个 feature
 - `Issue.result.feature_id` → `Feature.source_issue` 单向关联
-- `issue convert` 创建 feature 时承接 `desc`，并将 `impact` 写入 `background.pain_point`
+- `issue convert` 创建 feature 时承接 `desc` 与 `source_issue`；`background.pain_point` 不搬运 `impact`，由 PM 基于 issue 结论提炼一版、经用户确认后写入
 - `scenario` / `root_cause` / `fix_plan` 留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储
 - 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 

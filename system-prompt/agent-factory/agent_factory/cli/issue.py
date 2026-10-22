@@ -15,7 +15,7 @@ from agent_factory.cli.common import (
     next_issue_id,
 )
 from agent_factory.schema import (
-    Background, ClosedResult, ConvertedResult, Feature, FeatureIndex,
+    ClosedResult, ConvertedResult, Feature, FeatureIndex,
     FeatureIndexItem, FeatureStatus, Issue, IssueCloseReason, IssueIndex,
     IssueIndexItem,
 )
@@ -472,7 +472,6 @@ def convert(issue_id: int, slug: str) -> None:
         id=feature_id,
         title=dir_name,
         desc=issue.desc,
-        background=Background(pain_point=issue.impact),
         source_issue=issue.id,
     )
     feature_dir.mkdir(parents=True)
