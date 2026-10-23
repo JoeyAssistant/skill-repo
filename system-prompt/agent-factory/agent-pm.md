@@ -146,7 +146,9 @@ sequenceDiagram
 
     pm->>feat: create(id + title)
     pm->>user: 需求信息收集
-    pm->>feat: background
+    pm->>+user: summary + background 提炼稿 review
+    user->>-pm: 确认
+    pm->>feat: write summary + background
 
     pm->>feat: set designing
     pm->>+user: 确认基线分支（列候选）
@@ -240,6 +242,8 @@ sequenceDiagram
     end
     pm->>pm: worktree remove（清目录+删分支+清记录）
 ```
+
+**硬规则（流程约束）**：需求信息收集完成后，PM 先给出 `summary` + `background`（pain_point / benefit）提炼稿，经用户确认后才能写入 FEATURE.yaml；用户确认前不得 `feature set` 这两个字段。
 
 #### 3.3.1 question resolve要求
 
