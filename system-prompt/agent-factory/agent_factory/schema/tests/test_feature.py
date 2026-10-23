@@ -114,6 +114,11 @@ def test_feature_summary_roundtrip():
     assert feature.summary == "解决 X，通过 Y 优化，方案是 Z"
 
 
+def test_feature_summary_too_long_fails():
+    with pytest.raises(ValidationError):
+        Feature(**_valid_feature_kwargs(), summary="一" * 51)
+
+
 def test_feature_missing_desc_fails():
     kw = _valid_feature_kwargs()
     del kw["desc"]

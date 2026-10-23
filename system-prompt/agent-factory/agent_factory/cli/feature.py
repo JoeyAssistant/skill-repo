@@ -49,7 +49,7 @@ def feature_group() -> None:
 @click.option("--parent", "parent_id", type=int, default=None,
               help="父 feature 编号（拆分出的子 feature 才有；同时把本 feature 登记进父的 children）")
 @click.option("--summary", default=None,
-              help="一句话总结：解决什么问题、做了什么优化、大致方案（后续可用 feature set 补）")
+              help="一句话总结（≤50 字）：以「支持 xxx / 解决 xxx」开头（后续可用 feature set 补）")
 def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None,
         summary: str | None) -> None:
     """Create new feature (status=draft).
