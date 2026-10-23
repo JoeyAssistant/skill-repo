@@ -96,6 +96,86 @@ def test_issue_set_desc(tmp_path, monkeypatch):
     assert issue["desc"] == "新的描述"
 
 
+def test_issue_new_with_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".issues").mkdir()
+    (tmp_path / ".issues" / "index.yaml").write_text("issues: []\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "issue", "new",
+        "--title", "登录崩溃",
+        "--slug", "login-crash",
+        "--desc", "用户原话",
+        "--summary", "登录点击提交白屏，所有用户无法登录",
+    ])
+    assert result.exit_code == 0, result.output
+
+    data = load_yaml(tmp_path / ".issues" / "001-login-crash" / "ISSUE.yaml")
+    assert data["summary"] == "登录点击提交白屏，所有用户无法登录"
+
+
+def test_issue_set_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "issue", "set", "1", "summary", "登录点击提交白屏，所有用户无法登录",
+    ])
+    assert result.exit_code == 0, result.output
+
+    issue = load_yaml(tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml")
+    assert issue["summary"] == "登录点击提交白屏，所有用户无法登录"
+
+
+def test_issue_set_summary_too_long_rejected(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "set", "1", "summary", "一" * 51])
+    assert result.exit_code == 1  # ValidationError
+
+
+def test_issue_show_renders_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+    p = tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml"
+    p.write_text(p.read_text() + "summary: 登录点击提交白屏，所有用户无法登录\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "show", "1"])
+    assert result.exit_code == 0, result.output
+    assert "登录点击提交白屏，所有用户无法登录" in result.output
+
+
+def test_issue_list_table_includes_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+    p = tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml"
+    p.write_text(p.read_text() + "summary: 登录点击提交白屏\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "list"])
+    assert result.exit_code == 0, result.output
+    assert "登录点击提交白屏" in result.output
+
+
+def test_issue_list_json_includes_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+    p = tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml"
+    p.write_text(p.read_text() + "summary: 登录点击提交白屏\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "list", "--format", "json"])
+    assert result.exit_code == 0, result.output
+    import json
+    rows = json.loads(result.output)
+    assert rows[0]["summary"] == "登录点击提交白屏"
+
+
 def test_issue_set_title_rejected(tmp_path, monkeypatch):
     """title is immutable (equals directory name)."""
     monkeypatch.chdir(tmp_path)

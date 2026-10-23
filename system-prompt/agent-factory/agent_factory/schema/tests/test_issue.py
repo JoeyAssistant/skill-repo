@@ -33,6 +33,23 @@ def test_issue_extra_field_forbidden():
         Issue(id=1, title="001-test", desc="x", extra="y")
 
 
+def test_issue_summary_optional():
+    """summary 可选：存量 ISSUE.yaml 无 summary 仍合法。"""
+    issue = Issue(id=1, title="001-test", desc="d")
+    assert issue.summary is None
+
+
+def test_issue_summary_roundtrip():
+    issue = Issue(id=1, title="001-test", desc="d",
+                  summary="登录点击提交白屏，所有用户无法登录")
+    assert issue.summary == "登录点击提交白屏，所有用户无法登录"
+
+
+def test_issue_summary_too_long_fails():
+    with pytest.raises(ValidationError):
+        Issue(id=1, title="001-test", desc="d", summary="一" * 51)
+
+
 def test_converted_result_valid():
     r = ConvertedResult(feature_id=70)
     assert r.type == "converted_to_feature"

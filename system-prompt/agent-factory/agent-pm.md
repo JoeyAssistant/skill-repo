@@ -674,6 +674,7 @@ topology 以启动时检测为准，会话中途改配置不生效。
 - id # issue编号
 - title # issue标题，与目录一致
 - desc # 问题描述（用户原话）
+- summary # 一句话总结（≤50 字）：什么问题/现象+影响；信息收集阶段 PM 提炼写入，不写根因/修复方案
 - scenario # 复现场景
 - impact # 问题影响
 - root_cause # 问题根因（qa-diagnosis 填）

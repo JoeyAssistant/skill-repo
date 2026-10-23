@@ -43,7 +43,7 @@ def issue_group() -> None:
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 # Note: 'result' is special — use `issue close` command instead of `set` for it
 ISSUE_FIELDS = {
-    "desc", "scenario", "impact",
+    "desc", "summary", "scenario", "impact",
     "root_cause", "fix_plan",
 }
 
@@ -55,7 +55,9 @@ ISSUE_FIELDS = {
 @click.option("--priority", default=Priority.P2.value,
               type=click.Choice([p.value for p in Priority]),
               help="Priority (default: P2)")
-def new(title: str, slug: str, desc: str, priority: str) -> None:
+@click.option("--summary", default=None,
+              help="一句话总结（≤50 字）：什么问题/现象+影响（后续可用 issue set 补）")
+def new(title: str, slug: str, desc: str, priority: str, summary: str | None) -> None:
     """Create new issue (status=open).
 
     Directory name: <NNN>-<slug> (e.g., 001-login-crash).
@@ -78,6 +80,7 @@ def new(title: str, slug: str, desc: str, priority: str) -> None:
             id=issue_id,
             title=dir_name,
             desc=desc,
+            summary=summary,
         )
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
@@ -174,6 +177,8 @@ def show(issue_id: int, fmt: str) -> None:
         click.echo(yaml.safe_dump(issue.model_dump(mode="json"), allow_unicode=True, sort_keys=False))
     else:
         lines = [f"# Issue {issue.id}: {issue.title}", ""]
+        if issue.summary:
+            lines += [f"**Summary**: {issue.summary}", ""]
         lines += ["## Description", issue.desc, ""]
         if issue.scenario:
             lines += ["## Scenario", issue.scenario, ""]
@@ -216,32 +221,33 @@ def list_issues(status: str | None, fmt: str) -> None:
 
     feature_status = _feature_status_map()
 
-    def _feature_ref(item: IssueIndexItem) -> tuple[int | None, str | None]:
-        """Return (feature_id, feature_status) for a converted issue."""
+    def _issue_brief(item: IssueIndexItem) -> tuple[str | None, int | None, str | None]:
+        """Return (summary, feature_id, feature_status) read from ISSUE.yaml."""
         try:
             issue = Issue.model_validate(load_yaml(Path(".issues") / item.title / "ISSUE.yaml"))
         except Exception:
-            return None, None
+            return None, None, None
         if isinstance(issue.result, ConvertedResult):
-            return issue.result.feature_id, feature_status.get(issue.result.feature_id)
-        return None, None
+            return issue.summary, issue.result.feature_id, feature_status.get(issue.result.feature_id)
+        return issue.summary, None, None
 
     if fmt == "json":
         rows = []
         for item in items:
             row = item.model_dump(mode="json")
-            fid, fstatus = _feature_ref(item)
+            summary, fid, fstatus = _issue_brief(item)
+            row["summary"] = summary
             if fid is not None:
                 row["feature_id"] = fid
                 row["feature_status"] = fstatus
             rows.append(row)
         click.echo(json.dumps(rows, ensure_ascii=False, indent=2))
     else:
-        click.echo(f"{'ID':<5} {'STATUS':<12} {'PRIORITY':<10} {'FEATURE':<20} TITLE")
+        click.echo(f"{'ID':<5} {'STATUS':<12} {'PRIORITY':<10} {'FEATURE':<20} {'TITLE':<40} SUMMARY")
         for item in items:
-            fid, fstatus = _feature_ref(item)
+            summary, fid, fstatus = _issue_brief(item)
             ref = f"#{fid}({fstatus})" if fid is not None and fstatus else (f"#{fid}" if fid is not None else "-")
-            click.echo(f"{item.id:<5} {item.status.value:<12} {item.priority.value:<10} {ref:<20} {item.title}")
+            click.echo(f"{item.id:<5} {item.status.value:<12} {item.priority.value:<10} {ref:<20} {item.title:<40} {summary or '-'}")
 
 
 # Issue state machine: open → in_progress → closed

@@ -51,6 +51,8 @@ class Issue(BaseModel):
     id: int = Field(..., ge=1, le=999, description="issue 编号")
     title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
     desc: str = Field(..., description="用户原始描述（create 时填，保留原话）")
+    summary: Optional[str] = Field(None, max_length=50,
+        description="一句话总结（≤50 字）：什么问题/现象+影响；信息收集阶段 PM 提炼写入，不写根因/修复方案")
 
     # PM 加工后填（信息收集阶段）
     scenario: Optional[str] = Field(None,
