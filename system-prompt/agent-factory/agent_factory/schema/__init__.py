@@ -14,6 +14,8 @@ from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Fe
 from agent_factory.schema.issue import (
     ClosedResult,
     ConvertedResult,
+    EvidenceItem,
+    EvidenceType,
     Issue,
     IssueCloseReason,
     IssueResult,
@@ -40,6 +42,8 @@ __all__ = [
     # Issue
     "Issue",
     "IssueCloseReason",
+    "EvidenceItem",
+    "EvidenceType",
     "ConvertedResult",
     "ClosedResult",
     "IssueResult",

@@ -1,39 +1,59 @@
 id: 1
 title: 001-login-crash
 user_input: |
-  用户反馈：登录页面点击提交就崩溃了，控制台报错 token undefined。
-
   用户原话："今天早上想登录查账户，结果一点提交就白屏，刷新也没用。"
 
 summary: 登录点击提交白屏，所有用户无法登录
 
 scenario: |
-  现象：登录页面点击提交后页面崩溃。
-  复现步骤：
-  1. 打开 /login
-  2. 输入 admin / 123456
-  3. 点击"登录"
-  环境：生产，Chrome 120，commit abc1234。
+  运维同事在早高峰登录账户查数据，在登录页输入账号密码后点击「登录」，
+  页面没有跳转，直接白屏，刷新后仍停在同一页面。
+
+repro_steps: |
+  1. dev 启动服务：./scripts/start.sh --dev
+  2. 打开 http://localhost:9088/login
+  3. 输入已存在账号，密码故意输错
+  4. 点击「登录」
+
+  修复前：页面白屏，控制台报 token undefined。
 
 impact: |
-  问题点：login.py L42 取 token 时未做空值判断。
-  影响范围：所有用户无法登录，P1。
+  所有用户在密码输错时都会白屏，看不到「密码错误」提示，登录入口在早高峰实际不可用。
+  线上每天约 200 次登录失败，全部表现为白屏，P1。
 
 root_cause: |
-  login.py L42 未做空值判断；后端密码错误时返回的 JSON 没有 token 字段。
+  后端密码错误时返回的响应体没有 token 字段，前端登录处理假定 token 一定存在，
+  直接读取导致 undefined 并抛出异常。页面没有错误边界，异常最终表现为整页白屏。
+
+evidence:
+  - step: 1
+    claim: 密码错误时后端返回 401，响应体不含 token 字段
+    type: log
+    locator: prod log/server.log:118
+    snippet: |
+      POST /login 401 {"error": "invalid_grant"}
+  - step: 2
+    claim: 前端登录处理只判断 response.ok，非 200 时仍继续读取 token
+    type: code
+    locator: src/frontend/login.js:52-60 @ 3f9c2ab
+    snippet: |
+      const data = await res.json();
+      localStorage.setItem("token", data.token);
+      if (!res.ok) throw new Error(data.message);
+
+log_gap: |
+  现状：登录失败只记录 HTTP 状态码，没有记录错误类型，也看不出前端是否读到了 token。
+  需补充：401 响应日志增加 error 字段；前端白屏时上报一次带页面路由与错误栈的事件。
 
 fix_plan: |
-  ## 问题分析
-  前端假设 token 一定存在，后端在错误响应里省略了 token。
+  方向：把「认证失败」和「服务异常」分开处理，认证失败不再进入通用兜底分支。
 
-  ## 修复方向
-  - 文件：cli/login.py
-  - 函数：handle_login (L40-L60)
-  - 改动：加 token 存在性校验
-  - 回归测试：test_login_wrong_password_returns_error
+  关键改动点：
+  - 登录处理先判断 HTTP 401，读取响应体里的错误类型并展示给用户
+  - 其他非 200 响应继续走通用错误提示
+  - 登录页增加错误边界，避免单个异常导致整页白屏
 
-  ## qa-diagnosis 建议
-  建议转 feature，按 feature 流程设计并验收。
+  不做：不修改后端的错误响应结构；本次只改前端对错误的解读与展示。
 
 result:
   type: converted_to_feature

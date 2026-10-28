@@ -43,8 +43,8 @@ def issue_group() -> None:
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 # Note: 'result' is special — use `issue close` command instead of `set` for it
 ISSUE_FIELDS = {
-    "user_input", "summary", "scenario", "impact",
-    "root_cause", "fix_plan",
+    "user_input", "summary", "scenario", "repro_steps", "impact",
+    "root_cause", "evidence", "log_gap", "fix_plan",
 }
 
 
@@ -111,9 +111,10 @@ def new(title: str, slug: str, user_input: str, priority: str, summary: str | No
 def set_field(issue_id: int, field: str, value: str | None, file_path: Path | None) -> None:
     """Update a field in ISSUE.yaml. Title is immutable (equals directory name).
 
-    传值约定：多行长文本（user_input / scenario / impact 等）统一 `--file <path>` 传值——
+    传值约定：多行长文本（user_input / scenario / repro_steps / evidence / impact /
+    root_cause / log_gap / fix_plan 等）统一 `--file <path>` 传值——
     inline 传参在含引号 / $ / 反引号 / # 时 shell 转义不可靠，内容会静默截断或损坏；
-    --file 原样读入零转义。
+    --file 原样读入零转义。evidence 需传 YAML 列表。
     """
     if field not in ISSUE_FIELDS:
         click.echo(format_error("InvalidField",
@@ -135,10 +136,27 @@ def set_field(issue_id: int, field: str, value: str | None, file_path: Path | No
         click.echo(format_error("NotFound", str(exc), None), err=True)
         sys.exit(2)
 
+    if field == "evidence":
+        try:
+            parsed = yaml.safe_load(new_value)
+        except yaml.YAMLError as exc:
+            click.echo(format_error("InvalidValue",
+                                    f"evidence 必须是 YAML 列表: {exc}", None), err=True)
+            sys.exit(4)
+        if not isinstance(parsed, list):
+            click.echo(format_error(
+                "InvalidValue",
+                "evidence 必须是 YAML 列表，每项为 "
+                "{step, claim, type, locator, snippet}", None), err=True)
+            sys.exit(4)
+        field_value = parsed
+    else:
+        field_value = new_value
+
     issue_path = issue_dir / "ISSUE.yaml"
     try:
         data = load_yaml(issue_path)
-        data[field] = new_value
+        data[field] = field_value
         issue = Issue.model_validate(data)
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), str(issue_path)), err=True)
@@ -182,10 +200,23 @@ def show(issue_id: int, fmt: str) -> None:
         lines += ["## User Input", issue.user_input, ""]
         if issue.scenario:
             lines += ["## Scenario", issue.scenario, ""]
+        if issue.repro_steps:
+            lines += ["## Repro Steps", issue.repro_steps, ""]
         if issue.impact:
             lines += ["## Impact", issue.impact, ""]
         if issue.root_cause:
             lines += ["## Root Cause", issue.root_cause, ""]
+        if issue.evidence:
+            lines += ["## Evidence", ""]
+            for ev in issue.evidence:
+                lines.append(f"{ev.step}. [{ev.type.value}] {ev.claim}")
+                lines.append(f"   - locator: {ev.locator}")
+                lines.append("   - snippet:")
+                for snippet_line in ev.snippet.rstrip("\n").splitlines():
+                    lines.append(f"     {snippet_line}")
+                lines.append("")
+        if issue.log_gap:
+            lines += ["## Log Gap", issue.log_gap, ""]
         if issue.fix_plan:
             lines += ["## Fix Plan", issue.fix_plan, ""]
         if issue.result:
@@ -262,6 +293,16 @@ def _has_text(value: str | None) -> bool:
     return bool((value or "").strip())
 
 
+def _missing_diagnosis(issue: Issue) -> list[str]:
+    """Return missing diagnosis-field messages (qa proposes, PM confirms and writes)."""
+    missing: list[str] = []
+    for field in ("root_cause", "fix_plan", "repro_steps", "log_gap"):
+        if not _has_text(getattr(issue, field)):
+            missing.append(
+                f"{field} is empty (qa-diagnosis proposes, PM confirms and fills)")
+    return missing
+
+
 def _validate_close(issue: Issue, current_status: IssueStatus) -> list[str]:
     """Return missing-field messages for closing an issue."""
     if issue.result is None:
@@ -270,13 +311,12 @@ def _validate_close(issue: Issue, current_status: IssueStatus) -> list[str]:
     if isinstance(issue.result, ConvertedResult):
         if current_status != IssueStatus.IN_PROGRESS:
             missing.append("convert requires in_progress")
-        if not _has_text(issue.root_cause):
-            missing.append("root_cause is empty (qa-diagnosis must fill)")
-        if not _has_text(issue.fix_plan):
-            missing.append("fix_plan is empty (qa-diagnosis must fill)")
+        missing.extend(_missing_diagnosis(issue))
     elif isinstance(issue.result, ClosedResult):
         if not issue.result.reason.strip():
             missing.append("reason is empty")
+        if issue.result.reason_type == IssueCloseReason.NO_ACTION:
+            missing.extend(_missing_diagnosis(issue))
     return missing
 
 
@@ -310,14 +350,16 @@ def transition(issue_id: int, target: str) -> None:
         ), err=True)
         sys.exit(3)
 
-    # Cross-field validation: open → in_progress requires scenario + impact
+    # Cross-field validation: open → in_progress requires summary + scenario + impact
     if current_status == IssueStatus.OPEN and target_status == IssueStatus.IN_PROGRESS:
         issue = Issue.model_validate(load_yaml(issue_dir / "ISSUE.yaml"))
         missing = []
-        if not (issue.scenario or "").strip():
-            missing.append("scenario is empty (PM must fill via `agent-factory issue set <id> scenario ...`)")
-        if not (issue.impact or "").strip():
-            missing.append("impact is empty (PM must fill via `agent-factory issue set <id> impact ...`)")
+        if not _has_text(issue.summary):
+            missing.append("summary is empty (PM must confirm with user and fill via `issue set`)")
+        if not _has_text(issue.scenario):
+            missing.append("scenario is empty (PM must confirm with user and fill via `issue set`)")
+        if not _has_text(issue.impact):
+            missing.append("impact is empty (PM must confirm with user and fill via `issue set`)")
         if missing:
             click.echo(format_error(
                 "ValidationError",
@@ -410,8 +452,9 @@ def close(issue_id: int, reason_type: str, reason: str) -> None:
 def convert(issue_id: int, slug: str) -> None:
     """Convert issue to feature and close it as converted_to_feature.
 
-    Requires the issue to be in_progress with root_cause + fix_plan filled.
-    Creates a feature, copies user_input + impact, and links source_issue.
+    Requires the issue to be in_progress with root_cause + fix_plan +
+    repro_steps + log_gap filled (qa-diagnosis proposes, PM confirms).
+    Creates a feature from user_input and links source_issue.
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -450,11 +493,7 @@ def convert(issue_id: int, slug: str) -> None:
         ), err=True)
         sys.exit(3)
 
-    missing = []
-    if not _has_text(issue.root_cause):
-        missing.append("root_cause is empty (qa-diagnosis must fill)")
-    if not _has_text(issue.fix_plan):
-        missing.append("fix_plan is empty (qa-diagnosis must fill)")
+    missing = _missing_diagnosis(issue)
     if missing:
         click.echo(format_error(
             "ValidationError",

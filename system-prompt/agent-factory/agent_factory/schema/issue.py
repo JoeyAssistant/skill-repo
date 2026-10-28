@@ -24,6 +24,26 @@ class IssueCloseReason(str, Enum):
     NO_ACTION = "no_action"
 
 
+class EvidenceType(str, Enum):
+    """证据类型."""
+    CODE = "code"
+    LOG = "log"
+    DATA = "data"
+
+
+class EvidenceItem(BaseModel):
+    """有序证据链中的一步."""
+    model_config = ConfigDict(extra="forbid")
+    step: int = Field(..., ge=1, description="推理顺序，从 1 递增")
+    claim: str = Field(...,
+        description="这一步得出的断言（一句话）；支撑/排除、推断边界都写在这里")
+    type: EvidenceType = Field(..., description="证据类型：code / log / data")
+    locator: str = Field(...,
+        description="证据位置：code 用 path:line @ <commit SHA>；log/data 用绝对路径 + 行号")
+    snippet: str = Field(...,
+        description="locator 处的原文片段，不改写；统计结论放 claim")
+
+
 class ConvertedResult(BaseModel):
     """转 feature 的处理结果."""
     model_config = ConfigDict(extra="forbid")
@@ -57,20 +77,28 @@ class Issue(BaseModel):
 
     id: int = Field(..., ge=1, le=999, description="issue 编号")
     title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
-    user_input: str = Field(..., description="用户原始描述（create 时填，保留原话）")
+    user_input: str = Field(...,
+        description="用户原始输入：直接上报的问题保留原话；多轮讨论产出的问题由 PM 总结成一段")
     summary: Optional[str] = Field(None, max_length=50,
         description="一句话总结（≤50 字）：什么问题/现象+影响；信息收集阶段 PM 提炼写入，不写根因/修复方案")
 
     # PM 加工后填（信息收集阶段）
     scenario: Optional[str] = Field(None,
-        description="问题场景：如何复现（PM 与用户讨论后填）")
+        description="用户使用场景与操作：谁 + 在什么情况下 + 系统呈现什么状态；≤200 字；不写原因、代价、代码路径（PM 信息收集，用户确认后写入）")
+    repro_steps: Optional[str] = Field(None,
+        description="复现步骤：dev 可机械执行、输入取确定值、只写修复前观察；不写背景与影响（qa-diagnosis 提案，PM 确认后写入）")
     impact: Optional[str] = Field(None,
-        description="问题影响：问题点 + 影响范围")
+        description="损害与范围：丢了什么 + 影响多少 + 多严重 + 频率；不复述现象与复现步骤")
 
-    # QA 诊断产出
-    root_cause: Optional[str] = Field(None, description="根因")
+    # QA 诊断产出（提案，PM 确认后写入）
+    root_cause: Optional[str] = Field(None,
+        description="根因结论：2～3 句；不写证据、文件路径、推理过程")
+    evidence: Optional[list[EvidenceItem]] = Field(None,
+        description="有序证据链；可选；顺序即推理顺序，被排除的假设也作为一步写入")
+    log_gap: Optional[str] = Field(None,
+        description="维测日志缺口：缺了什么信息、导致判断不了什么、应在哪里补；日志充足时写 N/A")
     fix_plan: Optional[str] = Field(None,
-        description="qa-diagnosis 给的定位结论与修复方向（含问题分析 + 处理方向）")
+        description="修复方向：方向 + 关键改动点 + 不做；不写文件、函数、行号（qa-diagnosis 提案，PM 与用户讨论后写入）")
 
     # 处理结果（closed 时必填）
     result: Optional[IssueResult] = Field(None,

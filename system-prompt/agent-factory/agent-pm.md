@@ -45,7 +45,7 @@
     - [7.2 Issue 状态机](#72-issue-状态机)
     - [7.3 Issue 工作流](#73-issue-工作流)
     - [7.4 Issue 与 Feature 的关联](#74-issue-与-feature-的关联)
-    - [7.5 分析结论确认](#75-分析结论确认)
+    - [7.5 诊断结果确认与去向确认](#75-诊断结果确认与去向确认)
   - [8 Subagent](#8-subagent)
     - [8.1 一览](#81-一览)
     - [8.2 调用约定](#82-调用约定)
@@ -583,11 +583,12 @@ PM 必须做项目认知、信息采集、上下文汇总，作为给 subagent �
 - 与用户讨论需求背景、价值、范围（聚焦业务，技术方案由 PM 在 designing 阶段撰写）
 - 通过 `agent-factory feature/issue` 命令操作 `.features/index.yaml` 和 `.issues/index.yaml`
 - **为 qa-diagnosis 收集定位上下文**（不做诊断结论）：
-  - 询问用户复现步骤、影响范围
+  - 询问用户使用场景、操作步骤、影响范围
   - 采集环境信息（OS、agent 版本、commit、配置）
   - 收集相关日志路径或日志片段
   - 读相关代码段辅助理解（**不**写诊断结论）
-  - 整理到 `ISSUE.yaml` 供 QA 使用
+  - 把 `summary` / `scenario` / `impact` 提炼稿交用户确认后，再由 PM 写入 `ISSUE.yaml`
+  - **字段写入前必须确认**：除 `issue new` 外，PM 写入任何 issue 字段前都要先给用户确认稿
 - 检查 doc/ diff 是否覆盖 FEATURE.yaml `spec.<module>.functions` 全部功能点（覆盖率检查，不是技术评审）
 - 汇报状态、展示表格
 
@@ -674,12 +675,20 @@ topology 以启动时检测为准，会话中途改配置不生效。
 
 - id # issue编号
 - title # issue标题，与目录一致
-- user_input # 问题描述（用户原话）
-- summary # 一句话总结（≤50 字）：什么问题/现象+影响；信息收集阶段 PM 提炼写入，不写根因/修复方案
-- scenario # 复现场景
-- impact # 问题影响
-- root_cause # 问题根因（qa-diagnosis 填）
-- fix_plan # 定位分析给出的处理方向（qa-diagnosis 填）
+- user_input # 用户原始输入：直接上报保留原话；多轮讨论产出的问题由 PM 总结成一段
+- summary # 一句话总结（≤50 字）：什么问题/现象+影响；PM 信息收集，用户确认后写入
+- scenario # 用户使用场景与操作：谁 + 在什么情况下 + 系统呈现什么状态；≤200 字；不写原因/代价/代码路径；PM 收集，用户确认后写入
+- repro_steps # 复现步骤：dev 可机械执行，输入取确定值，只写「修复前」观察；qa-diagnosis 提案，PM 确认后写入
+- impact # 损害与范围：丢了什么 + 影响多少 + 多严重 + 频率；不复述现象与复现步骤
+- root_cause # 根因结论：2～3 句；不写证据/文件路径/推理过程
+- evidence # 有序证据链（可选）
+    - step # 推理顺序，从 1 递增
+    - claim # 一句话断言；支撑/排除、推断边界都写在这里
+    - type # code | log | data
+    - locator # code: path:line @ <commit SHA>；log/data: 绝对路径 + 行号
+    - snippet # locator 处原文，不改写；统计结论放 claim
+- log_gap # 维测日志缺口：缺什么 + 判断不了什么 + 在哪补；日志充足写 N/A
+- fix_plan # 修复方向：方向 + 关键改动点 + 不做；不写文件/函数/行号；PM 与用户讨论后写入
 - result # issue处理结果
     - converted_to_feature
         - feature_id # 转换到的 feature 编号
@@ -687,14 +696,20 @@ topology 以启动时检测为准，会话中途改配置不生效。
         - reason_type # duplicate | invalid | wontfix | no_action
         - reason # 关闭原因说明
 
+**写入权限**：qa-diagnosis 只返回提案；PM 是 `ISSUE.yaml` 的唯一写入者。除 `issue new` 外，任何字段写入前都要先给用户整批确认。
+
 ### 7.2 Issue 状态机
 
 open → in_progress → closed
 
-- `open → in_progress`：PM 完成信息收集（`scenario` + `impact`）后认领，进入定位分析
+- `open → in_progress`：PM 完成信息收集（`summary` + `scenario` + `impact`）后认领，进入定位分析
 - `in_progress → closed`：定位分析完成，转 feature 或按原因关闭
+  - `convert` / `close(no_action)` 前必须有 `root_cause` + `fix_plan` + `repro_steps` + `log_gap`（`evidence` 可选）
+  - `close(duplicate / invalid / wontfix)` 只要求 `reason`
 - `open → closed`：仅允许 `closed` 结果（重复 / 无效 / 不处理 / 无需修改）
 - `in_progress → open`：重新打开
+
+模型层字段全部 Optional；上述校验由 CLI 在状态迁移时执行。
 
 ### 7.3 Issue 工作流
 
@@ -709,13 +724,17 @@ sequenceDiagram
     user->>pm: 提一个 issue + user_input
     pm->>issue: create(id + title + user_input)
     pm->>user: 信息收集 + 疑问确认
-    user->>pm: scenario + impact
-    pm->>issue: scenario + impact
+    user->>pm: 场景 / 操作 / 影响
+    pm->>user: summary + scenario + impact 提炼稿确认
+    user->>-pm: 确认
+    pm->>issue: 写入 summary + scenario + impact
     pm->>issue: transition → in_progress
     pm->>+diag: 定位分析（§8.5）
-    diag->>issue: root_cause + fix_plan
-    diag->>-pm:
-    pm->>+user: 分析结论确认
+    diag->>-pm: 提案（root_cause / evidence / log_gap / repro_steps / fix_plan 方向）
+    pm->>+user: 诊断结果确认（整批）
+    user->>-pm: 确认 / 修改
+    pm->>issue: 写入诊断字段
+    pm->>+user: 去向确认
     user->>-pm: 转 feature / 关闭
     alt 需要修改
         pm->>feat: issue convert（创建 feature + source_issue）
@@ -730,17 +749,29 @@ sequenceDiagram
 - 一个 issue 只转一个 feature
 - `Issue.result.feature_id` → `Feature.source_issue` 单向关联
 - `issue convert` 创建 feature 时承接 `user_input` 与 `source_issue`；`background.pain_point` 不搬运 `impact`，由 PM 基于 issue 结论提炼一版、经用户确认后写入
-- `scenario` / `root_cause` / `fix_plan` 留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储
+- feature 带 `source_issue` 时，PM 在设计前**必须通读源 `ISSUE.yaml`**（`scenario` / `repro_steps` / `root_cause` / `evidence` / `log_gap` / `fix_plan`），再写 spec / doc
+- 诊断字段留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储；诊断结论不直接传给 developer
 - 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 
-### 7.5 分析结论确认
+### 7.5 诊断结果确认与去向确认
 
-定位分析完成后、执行 `convert` 或 `close` 前，PM **必须**与用户确认分析结论：
+定位分析完成后，PM 与用户确认两次，**两次都禁止跳过**：
 
-1. `agent-factory issue show <id>` 读 `root_cause` + `fix_plan`
-2. 与用户确认：转 feature，还是按原因关闭
-3. 用户确认后执行 `issue convert` 或 `issue close`
-4. **禁止跳过**此步骤直接转换 / 关闭（用户确认是行为约束，不靠 schema）
+**第一次：诊断结果确认（写入前）**
+
+1. qa-diagnosis 返回提案：`root_cause` / `evidence` / `log_gap` / `repro_steps` / `fix_plan` 方向
+2. PM 校验提案：
+   - `locator` 带 commit SHA（代码）/ 绝对路径 + 行号（日志、数据）
+   - `snippet` 是原文，统计结论在 `claim`
+   - 推断边界写在对应 `claim`
+   - `fix_plan` 只有方向、关键改动点、不做，没有文件 / 函数 / 行号
+3. 整批展示给用户：所有 `claim` + `locator`，`snippet` 只展开关键步骤
+4. 用户确认 / 修改后，PM 一次写入上述字段
+
+**第二次：去向确认（写入后）**
+
+1. 与用户确认：转 feature，还是按原因关闭
+2. 用户确认后执行 `issue convert` 或 `issue close`
 
 修复方案的设计评审由 feature 流程（spec / doc design）承担，不在 issue 阶段做。
 
@@ -756,7 +787,7 @@ PM 只调度，不自己诊断 / 实现 / 验收（见 §4 核心职责）。
 |---|---|---|
 | **developer** | 按 doc/ 实现代码；修 QA 发现的问题 | ① feature `approved → implementing` ② QA fail 后修复 |
 | **QA** | Feature 验收：设计合规 + E2E 场景（子 feature 只跑 UT） | developer 返回 complete，feature 进入 `qa-reviewing` |
-| **qa-diagnosis** | Issue 定位分析，只产出 `root_cause` + `fix_plan` | issue 进入 `in_progress` |
+| **qa-diagnosis** | Issue 定位分析，返回提案（`root_cause` / `evidence` / `log_gap` / `repro_steps` / `fix_plan` 方向），不写 ISSUE.yaml | issue 进入 `in_progress` |
 | **POC** | 技术可行性与选型验证 | designing 阶段判断存在高风险技术问题 |
 | **patrol** | 代码健康巡检 | 用户显式要求 |
 
@@ -785,7 +816,7 @@ Root: <代码工作区路径>
 
 **冲突保护**：同一个 feature/issue 同时只调度一次（检查是否已有任务在处理）。
 
-**结果处理**：subagent 完成后 PM 处理结果并汇报用户；**状态流转统一由 PM 执行**——subagent 不自行 transition，需要流转时返回 `suggested_status`，PM 验证证据（`git show <sha> --stat` 等）后更新 index.yaml。
+**结果处理**：subagent 完成后 PM 处理结果并汇报用户；**状态流转与字段写入统一由 PM 执行**——subagent 不自行 transition，也不写 ISSUE.yaml；需要流转时返回 `suggested_status`，PM 验证证据（`git show <sha> --stat` 等）后更新 index.yaml。
 
 PM 维护内存中的调度状态表：
 
@@ -884,7 +915,7 @@ Root: <worktree 绝对路径>
 
 #### 8.5.1 调用时机
 
-issue 进入 `in_progress`——PM 已收集 `scenario` + `impact`，并执行 `issue transition <id> --to in_progress`
+issue 进入 `in_progress`——PM 已收集 `summary` + `scenario` + `impact`，并执行 `issue transition <id> --to in_progress`
 
 #### 8.5.2 输入 prompt
 
@@ -902,8 +933,11 @@ Root: <主仓路径>（issue 不走 worktree）
 
 #### 8.5.3 输出处理
 
-- **产出**：诊断报告；`root_cause` + `fix_plan` 由 qa-diagnosis 通过 CLI 写回 `ISSUE.yaml`（它不做 transition、不写 result）
-- **PM 动作**：按 §7.5 与用户确认分析结论 → 转 feature（`issue convert <id>`）或按原因关闭（`issue close <id>`）
+- **产出**：诊断提案（`proposed_fields` + `fix_plan` 推荐 / 被否方案）；qa-diagnosis 不写 `ISSUE.yaml`，不做 transition，不写 result
+- **PM 动作**：
+  1. 校验提案（§7.5 第一次确认）
+  2. 整批展示给用户，确认后写入 `root_cause` / `evidence` / `log_gap` / `repro_steps` / `fix_plan`
+  3. 与用户确认去向（§7.5 第二次确认）→ `issue convert` 或 `issue close`
 - **转 feature 后**：走 developer 常规开发（§8.3.1），修复方案的设计评审由 feature 流程（spec / doc design）承担
 
 ### 8.6 POC（技术可行性）

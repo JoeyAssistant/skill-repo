@@ -11,6 +11,7 @@ def _setup_issue(tmp_path):
     (tmp_path / ".issues" / "001-test-issue").mkdir(parents=True)
     (tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml").write_text(
         "id: 1\ntitle: '001-test-issue'\ndesc: '用户原始描述'\n"
+        "summary: '登录点击提交白屏'\n"
     )
     (tmp_path / ".issues" / "index.yaml").write_text(
         "issues:\n  - id: 1\n    title: '001-test-issue'\n    status: open\n    priority: P2\n"
@@ -213,7 +214,7 @@ def test_issue_list_no_type_filter(tmp_path, monkeypatch):
 def test_issue_open_to_in_progress_requires_scenario_impact(tmp_path, monkeypatch):
     """open → in_progress must have scenario + impact filled."""
     monkeypatch.chdir(tmp_path)
-    _setup_issue(tmp_path)  # only has id/title/user_input
+    _setup_issue(tmp_path)  # has id/title/user_input/summary, missing scenario/impact
 
     runner = CliRunner()
     result = runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
@@ -296,6 +297,8 @@ def test_issue_convert_creates_feature_and_closes(tmp_path, monkeypatch):
     runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
     runner.invoke(main, ["issue", "set", "1", "root_cause", "根因"])
     runner.invoke(main, ["issue", "set", "1", "fix_plan", "修复方向"])
+    runner.invoke(main, ["issue", "set", "1", "repro_steps", "复现步骤"])
+    runner.invoke(main, ["issue", "set", "1", "log_gap", "N/A"])
 
     result = runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
     assert result.exit_code == 0
@@ -350,6 +353,8 @@ def test_issue_show_with_converted_result(tmp_path, monkeypatch):
     runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
     runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
     runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
+    runner.invoke(main, ["issue", "set", "1", "repro_steps", "z"])
+    runner.invoke(main, ["issue", "set", "1", "log_gap", "N/A"])
     runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
 
     result = runner.invoke(main, ["issue", "show", "1"])
@@ -358,3 +363,76 @@ def test_issue_show_with_converted_result(tmp_path, monkeypatch):
     assert "feature_id" in result.output
     assert "feature_status" in result.output
     assert "draft" in result.output
+
+
+def test_issue_set_evidence_and_show(tmp_path, monkeypatch):
+    """evidence 通过 --file 写入 YAML 列表，并在 show 中渲染."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+
+    evidence_file = tmp_path / "evidence.yaml"
+    evidence_file.write_text(
+        "- step: 1\n"
+        "  claim: 后端返回 401，响应体不含 token\n"
+        "  type: log\n"
+        "  locator: prod log/server.log:118\n"
+        "  snippet: 'POST /login 401'\n"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "issue", "set", "1", "evidence", "--file", str(evidence_file),
+    ])
+    assert result.exit_code == 0, result.output
+
+    issue = load_yaml(tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml")
+    assert issue["evidence"][0]["claim"] == "后端返回 401，响应体不含 token"
+
+    shown = runner.invoke(main, ["issue", "show", "1"])
+    assert shown.exit_code == 0
+    assert "## Evidence" in shown.output
+    assert "后端返回 401" in shown.output
+
+
+def test_issue_open_to_in_progress_requires_summary(tmp_path, monkeypatch):
+    """summary is required alongside scenario + impact."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".issues" / "001-test-issue").mkdir(parents=True)
+    (tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml").write_text(
+        "id: 1\ntitle: '001-test-issue'\nuser_input: '用户原话'\n"
+        "scenario: '场景'\nimpact: '影响'\n"
+    )
+    (tmp_path / ".issues" / "index.yaml").write_text(
+        "issues:\n  - id: 1\n    title: '001-test-issue'\n    status: open\n    priority: P2\n"
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
+    assert result.exit_code == 1
+    assert "summary is empty" in result.output
+
+
+def test_issue_close_no_action_requires_diagnosis(tmp_path, monkeypatch):
+    """close(no_action) requires diagnosis fields; wontfix does not."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+    runner = CliRunner()
+    runner.invoke(main, ["issue", "set", "1", "scenario", "x"])
+    runner.invoke(main, ["issue", "set", "1", "impact", "y"])
+    runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
+
+    result = runner.invoke(main, [
+        "issue", "close", "1", "--reason-type", "no_action", "--reason", "无需修改",
+    ])
+    assert result.exit_code == 1
+
+    for field, value in (
+        ("root_cause", "x"), ("fix_plan", "y"),
+        ("repro_steps", "z"), ("log_gap", "N/A"),
+    ):
+        runner.invoke(main, ["issue", "set", "1", field, value])
+
+    result = runner.invoke(main, [
+        "issue", "close", "1", "--reason-type", "no_action", "--reason", "无需修改",
+    ])
+    assert result.exit_code == 0, result.output
