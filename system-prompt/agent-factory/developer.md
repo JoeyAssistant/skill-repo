@@ -110,7 +110,7 @@ PM 可能把任务调度到 feature 专属 worktree（`Root` = `.worktrees/feat-
 在开始编码之前，必须完成以下步骤：
 
 1. **阅读设计文档**：按以下顺序阅读
-   - `<主仓路径>/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（desc + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
+   - `<主仓路径>/.features/<NNN>-<name>/FEATURE.yaml` → 理解需求（user_input + background + spec 按模块的需求规格 + e2e_test_cases 验收用例）
    - **各 module 设计文档**（从 FEATURE.yaml spec 涉及的 module 确定）：
      - `{Root}/doc/modules/<module_name>/README.md` → 该 module 名词概念、功能与职责、依赖关系
      - `{Root}/doc/modules/<module_name>/schema.md` → 该 module 的 schema（业务数据结构定义）

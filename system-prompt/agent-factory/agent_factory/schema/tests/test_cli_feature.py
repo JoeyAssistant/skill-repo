@@ -19,7 +19,7 @@ def test_feature_new_creates_files(tmp_path, monkeypatch):
         "feature", "new",
         "--title", "收入管理",
         "--slug", "income-module",
-        "--desc", "用户原话：我想记收入",
+        "--user-input", "用户原话：我想记收入",
         "--priority", "P1",
     ])
     assert result.exit_code == 0, result.output
@@ -32,7 +32,7 @@ def test_feature_new_creates_files(tmp_path, monkeypatch):
     data = load_yaml(feat)
     assert data["id"] == 1
     assert data["title"] == "001-income-module"
-    assert data["desc"] == "用户原话：我想记收入"
+    assert data["user_input"] == "用户原话：我想记收入"
 
     # Index updated
     idx = load_yaml(tmp_path / ".features" / "index.yaml")
@@ -54,7 +54,7 @@ def test_feature_new_requires_desc(tmp_path, monkeypatch):
         "--title", "X",
         "--slug", "x",
     ])
-    assert result.exit_code != 0  # --desc is required
+    assert result.exit_code != 0  # --user-input is required
 
 
 def test_feature_new_invalid_slug(tmp_path, monkeypatch):
@@ -67,7 +67,7 @@ def test_feature_new_invalid_slug(tmp_path, monkeypatch):
         "feature", "new",
         "--title", "X",
         "--slug", "Invalid_Slug",
-        "--desc", "test desc",
+        "--user-input", "test input",
     ])
     assert result.exit_code == 4  # InvalidSlug
 
@@ -82,7 +82,7 @@ def test_feature_new_slug_must_start_with_letter(tmp_path, monkeypatch):
         "feature", "new",
         "--title", "X",
         "--slug", "123-abc",
-        "--desc", "test",
+        "--user-input", "test",
     ])
     assert result.exit_code == 4
 
@@ -93,7 +93,7 @@ def test_feature_new_default_priority(tmp_path, monkeypatch):
     (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
 
     runner = CliRunner()
-    result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x", "--desc", "test desc"])
+    result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x", "--user-input", "test input"])
     assert result.exit_code == 0
 
     idx = load_yaml(tmp_path / ".features" / "index.yaml")
@@ -110,7 +110,7 @@ def test_feature_new_with_summary(tmp_path, monkeypatch):
         "feature", "new",
         "--title", "收入管理",
         "--slug", "income-module",
-        "--desc", "用户原话：我想记收入",
+        "--user-input", "用户原话：我想记收入",
         "--summary", "解决看不到净收支的问题，新增收入模块，方案是录入+按月汇总",
     ])
     assert result.exit_code == 0, result.output
@@ -126,7 +126,7 @@ def test_feature_new_without_summary_is_unchanged(tmp_path, monkeypatch):
     (tmp_path / ".features" / "index.yaml").write_text("features: []\n")
 
     runner = CliRunner()
-    result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x", "--desc", "d"])
+    result = runner.invoke(main, ["feature", "new", "--title", "X", "--slug", "x", "--user-input", "d"])
     assert result.exit_code == 0, result.output
 
     data = load_yaml(tmp_path / ".features" / "001-x" / "FEATURE.yaml")
@@ -141,7 +141,7 @@ def test_feature_new_increments_id(tmp_path, monkeypatch):
     )
 
     runner = CliRunner()
-    result = runner.invoke(main, ["feature", "new", "--title", "B", "--slug", "b", "--desc", "test"])
+    result = runner.invoke(main, ["feature", "new", "--title", "B", "--slug", "b", "--user-input", "test"])
     assert result.exit_code == 0
     assert "Created feature 2" in result.output
     assert "002-b" in result.output
@@ -153,13 +153,13 @@ def test_feature_set_desc(tmp_path, monkeypatch):
 
     runner = CliRunner()
     result = runner.invoke(main, [
-        "feature", "set", "1", "desc", "新的需求描述",
+        "feature", "set", "1", "user_input", "新的需求描述",
     ])
     assert result.exit_code == 0, result.output
     assert "Updated feature 1" in result.output
 
     feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
-    assert feat["desc"] == "新的需求描述"
+    assert feat["user_input"] == "新的需求描述"
 
 
 def test_feature_set_summary(tmp_path, monkeypatch):
@@ -362,7 +362,7 @@ def test_feature_set_unknown_feature(tmp_path, monkeypatch):
 
     runner = CliRunner()
     result = runner.invoke(main, [
-        "feature", "set", "999", "desc", "X",
+        "feature", "set", "999", "user_input", "X",
     ])
     assert result.exit_code == 2
 
@@ -383,7 +383,7 @@ def _setup_feature(tmp_path):
     """Helper: create .features/001-test-feature/FEATURE.yaml + index.yaml entry."""
     (tmp_path / ".features" / "001-test-feature").mkdir(parents=True)
     (tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml").write_text(
-        "id: 1\ntitle: '001-test-feature'\ndesc: test desc\n"
+        "id: 1\ntitle: '001-test-feature'\ndesc: test input\n"
     )
     (tmp_path / ".features" / "index.yaml").write_text(
         "features:\n  - id: 1\n    title: '001-test-feature'\n    status: draft\n    priority: P2\n"
@@ -409,7 +409,7 @@ def test_feature_show_markdown_default(tmp_path, monkeypatch):
     result = runner.invoke(main, ["feature", "show", "1"])
     assert result.exit_code == 0
     assert "001-test-feature" in result.output
-    assert "test desc" in result.output
+    assert "test input" in result.output
 
 
 def test_feature_show_renders_summary(tmp_path, monkeypatch):
@@ -660,11 +660,11 @@ def test_feature_delete_unknown_feature(tmp_path, monkeypatch):
 
 # --- Helpers ---
 
-def _setup_minimal_feature(tmp_path, fid, dir_name, desc):
-    """Create a minimal feature with given id, dir_name, desc."""
+def _setup_minimal_feature(tmp_path, fid, dir_name, user_input):
+    """Create a minimal feature with given id, dir_name, user_input."""
     (tmp_path / ".features" / dir_name).mkdir(parents=True)
     (tmp_path / ".features" / dir_name / "FEATURE.yaml").write_text(
-        f"id: {fid}\ntitle: '{dir_name}'\ndesc: {desc}\n"
+        f"id: {fid}\ntitle: '{dir_name}'\ndesc: {user_input}\n"
     )
 
 
@@ -728,7 +728,7 @@ def _inject_worktree_record(tmp_path, dir_name):
 
 def _new_feature(runner, slug, parent=None):
     """Invoke `feature new` with the given slug; optional --parent."""
-    args = ["feature", "new", "--title", slug, "--slug", slug, "--desc", "d"]
+    args = ["feature", "new", "--title", slug, "--slug", slug, "--user-input", "d"]
     if parent is not None:
         args += ["--parent", str(parent)]
     return runner.invoke(main, args)

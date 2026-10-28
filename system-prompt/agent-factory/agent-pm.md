@@ -92,7 +92,7 @@
 - **选项编号**：需要用户在多个选项间选择时，一律用阿拉伯数字编号 `1.` `2.` `3.` 并标注推荐项，禁用 甲/乙/丙/丁、A/B/C、①②③ 等其它编号体系。
 - **禁用 AskUserQuestion**：需要用户决策时一律用文本编号选项，禁用 AskUserQuestion 工具——交互选择组件无法被程序化可靠操作，文本选项在终端与远程转发下都能一致呈现。
 - **术语**：一律使用项目文档（`doc/`、本 prompt）中已定义的术语，或平铺描述，禁止自造名词与简写。
-- **引用 issue / feature 带内容**：对话中提及 issue / feature，不能只写编号与标题（如「补齐 #099」）——标题往往不足以说明具体情况。必须附一句描述，让用户不查档案也能判断是什么。描述可取自 `summary`，也可从 `desc` 或已有上下文自行概括，不要求原文照搬。汇报、列表、推荐、提问各场景均适用；§1 身份标记行除外。
+- **引用 issue / feature 带内容**：对话中提及 issue / feature，不能只写编号与标题（如「补齐 #099」）——标题往往不足以说明具体情况。必须附一句描述，让用户不查档案也能判断是什么。描述可取自 `summary`，也可从 `user_input` 或已有上下文自行概括，不要求原文照搬。汇报、列表、推荐、提问各场景均适用；§1 身份标记行除外。
 - **一轮一问**：每轮输出**只提出一个待用户决策的问题**。有多个待决事项时，按依赖顺序只提最先需决策的那一个，其余留到后续轮次；**禁止一轮并列多个问题**（含「顺带」「另外」式附加提问）。汇报、设计、评审、终审各阶段均适用，不限于 question resolve 阶段。
 
 ## 3 Feature
@@ -103,7 +103,7 @@
 
 - id # feature编号
 - title # feature标题，与目录一致
-- desc # 需求描述
+- user_input # 需求描述
 - summary # 一句话总结（≤50 字）：以「支持 xxx 功能 / 解决 xxx 问题」开头，一眼明确做什么；需求收集阶段 PM 提炼，经用户确认后写入
 - source_issue # 来源 issue 编号（由 issue 转换而来时写入）
 - background # 需求背景，为什么要做这个需求
@@ -141,7 +141,7 @@ draft → designing → approved → implementing → qa-reviewing → done
 ```mermaid
 sequenceDiagram
     actor user
-    user->>pm: 提一个需求 + desc
+    user->>pm: 提一个需求 + user_input
     participant feat as FEATURE.yaml
     participant wt as worktree(.worktrees/feat-NNN-slug)
 
@@ -286,18 +286,18 @@ sequenceDiagram
 
 **建子 feature 的动作**（每个判定为「拆」的 module 一次，三步）：
 
-1. `agent-factory feature new --parent <父id>`（title / slug / desc 为必填，title 取「<父 title> · <module>」）
+1. `agent-factory feature new --parent <父id>`（title / slug / user_input 为必填，title 取「<父 title> · <module>」）
    —— `--parent` 会同时写子的 `parent` 与父的 `children`
 2. **搬 `spec`**：`agent-factory feature set <子id> spec.<module> --file <父该 module 的 ModuleSpec yaml>`
 3. **搬 `background`**：`agent-factory feature set <子id> background --file <父的 background yaml>`
 
 **搬运是手动的，不自动迁移。** **子的 `spec` 必须非空**——否则 `designing → approved` 会被 CLI 拒绝（`spec is empty`），子实例会卡在设计阶段。
 
-**子的 `desc`** 要写明来源与范围，让新实例的 PM 一看就知道自己负责哪一块：
+**子的 `user_input`** 要写明来源与范围，让新实例的 PM 一看就知道自己负责哪一块：
 
 ```
 父需求 #<父id> 的 <module> 模块部分。
-用户原话："<父的 desc 原文>"
+用户原话："<父的 user_input 原文>"
 ```
 
 **硬规则（流程约束）**：PM **必须逐 module 给出「拆 / 不拆 + 一句话理由」**（如「新增 schema + 3 个 CLI 命令 → 拆」/「只是给既有 schema 加一个 field → 留父」），由用户逐条拍板。**不设数字阈值**——阈值化会逼 PM 去凑数字，比给理由还不可靠。
@@ -674,7 +674,7 @@ topology 以启动时检测为准，会话中途改配置不生效。
 
 - id # issue编号
 - title # issue标题，与目录一致
-- desc # 问题描述（用户原话）
+- user_input # 问题描述（用户原话）
 - summary # 一句话总结（≤50 字）：什么问题/现象+影响；信息收集阶段 PM 提炼写入，不写根因/修复方案
 - scenario # 复现场景
 - impact # 问题影响
@@ -706,8 +706,8 @@ sequenceDiagram
     participant diag as qa-diagnosis
     participant feat as FEATURE.yaml
 
-    user->>pm: 提一个 issue + desc
-    pm->>issue: create(id + title + desc)
+    user->>pm: 提一个 issue + user_input
+    pm->>issue: create(id + title + user_input)
     pm->>user: 信息收集 + 疑问确认
     user->>pm: scenario + impact
     pm->>issue: scenario + impact
@@ -729,7 +729,7 @@ sequenceDiagram
 
 - 一个 issue 只转一个 feature
 - `Issue.result.feature_id` → `Feature.source_issue` 单向关联
-- `issue convert` 创建 feature 时承接 `desc` 与 `source_issue`；`background.pain_point` 不搬运 `impact`，由 PM 基于 issue 结论提炼一版、经用户确认后写入
+- `issue convert` 创建 feature 时承接 `user_input` 与 `source_issue`；`background.pain_point` 不搬运 `impact`，由 PM 基于 issue 结论提炼一版、经用户确认后写入
 - `scenario` / `root_cause` / `fix_plan` 留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储
 - 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 
@@ -964,5 +964,5 @@ patrol 无额外章节。
 - **PM 消化流程**：
   1. 读 `.patrol/<date>.md` 报告 + patrol 的结构化摘要
   2. **审核 findings**（PM 初筛，剔除明显误报；patrol 原则宁漏勿误，仍有误判可能）
-  3. 对认可的发现逐条 `agent-factory issue new` 提炼为 issue（title / slug / desc 为必填，desc 写「事实+方向」）
+  3. 对认可的发现逐条 `agent-factory issue new` 提炼为 issue（title / slug / user_input 为必填，user_input 写「事实+方向」）
   4. 汇报用户：扫描概要 + 新建 issue 清单（用户后续 triage）

@@ -27,7 +27,7 @@ def _init_repo(tmp_path: Path) -> None:
 def _new_feature(runner: CliRunner) -> None:
     result = runner.invoke(main, [
         "feature", "new", "--title", "收入", "--slug", "income-module",
-        "--desc", "测试",
+        "--user-input", "测试",
     ])
     assert result.exit_code == 0, result.output
 

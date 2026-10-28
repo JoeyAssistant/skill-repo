@@ -1,7 +1,7 @@
 # agent_factory/schema/examples/feature.yaml
 id: 1
 title: 001-income-module
-desc: |
+user_input: |
   用户原话："我想记收入，现在只有支出模块，月底看不到净收支。"
 
 summary: 支持收入录入与按月汇总，解决月底看不到净收支的问题

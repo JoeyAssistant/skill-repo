@@ -43,7 +43,7 @@ def issue_group() -> None:
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 # Note: 'result' is special — use `issue close` command instead of `set` for it
 ISSUE_FIELDS = {
-    "desc", "summary", "scenario", "impact",
+    "user_input", "summary", "scenario", "impact",
     "root_cause", "fix_plan",
 }
 
@@ -51,17 +51,17 @@ ISSUE_FIELDS = {
 @issue_group.command("new")
 @click.option("--title", required=True, help="Human-readable title (stored in ISSUE.yaml)")
 @click.option("--slug", required=True, help="Directory slug (kebab-case)")
-@click.option("--desc", required=True, help="User's original description (preserved verbatim)")
+@click.option("--user-input", required=True, help="User's original input (preserved verbatim)")
 @click.option("--priority", default=Priority.P2.value,
               type=click.Choice([p.value for p in Priority]),
               help="Priority (default: P2)")
 @click.option("--summary", default=None,
               help="一句话总结（≤50 字）：什么问题/现象+影响（后续可用 issue set 补）")
-def new(title: str, slug: str, desc: str, priority: str, summary: str | None) -> None:
+def new(title: str, slug: str, user_input: str, priority: str, summary: str | None) -> None:
     """Create new issue (status=open).
 
     Directory name: <NNN>-<slug> (e.g., 001-login-crash).
-    --desc preserves user's original description verbatim (required).
+    --user-input preserves user's original description verbatim (required).
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -79,7 +79,7 @@ def new(title: str, slug: str, desc: str, priority: str, summary: str | None) ->
         issue = Issue(
             id=issue_id,
             title=dir_name,
-            desc=desc,
+            user_input=user_input,
             summary=summary,
         )
     except ValidationError as exc:
@@ -111,7 +111,7 @@ def new(title: str, slug: str, desc: str, priority: str, summary: str | None) ->
 def set_field(issue_id: int, field: str, value: str | None, file_path: Path | None) -> None:
     """Update a field in ISSUE.yaml. Title is immutable (equals directory name).
 
-    传值约定：多行长文本（desc / scenario / impact 等）统一 `--file <path>` 传值——
+    传值约定：多行长文本（user_input / scenario / impact 等）统一 `--file <path>` 传值——
     inline 传参在含引号 / $ / 反引号 / # 时 shell 转义不可靠，内容会静默截断或损坏；
     --file 原样读入零转义。
     """
@@ -179,7 +179,7 @@ def show(issue_id: int, fmt: str) -> None:
         lines = [f"# Issue {issue.id}: {issue.title}", ""]
         if issue.summary:
             lines += [f"**Summary**: {issue.summary}", ""]
-        lines += ["## Description", issue.desc, ""]
+        lines += ["## User Input", issue.user_input, ""]
         if issue.scenario:
             lines += ["## Scenario", issue.scenario, ""]
         if issue.impact:
@@ -411,7 +411,7 @@ def convert(issue_id: int, slug: str) -> None:
     """Convert issue to feature and close it as converted_to_feature.
 
     Requires the issue to be in_progress with root_cause + fix_plan filled.
-    Creates a feature, copies desc + impact, and links source_issue.
+    Creates a feature, copies user_input + impact, and links source_issue.
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -477,7 +477,7 @@ def convert(issue_id: int, slug: str) -> None:
     feature = Feature(
         id=feature_id,
         title=dir_name,
-        desc=issue.desc,
+        user_input=issue.user_input,
         source_issue=issue.id,
     )
     feature_dir.mkdir(parents=True)

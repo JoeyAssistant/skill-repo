@@ -9,10 +9,10 @@ from agent_factory.schema.issue import IssueStatus
 
 
 def test_issue_minimal_valid():
-    """Minimal Issue: id + title + desc (其他 Optional)."""
-    issue = Issue(id=1, title="001-test", desc="用户原始描述")
+    """Minimal Issue: id + title + user_input (其他 Optional)."""
+    issue = Issue(id=1, title="001-test", user_input="用户原始描述")
     assert issue.id == 1
-    assert issue.desc == "用户原始描述"
+    assert issue.user_input == "用户原始描述"
     assert issue.scenario is None
     assert issue.impact is None
     assert issue.root_cause is None
@@ -20,34 +20,45 @@ def test_issue_minimal_valid():
     assert issue.result is None
 
 
-def test_issue_missing_desc_fails():
+def test_issue_legacy_desc_key():
+    """历史 ISSUE.yaml 使用 desc，读取时映射到 user_input。"""
+    issue = Issue.model_validate({"id": 1, "title": "001-test", "desc": "旧格式原话"})
+    assert issue.user_input == "旧格式原话"
+
+    # 同时存在时以 user_input 为准
+    issue = Issue.model_validate(
+        {"id": 1, "title": "001-test", "desc": "旧", "user_input": "新"})
+    assert issue.user_input == "新"
+
+
+def test_issue_missing_user_input_fails():
     with pytest.raises(ValidationError) as exc:
         Issue(id=1, title="001-test")
     errors = exc.value.errors()
     missing = [e["loc"][0] for e in errors if e["type"] == "missing"]
-    assert "desc" in missing
+    assert "user_input" in missing
 
 
 def test_issue_extra_field_forbidden():
     with pytest.raises(ValidationError):
-        Issue(id=1, title="001-test", desc="x", extra="y")
+        Issue(id=1, title="001-test", user_input="x", extra="y")
 
 
 def test_issue_summary_optional():
     """summary 可选：存量 ISSUE.yaml 无 summary 仍合法。"""
-    issue = Issue(id=1, title="001-test", desc="d")
+    issue = Issue(id=1, title="001-test", user_input="d")
     assert issue.summary is None
 
 
 def test_issue_summary_roundtrip():
-    issue = Issue(id=1, title="001-test", desc="d",
+    issue = Issue(id=1, title="001-test", user_input="d",
                   summary="登录点击提交白屏，所有用户无法登录")
     assert issue.summary == "登录点击提交白屏，所有用户无法登录"
 
 
 def test_issue_summary_too_long_fails():
     with pytest.raises(ValidationError):
-        Issue(id=1, title="001-test", desc="d", summary="一" * 51)
+        Issue(id=1, title="001-test", user_input="d", summary="一" * 51)
 
 
 def test_converted_result_valid():
@@ -70,7 +81,7 @@ def test_closed_result_invalid_reason_type():
 
 def test_issue_with_converted_result():
     issue = Issue(
-        id=1, title="001-test", desc="x",
+        id=1, title="001-test", user_input="x",
         result=ConvertedResult(feature_id=5),
     )
     assert issue.result.type == "converted_to_feature"
@@ -79,7 +90,7 @@ def test_issue_with_converted_result():
 
 def test_issue_with_closed_result():
     issue = Issue(
-        id=1, title="001-test", desc="x",
+        id=1, title="001-test", user_input="x",
         result=ClosedResult(reason_type="invalid", reason="非缺陷"),
     )
     assert issue.result.type == "closed"
@@ -95,6 +106,6 @@ def test_issue_status_enum_renamed():
 
 def test_issue_id_range():
     with pytest.raises(ValidationError):
-        Issue(id=0, title="...", desc="...")
+        Issue(id=0, title="...", user_input="...")
     with pytest.raises(ValidationError):
-        Issue(id=1000, title="...", desc="...")
+        Issue(id=1000, title="...", user_input="...")

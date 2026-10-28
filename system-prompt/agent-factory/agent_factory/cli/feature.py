@@ -39,7 +39,7 @@ def feature_group() -> None:
 @feature_group.command("new")
 @click.option("--title", required=True, help="Human-readable title")
 @click.option("--slug", required=True, help="Directory slug (kebab-case)")
-@click.option("--desc", required=True, help="User's original request description (preserved verbatim)")
+@click.option("--user-input", required=True, help="User's original request input (preserved verbatim)")
 @click.option(
     "--priority",
     type=click.Choice([p.value for p in Priority]),
@@ -50,7 +50,7 @@ def feature_group() -> None:
               help="父 feature 编号（拆分出的子 feature 才有；同时把本 feature 登记进父的 children）")
 @click.option("--summary", default=None,
               help="一句话总结（≤50 字）：以「支持 xxx / 解决 xxx」开头（后续可用 feature set 补）")
-def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None,
+def new(title: str, slug: str, user_input: str, priority: str, parent_id: int | None,
         summary: str | None) -> None:
     """Create new feature (status=draft).
 
@@ -100,7 +100,7 @@ def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None,
         feature = Feature(
             id=feature_id,
             title=dir_name,  # title field = directory name
-            desc=desc,
+            user_input=user_input,
             summary=summary,
             parent=parent_id,
         )
@@ -133,7 +133,7 @@ def new(title: str, slug: str, desc: str, priority: str, parent_id: int | None,
 
 
 # Fields that route to FEATURE.yaml (plain scalars)
-SCALAR_FIELDS = {"desc", "summary", "source_issue"}
+SCALAR_FIELDS = {"user_input", "summary", "source_issue"}
 
 # Subfields of background that can be set individually
 BACKGROUND_SUBFIELDS = {"pain_point", "benefit"}
@@ -151,7 +151,7 @@ def set_field(feature_id: int, field: str, value: str | None,
               file_path: Path | None, remove: bool) -> None:
     """Update FEATURE.yaml. 支持嵌套路径：background.pain_point / spec.<module>
 
-    传值约定：多行长文本（desc / background / spec 等）统一 `--file <path>` 传值——
+    传值约定：多行长文本（user_input / background / spec 等）统一 `--file <path>` 传值——
     inline 传参在含引号 / $ / 反引号 / # 时 shell 转义不可靠，内容会静默截断或损坏；
     --file 原样读入零转义。
     """
@@ -220,7 +220,7 @@ def _read_value(value: str | None, file_path: Path | None) -> str:
 def _invalid_field(field: str) -> None:
     """Exit with invalid field error."""
     click.echo(format_error("InvalidField",
-        f"Field '{field}' not supported. 合法形式：desc / source_issue / background "
+        f"Field '{field}' not supported. 合法形式：user_input / source_issue / background "
         f"/ background.pain_point / background.benefit / spec.<module> / e2e_test_cases",
         None), err=True)
     sys.exit(4)
@@ -368,7 +368,7 @@ def _render_feature_markdown(feature: Feature) -> str:
     if feature.summary:
         lines += [f"**Summary**: {feature.summary}", ""]
     lines += [
-        f"**Desc**: {feature.desc}",
+        f"**User Input**: {feature.user_input}",
         "",
     ]
     if feature.parent is not None:

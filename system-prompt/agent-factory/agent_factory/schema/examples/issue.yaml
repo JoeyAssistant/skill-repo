@@ -1,6 +1,6 @@
 id: 1
 title: 001-login-crash
-desc: |
+user_input: |
   用户反馈：登录页面点击提交就崩溃了，控制台报错 token undefined。
 
   用户原话："今天早上想登录查账户，结果一点提交就白屏，刷新也没用。"

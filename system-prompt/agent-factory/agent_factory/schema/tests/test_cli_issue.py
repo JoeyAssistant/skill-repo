@@ -27,7 +27,7 @@ def test_issue_new_creates_files(tmp_path, monkeypatch):
         "issue", "new",
         "--title", "登录崩溃",
         "--slug", "login-crash",
-        "--desc", "用户反馈登录就崩溃了",
+        "--user-input", "用户反馈登录就崩溃了",
         "--priority", "P1",
     ])
     assert result.exit_code == 0
@@ -36,7 +36,7 @@ def test_issue_new_creates_files(tmp_path, monkeypatch):
 
     issue = load_yaml(tmp_path / ".issues" / "001-login-crash" / "ISSUE.yaml")
     assert issue["title"] == "001-login-crash"
-    assert issue["desc"] == "用户反馈登录就崩溃了"
+    assert issue["user_input"] == "用户反馈登录就崩溃了"
 
     idx = load_yaml(tmp_path / ".issues" / "index.yaml")
     assert idx["issues"][0]["priority"] == "P1"
@@ -49,7 +49,7 @@ def test_issue_new_requires_desc(tmp_path, monkeypatch):
 
     runner = CliRunner()
     result = runner.invoke(main, ["issue", "new", "--title", "X", "--slug", "test"])
-    assert result.exit_code != 0  # --desc required
+    assert result.exit_code != 0  # --user-input required
 
 
 def test_issue_new_invalid_slug(tmp_path, monkeypatch):
@@ -62,7 +62,7 @@ def test_issue_new_invalid_slug(tmp_path, monkeypatch):
         "issue", "new",
         "--title", "X",
         "--slug", "INVALID",
-        "--desc", "test",
+        "--user-input", "test",
     ])
     assert result.exit_code == 4  # InvalidSlug
 
@@ -82,18 +82,18 @@ def test_issue_set_field(tmp_path, monkeypatch):
 
 
 def test_issue_set_desc(tmp_path, monkeypatch):
-    """desc field can be set after creation."""
+    """user_input field can be set after creation."""
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
 
     runner = CliRunner()
     result = runner.invoke(main, [
-        "issue", "set", "1", "desc", "新的描述",
+        "issue", "set", "1", "user_input", "新的描述",
     ])
     assert result.exit_code == 0
 
     issue = load_yaml(tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml")
-    assert issue["desc"] == "新的描述"
+    assert issue["user_input"] == "新的描述"
 
 
 def test_issue_new_with_summary(tmp_path, monkeypatch):
@@ -106,7 +106,7 @@ def test_issue_new_with_summary(tmp_path, monkeypatch):
         "issue", "new",
         "--title", "登录崩溃",
         "--slug", "login-crash",
-        "--desc", "用户原话",
+        "--user-input", "用户原话",
         "--summary", "登录点击提交白屏，所有用户无法登录",
     ])
     assert result.exit_code == 0, result.output
@@ -196,7 +196,7 @@ def test_issue_show(tmp_path, monkeypatch):
     result = runner.invoke(main, ["issue", "show", "1"])
     assert result.exit_code == 0
     assert "001-test-issue" in result.output
-    assert "Description" in result.output
+    assert "User Input" in result.output
 
 
 def test_issue_list_no_type_filter(tmp_path, monkeypatch):
@@ -213,7 +213,7 @@ def test_issue_list_no_type_filter(tmp_path, monkeypatch):
 def test_issue_open_to_in_progress_requires_scenario_impact(tmp_path, monkeypatch):
     """open → in_progress must have scenario + impact filled."""
     monkeypatch.chdir(tmp_path)
-    _setup_issue(tmp_path)  # only has id/title/desc
+    _setup_issue(tmp_path)  # only has id/title/user_input
 
     runner = CliRunner()
     result = runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
@@ -307,7 +307,7 @@ def test_issue_convert_creates_feature_and_closes(tmp_path, monkeypatch):
 
     feature = load_yaml(tmp_path / ".features" / "001-login-crash" / "FEATURE.yaml")
     assert feature["id"] == 1
-    assert feature["desc"] == "用户原始描述"
+    assert feature["user_input"] == "用户原始描述"
     assert feature["source_issue"] == 1
     assert feature.get("background") is None  # pain_point 由 PM 重新提炼写入，不从 impact 搬运
 

@@ -88,7 +88,7 @@ def _valid_feature_kwargs():
     return dict(
         id=1,
         title="001-income-module",
-        desc="用户原话：收入管理",
+        user_input="用户原话：收入管理",
     )
 
 
@@ -96,7 +96,7 @@ def test_feature_minimal_valid():
     feature = Feature(**_valid_feature_kwargs())
     assert feature.id == 1
     assert feature.title == "001-income-module"
-    assert feature.desc == "用户原话：收入管理"
+    assert feature.user_input == "用户原话：收入管理"
     assert feature.background is None
     assert feature.spec == {}
     assert feature.e2e_test_cases == []
@@ -119,14 +119,20 @@ def test_feature_summary_too_long_fails():
         Feature(**_valid_feature_kwargs(), summary="一" * 51)
 
 
-def test_feature_missing_desc_fails():
+def test_feature_legacy_desc_key():
+    """历史 FEATURE.yaml 使用 desc，读取时映射到 user_input。"""
+    feature = Feature.model_validate({"id": 1, "title": "001-x", "desc": "旧格式原话"})
+    assert feature.user_input == "旧格式原话"
+
+
+def test_feature_missing_user_input_fails():
     kw = _valid_feature_kwargs()
-    del kw["desc"]
+    del kw["user_input"]
     with pytest.raises(ValidationError) as exc:
         Feature(**kw)
     errors = exc.value.errors()
     missing = [e["loc"][0] for e in errors if e["type"] == "missing"]
-    assert "desc" in missing
+    assert "user_input" in missing
 
 
 def test_feature_with_full_structure():

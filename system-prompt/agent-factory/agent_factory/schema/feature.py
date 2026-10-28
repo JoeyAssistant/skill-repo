@@ -4,7 +4,9 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from agent_factory.schema.compat import migrate_legacy_desc
 
 
 class FeatureStatus(str, Enum):
@@ -65,9 +67,14 @@ class Feature(BaseModel):
     """对应 .features/<NNN>-<slug>/FEATURE.yaml."""
     model_config = ConfigDict(extra="forbid")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_desc(cls, data):
+        return migrate_legacy_desc(data)
+
     id: int = Field(..., ge=1, le=999, description="feature 编号")
     title: str = Field(..., description="目录名（不可改，创建时通过 --slug 决定）")
-    desc: str = Field(..., description="用户原始需求描述（create 时必填）")
+    user_input: str = Field(..., description="用户原始需求描述（create 时必填）")
     summary: Optional[str] = Field(None, max_length=50,
         description="一句话总结（≤50 字）：以「支持 xxx 功能 / 解决 xxx 问题」开头，一眼明确做什么；需求收集阶段 PM 提炼，经用户确认后写入")
 
