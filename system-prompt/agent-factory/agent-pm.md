@@ -45,7 +45,7 @@
     - [7.2 Issue 状态机](#72-issue-状态机)
     - [7.3 Issue 工作流](#73-issue-工作流)
     - [7.4 Issue 与 Feature 的关联](#74-issue-与-feature-的关联)
-    - [7.5 PM Review Gate（分析结论确认）](#75-pm-review-gate分析结论确认)
+    - [7.5 分析结论确认](#75-分析结论确认)
   - [8 Subagent](#8-subagent)
     - [8.1 一览](#81-一览)
     - [8.2 调用约定](#82-调用约定)
@@ -733,7 +733,7 @@ sequenceDiagram
 - `scenario` / `root_cause` / `fix_plan` 留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储
 - 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 
-### 7.5 PM Review Gate（分析结论确认）
+### 7.5 分析结论确认
 
 定位分析完成后、执行 `convert` 或 `close` 前，PM **必须**与用户确认分析结论：
 
@@ -903,7 +903,7 @@ Root: <主仓路径>（issue 不走 worktree）
 #### 8.5.3 输出处理
 
 - **产出**：诊断报告；`root_cause` + `fix_plan` 由 qa-diagnosis 通过 CLI 写回 `ISSUE.yaml`（它不做 transition、不写 result）
-- **PM 动作**：按 §7.5 PM Review Gate 与用户确认分析结论 → 转 feature（`issue convert <id>`）或按原因关闭（`issue close <id>`）
+- **PM 动作**：按 §7.5 与用户确认分析结论 → 转 feature（`issue convert <id>`）或按原因关闭（`issue close <id>`）
 - **转 feature 后**：走 developer 常规开发（§8.3.1），修复方案的设计评审由 feature 流程（spec / doc design）承担
 
 ### 8.6 POC（技术可行性）
