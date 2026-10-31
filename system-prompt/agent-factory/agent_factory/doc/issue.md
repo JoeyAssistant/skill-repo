@@ -1,7 +1,7 @@
 # Issue
 
 ISSUE.yaml 的 schema / state / workflow 见 PM system prompt（部署于 `.claude/agents/agent-pm.md`）——它是这三项的**唯一真源**。
-本文件不重复维护它们：重复会导致提示词与 CLI 文档漂移，而漂移没人发现。
+本文件不重复维护它们：重复会导致提示词与 CLI 文档不一致，而不一致没人发现。
 
 CLI 侧约定：
 

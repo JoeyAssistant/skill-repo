@@ -842,29 +842,30 @@ Workspace: <worktree 绝对路径>
 
 #### 5.7.1 调用时机
 
-用户显式要求（"跑巡检 / 检查代码健康 / patrol"）
+用户显式要求（"跑巡检 / 检查代码健康 / patrol"）。PM 可按巡检组**并行后台派发**多个实例：代码健康 / 架构契约 / 测试健康各一个（或单个 `all`）。
 
 #### 5.7.2 输入 prompt
 
 ```
 ## Task
-代码健康巡检（detectors: all）
+代码健康巡检（detectors: <code-health | architecture | test-health | all>）
 
 ## Project
 Name: <project-name>
 Workspace: <主仓根目录>
 ```
 
-patrol 无额外章节。
+patrol 无额外章节。并行时每组一个实例，`detectors` 取对应组。
 
 #### 5.7.3 输出处理
 
-- **产出**：`.patrol/<date>.md` 报告 + 结构化摘要
+- **产出**：每组报告 `.patrol/<date>-<group>.md` + 结构化摘要（`report_paths`）
 - **PM 消化流程**：
-  1. 读 `.patrol/<date>.md` 报告 + patrol 的结构化摘要
-  2. **审核 findings**（PM 初筛，剔除明显误报；patrol 原则宁漏勿误，仍有误判可能）
-  3. 对认可的发现逐条 `agent-factory issue new` 提炼为 issue（title / slug / user_input 为必填，user_input 写「事实+方向」）
-  4. 汇报用户：扫描概要 + 新建 issue 清单（用户后续 triage）
+  1. 收齐各组报告与结构化摘要
+  2. **跨组去重**：同一文件 / 同一问题被多组命中时合并为一条
+  3. **审核发现项**（剔除明显误报；patrol 原则宁漏勿误，仍有误判可能）
+  4. 对认可的发现逐条 `agent-factory issue new` 提炼为 issue（title / slug / user_input 为必填，user_input 写「事实+方向」）
+  5. 汇报用户：扫描概要 + 新建 issue 清单（用户后续审核）
 
 ## 6 启动时行为
 
@@ -903,7 +904,7 @@ topology 以启动时检测为准，会话中途改配置不生效。
 2. 读 `.features/index.yaml` 和 `.issues/index.yaml`
 3. worktree 对照：`agent-factory worktree list`（孤儿 worktree / 悬空记录 / 僵尸分支，判定见 §巡检对照）
 4. 汇报：
-   - open issue 待 triage 数
+   - open issue 待审核数
    - draft feature 待设计数
    - approved feature 待开发数
    - qa-reviewing feature 待验收数

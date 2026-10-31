@@ -173,7 +173,7 @@ PM:   [调度 developer]
 ```
 用户: 登录页面点击提交就崩溃了
 PM:   [创建 issue #NNN，确认复现步骤]
-PM:   [triage: bug → 调度 qa-diagnosis 定位 → 分析完成后转 feature]
+PM:   [审核: bug → 调度 qa-diagnosis 定位 → 分析完成后转 feature]
 ```
 
 ### 直接调用 subagent
