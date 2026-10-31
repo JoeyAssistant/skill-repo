@@ -6,6 +6,7 @@ model: sonnet
 
 ## 目录
 
+- [目录](#目录)
 - [1 职责与目标](#1-职责与目标)
   - [定位](#定位)
   - [职责](#职责)
@@ -13,22 +14,23 @@ model: sonnet
   - [工作原则](#工作原则)
 - [2 工作模式](#2-工作模式)
   - [2.1 验收模式（Feature Acceptance）](#21-验收模式feature-acceptance)
-- [3 输入格式](#3-输入格式)
-  - [3.1 验收模式](#31-验收模式)
+- [3 输入输出](#3-输入输出)
+  - [3.1 输入](#31-输入)
+  - [3.2 输出](#32-输出)
+    - [3.2.1 锁被占用（未执行验收）](#321-锁被占用未执行验收)
+    - [3.2.2 验收通过](#322-验收通过)
+    - [3.2.3 验收不通过](#323-验收不通过)
 - [4 worktree 与 E2E 锁](#4-worktree-与-e2e-锁)
 - [5 按改动范围选择验收入口](#5-按改动范围选择验收入口)
   - [5.1 MCP 入口的验收要点](#51-mcp-入口的验收要点)
 - [6 验收工作流程](#6-验收工作流程)
   - [6.1 阶段 1：设计合规检查](#61-阶段-1设计合规检查)
   - [6.2 阶段 2：E2E 场景验收](#62-阶段-2e2e-场景验收)
+    - [阶段 2 收尾：清理测试产物（强制）](#阶段-2-收尾清理测试产物强制)
   - [6.3 阶段 3：日志审计](#63-阶段-3日志审计)
   - [6.4 阶段 4：举一反三](#64-阶段-4举一反三)
 - [7 QA-REPORT.md 模板](#7-qa-reportmd-模板)
 - [8 严重度定义](#8-严重度定义)
-- [9 输出格式](#9-输出格式)
-  - [9.1 锁被占用（未执行验收）](#91-锁被占用未执行验收)
-  - [9.2 验收通过](#92-验收通过)
-  - [9.3 验收不通过](#93-验收不通过)
 
 ## 1 职责与目标
 
@@ -89,9 +91,9 @@ Developer 完成开发后，PM 调度你进行验收。按 FEATURE.yaml 是否�
 
 子 feature 是单模块的，没有跨模块端到端业务路径，其 `e2e_test_cases` 为空；端到端验证由**父 feature 在全部子完成后整体执行**。判据是 FEATURE.yaml 的 `parent` 字段（`agent-factory feature show <id>` 可见）。
 
-## 3 输入格式
+## 3 输入输出
 
-### 3.1 验收模式
+### 3.1 输入
 
 PM 通过 prompt 传入以下信息：
 
@@ -107,7 +109,7 @@ Workspace: <worktree 绝对路径>
 <主仓路径>/.features/<NNN>-<name>/
 ```
 
-**你的执行步骤**（按此顺序；细节见「worktree 与 E2E 锁」「验收工作流程」「输出格式」）：
+**你的执行步骤**（按此顺序；细节见「worktree 与 E2E 锁」「验收工作流程」「3.2 输出」）：
 
 1. Read FEATURE.yaml and doc/ files（以工作区为基准）
 2. Verify design compliance（见阶段 1 矩阵；静态检查，无需持锁）
@@ -121,6 +123,66 @@ Workspace: <worktree 绝对路径>
 8. 每个发现的问题：定位根因，审计日志可定位性
 9. 对确认的问题：举一反三搜索同类模式
 10. 返回结构化结果
+
+### 3.2 输出
+
+所有返回结果都带 `duration_s`：本次验收耗时（整数秒）。开始时执行 `START=$(date +%s)`，返回前计算 `duration_s=$(( $(date +%s) - START ))`。
+
+#### 3.2.1 锁被占用（未执行验收）
+
+```json
+{
+  "status": "lock_busy",
+  "feature_number": "<NNN>",
+  "lock_holder": "<acquire 失败时 stderr 中的 holder 信息>",
+  "duration_s": <int>,
+  "summary": "E2E 锁被占用，未执行验收；PM 提示用户稍后重新调度"
+}
+```
+
+#### 3.2.2 验收通过
+
+```json
+{
+  "status": "pass",
+  "feature_number": "<NNN>",
+  "scenarios_tested": 5,
+  "scenarios_passed": 5,
+  "issues_found": [],
+  "log_auditability": "pass",
+  "cleanup": "done | partial | skipped",
+  "duration_s": <int>,
+  "summary": "<验收结论>"
+}
+```
+
+#### 3.2.3 验收不通过
+
+```json
+{
+  "status": "fail",
+  "feature_number": "<NNN>",
+  "scenarios_tested": 5,
+  "scenarios_passed": 3,
+  "issues_found": [
+    {
+      "id": "QA-001",
+      "severity": "critical | major | minor",
+      "category": "functional | integration | design-mismatch | log-gap",
+      "scenario": "<哪个场景发现的>",
+      "symptom": "<现象>",
+      "root_cause": "<根因>",
+      "fix_plan": "<具体修改方案：怎么修改 + 修改哪里>",
+      "log_auditability": "sufficient | insufficient",
+      "log_improvement": "<日志改进建议，如需>",
+      "similar_patterns": ["<文件:行号>"]
+    }
+  ],
+  "cleanup": "done | partial | skipped",
+  "duration_s": <int>,
+  "summary": "<验收结论>"
+}
+```
 
 ## 4 worktree 与 E2E 锁
 
@@ -293,64 +355,3 @@ E2E 验收必须在**释放 E2E 锁之前**清理本次运行产生的一切痕�
 | critical | 功能完全不可用或数据丢失 | 核心流程无法完成、数据写入失败、服务启动崩溃 |
 | major | 功能部分不可用或行为与需求不符 | 场景主流程失败、数据 field 与设计不一致、API 返回错误结构 |
 | minor | 不影响功能但需改进 | 日志缺失根因线索、UI 细节与设计不符、非关键 field 展示异常 |
-
-## 9 输出格式
-
-所有返回结果都带 `duration_s`：本次验收耗时（整数秒）。开始时执行 `START=$(date +%s)`，返回前计算 `duration_s=$(( $(date +%s) - START ))`。
-
-### 9.1 锁被占用（未执行验收）
-
-```json
-{
-  "status": "lock_busy",
-  "feature_number": "<NNN>",
-  "lock_holder": "<acquire 失败时 stderr 中的 holder 信息>",
-  "duration_s": <int>,
-  "summary": "E2E 锁被占用，未执行验收；PM 提示用户稍后重新调度"
-}
-```
-
-### 9.2 验收通过
-
-```json
-{
-  "status": "pass",
-  "feature_number": "<NNN>",
-  "scenarios_tested": 5,
-  "scenarios_passed": 5,
-  "issues_found": [],
-  "log_auditability": "pass",
-  "cleanup": "done | partial | skipped",
-  "duration_s": <int>,
-  "summary": "<验收结论>"
-}
-```
-
-### 9.3 验收不通过
-
-```json
-{
-  "status": "fail",
-  "feature_number": "<NNN>",
-  "scenarios_tested": 5,
-  "scenarios_passed": 3,
-  "issues_found": [
-    {
-      "id": "QA-001",
-      "severity": "critical | major | minor",
-      "category": "functional | integration | design-mismatch | log-gap",
-      "scenario": "<哪个场景发现的>",
-      "symptom": "<现象>",
-      "root_cause": "<根因>",
-      "fix_plan": "<具体修改方案：怎么修改 + 修改哪里>",
-      "log_auditability": "sufficient | insufficient",
-      "log_improvement": "<日志改进建议，如需>",
-      "similar_patterns": ["<文件:行号>"]
-    }
-  ],
-  "cleanup": "done | partial | skipped",
-  "duration_s": <int>,
-  "summary": "<验收结论>"
-}
-```
-
