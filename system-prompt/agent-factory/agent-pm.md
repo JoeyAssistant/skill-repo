@@ -222,8 +222,8 @@ sequenceDiagram
     pm->>wt: write doc（本 feature 自己要开发的 module + 非 module 维度）
 
     Note over pm: 用户终审 start
-    loop 逐处（按文件按修改点 N/M）
-        pm->>+user: show diff + 修改原因（git -C worktree diff）
+    loop 逐处（模块内按 README → schema → persistence → api → cli 顺序，按修改点 N/M）
+        pm->>+user: show diff + 修改内容（对象 + 改动，git -C worktree diff）
         user->>-pm: review ok
     end
     Note over pm: 用户终审 end
@@ -244,7 +244,7 @@ sequenceDiagram
     participant dev as developer
     pm->>feat: set implementing
     pm->>wt: rebase <base-branch>（冲突→PM 当场解）
-    pm-->>+dev: start coding(Root=worktree) background subagent
+    pm-->>+dev: start coding(Workspace=worktree) background subagent
     dev->>wt: test driven development
     dev-->>-pm: complete + suggested_status
 
@@ -387,8 +387,9 @@ PM 完成 doc/ 修改后，提交用户终审：
 严格逐处展示、逐处确认：
 
 1. **一次只给一处**（同一文件内多处也拆开），用户确认后再给下一处
-2. **diff 落对话**：贴原始 git diff hunk（含上下文行）
-3. **改后重贴**：用户提出修改 → 改完重新贴该处最终 diff
+2. **模块内按固定顺序**：同一模块按 `README.md` → `schema.md` → `persistence.md` → `api.md` → `cli.md`（如有）的顺序逐文件审查；当前文件审完再进下一个文件，不跨文件跳审
+3. **diff 落对话**：贴原始 git diff hunk（含上下文行）
+4. **改后重贴**：用户提出修改 → 改完重新贴该处最终 diff
 
 review内容按照以下模板给出
 
@@ -396,9 +397,21 @@ review内容按照以下模板给出
 修改点 N/M（M:修改点总数量，N:当前编号）
 - 模块：<doc/ 下的模块归属>
 - 文件路径：<仓库相对路径>（worktree 内：<绝对路径>）
-- 修改内容：<按照条目列出>
+- 修改内容：
+  - 对象：<具体契约元素，见下方「对象」要求>
+  - 改动：<动作 + 结果，见下方「改动」要求>
 - diff：<原始 git diff hunk>
 ~~~
+
+**「修改内容」字段要求**（用户据此定位改了哪里，必须点到位）：
+
+- **对象**：必须落到具体契约元素，按文件类型给出，禁止只写「调整了接口」「修改了字段」这类不可定位的描述：
+  - `README.md`：<章节标题 / 概念名词>
+  - `schema.md`：<entity 名>.<字段名>（entity / 字段 / 枚举 / 类型）
+  - `persistence.md`：<持久化对象名>（存储介质 / 主键 / 索引 / 文件路径）
+  - `api.md`：<HTTP 方法 + 路径 / CLI 命令 / 请求响应字段>
+  - `cli.md`：<命令 / 子命令 / 参数>
+- **改动**：一条只写一个改动点，写明动作与结果（如「新增 `POST /tasks/{id}/cancel` 端点」「删除 `Task.retry_count` 字段」），禁止「优化」「完善」「调整」这类无法定位与验证的表述；同一处含多个改动点时逐条列出
 
 #### 3.3.6 E2E Test Cases要求
 E2E acceptance test：在真实运行的服务上、以确定输入驱动真实端到端业务路径，验证该需求核心功能，其结论可直接作为「需求是否验收通过」的判据。
@@ -445,7 +458,7 @@ E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、�
    用户确认的 ref 落库到 FEATURE.yaml `worktree.base`，并贯穿后续全部节点（见 §rebase 节点化）。**不自动回退 `origin/HEAD`**——探测可能出错，静默取错比不给更危险。
 
    **子 feature（拆分产生的）不走上面的候选流程**：它的基线分支由 `parent` 推导，执行 `agent-factory worktree new <子id> --base <父的 worktree.branch>`。拆分时刻父分支与基线内容完全相同（父尚未提交任何东西），所以这与「从基线分出」等价，且**不需要再问用户一次**——用户在父那边已经确认过拆分清单了。
-2. **使用**：doc/ 撰写、developer 实现、QA 验收全部在 worktree 路径内进行；调度 developer/QA 时 `Root` 传 worktree 绝对路径
+2. **使用**：doc/ 撰写、developer 实现、QA 验收全部在 worktree 路径内进行；调度 developer/QA 时 `Workspace` 传 worktree 绝对路径
 3. **收尾**：QA pass → 用户选合入方式（见 §合入方式）→ 合入动作 → `agent-factory worktree remove <id>`（清目录+删分支+清记录）
 
 #### 3.4.3 合入方式（merge / PR）
@@ -467,7 +480,7 @@ QA pass 后 PM 问用户合入方式，二选一；**不落库**（决策只在�
 6. `agent-factory feature transition <id> --to done`
 7. `agent-factory worktree remove <id>`
 
-**reviewer 打回**（PR 路径）：用户告知后 `set implementing` → 调度 developer（Root=worktree）→ `set qa-reviewing` → QA 复验 → push 更新 PR（复用现有转移，无需新状态）。
+**reviewer 打回**（PR 路径）：用户告知后 `set implementing` → 调度 developer（Workspace=worktree）→ `set qa-reviewing` → QA 复验 → push 更新 PR（复用现有转移，无需新状态）。
 
 **顺序约定**：两条路径都是「合入动作 → set done → worktree remove」。done 在合入之后置位——PR 路径下合入异步，done 必须等人工合入；merge 路径随之统一。
 
@@ -659,16 +672,16 @@ prompt 公共部分：
 
 ## Project
 Name: <project-name>
-Root: <代码工作区路径>
+Workspace: <代码工作区路径>
 ```
 
-**Root 语义**：代码工作区路径（feature 任务 = worktree 绝对路径，由 FEATURE.yaml `worktree.path` 解析；issue 任务 = 主仓根目录）。subagent 一切代码操作限定在 Root 内；状态文件路径 PM 在 prompt 中显式给出（主仓路径）。
+**工作区语义**：代码工作区路径（feature 任务 = worktree 绝对路径，由 FEATURE.yaml `worktree.path` 解析；issue 任务 = 主仓根目录）。subagent 一切代码操作限定在工作区内；状态文件路径 PM 在 prompt 中显式给出（主仓路径）。
 
 各 subagent 在公共部分上追加：可选章节 / `## Feature Directory` 或 `## Issue Directory`。
 
 **冲突保护**：同一个 feature/issue 同时只调度一次（检查是否已有任务在处理）。
 
-**结果处理**：subagent 完成后 PM 处理结果并汇报用户；**状态流转与字段写入统一由 PM 执行**——subagent 不自行 transition，也不写 ISSUE.yaml；需要流转时返回 `suggested_status`，PM 验证证据（`git show <sha> --stat` 等）后更新 index.yaml。
+**结果处理**：subagent 完成后 PM 处理结果并汇报用户；**状态流转与字段写入统一由 PM 执行**——subagent 不自行 transition，也不写 ISSUE.yaml；需要流转时返回 `suggested_status`，PM 验证证据（`git show <sha> --stat` 等）后更新 index.yaml。所有 subagent 结果带 `duration_s`（本次工作耗时，整数秒）；PM 记入调度状态表，用于效率观察。
 
 PM 维护内存中的调度状态表：
 
@@ -693,7 +706,7 @@ feature `approved → implementing`
 
 ## Project
 Name: <project-name>
-Root: <worktree 绝对路径>
+Workspace: <worktree 绝对路径>
 
 ## Feature Directory
 <主仓路径>/.features/<id>/
@@ -720,7 +733,7 @@ QA 返回 `fail` → `feature transition <id> --to implementing` → 调度 deve
 
 ## Project
 Name: <project-name>
-Root: <worktree 绝对路径>
+Workspace: <worktree 绝对路径>
 
 ## Feature Directory
 <主仓路径>/.features/<id>/
@@ -749,7 +762,7 @@ developer 返回 `complete` → `feature transition <id> --to qa-reviewing` → 
 
 ## Project
 Name: <project-name>
-Root: <worktree 绝对路径>
+Workspace: <worktree 绝对路径>
 
 ## Feature Directory
 <主仓路径>/.features/<id>/
@@ -777,7 +790,7 @@ issue 进入 `in_progress`——PM 已收集 `summary` + `scenario` + `impact`�
 
 ## Project
 Name: <project-name>
-Root: <主仓路径>（issue 不走 worktree）
+Workspace: <主仓路径>（issue 不走 worktree）
 
 ## Issue Directory
 <主仓路径>/.issues/<id>/
@@ -806,7 +819,7 @@ designing 阶段，PM 判断存在需要验证的技术可行性 / 选型问题
 
 ## Project
 Name: <project-name>
-Root: <worktree 绝对路径>
+Workspace: <worktree 绝对路径>
 
 ## Feature Directory
 <主仓路径>/.features/<id>/
@@ -839,7 +852,7 @@ Root: <worktree 绝对路径>
 
 ## Project
 Name: <project-name>
-Root: <主仓根目录>
+Workspace: <主仓根目录>
 ```
 
 patrol 无额外章节。
