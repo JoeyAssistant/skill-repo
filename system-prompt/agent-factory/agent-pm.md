@@ -110,6 +110,7 @@
 2. **交付可信**：进入 done 的 feature 同时满足四条——需求与设计经用户确认、实现有 commit 证据、QA 验收通过、合入干净且 worktree 已清理
 3. **状态一致**：用户任意时刻看到的状态，与 `.features/` / `.issues` 记录及代码、git 实际一致，不依赖对话记忆
 4. **工作流自进化**：每次交付都把本次踩到的坑转成提示词改动建议；同类返工不再发生，人工纠偏量随使用递减
+5. **打造完美用户体验**：设计 agent 时，凡最终用户直接接触的部分——前端、对外 API、CLI、Agent 对话——都以最终用户的使用体验为判据；交互流程、状态与反馈、错误与恢复、等待与可理解性纳入设计，不以功能跑通为终点
 
 ### 工作原则
 
@@ -393,6 +394,7 @@ sequenceDiagram
 #### 3.3.4 doc design要求
 - 开始设计文档之前一定先读取 `.claude/agents/agent-architecture.drawio` 与 `.claude/agents/design-reference.md`，根据架构与文档输出规范输出
 - 以每个 doc 为单位（模块：`doc/modules/<module_name>/`；backend：`doc/backend/<service_name>/`），和用户对齐、讨论、明确修改内容
+- 对外部分（前端、对外 API、CLI、Agent 对话）的设计必须写出最终用户的交互流程、状态与反馈、错误与恢复、等待与可理解性；不以功能跑通为终点（见 §1 目标「打造完美用户体验」）
 
 PM 完成 doc/ 修改后，提交用户终审：
 
@@ -488,7 +490,26 @@ QA pass 后 PM 问用户合入方式，二选一；**不落库**（决策只在�
 **PR 路径**（推分支 + 建 PR，人工合入）：
 1. 末次 rebase（同上）
 2. `git -C <worktree> push -u origin feature/<NNN>-<slug>`
-3. 建 PR（**带描述**，内容不作规定）：平台按 `git remote -v` 判定——ADO 域名 → `az repos pr create`；GitHub → `gh pr create`；无法判定 → 问用户
+3. 建 PR（**带描述**，内容不作规定）：
+   1. 取远端：当前分支 upstream 的远端，没有则 `origin`；`git remote get-url <remote>`
+   2. 归一化：SCP 形式 `user@host:path` 归一为 `host/path`；URL 形式去协议、userinfo、端口与末尾 `.git`、末尾斜杠，得到 `<host>/<path>`。按序判定平台：
+      - `host` 为 `ssh.dev.azure.com` 且 path 以 `/v3/` 开头 → ADO：`v3/<org>/<project>/<repo>` 还原为 `<ado-base>=https://dev.azure.com/<org>/<project>`、`<repo>`
+      - path 含 `/_git/` → ADO：`<ado-base>=https://<host>/` + `/_git/` 之前的部分，`<repo>` = `/_git/` 之后的部分
+      - `host` 为 `github.com` → GitHub，API 基址 `https://api.github.com`
+      - 其它 host → 先按 GitHub Enterprise 尝试，API 基址 `https://<host>/api/v3`；请求返回 401/404 → 问用户
+      - 均不匹配 → 问用户
+   3. **REST 优先**，CLI 是否安装不影响主路径：
+      - ADO：`POST <ado-base>/_apis/git/repositories/<urlencode(repo)>/pullrequests?api-version=6.0`
+        - `Authorization: Basic base64(":" + <ADO_PAT>)`；PAT 取项目约定的环境变量（本部署为 `AZURE_DEVOPS_PAT`）
+        - body：`{"sourceRefName":"refs/heads/<branch>","targetRefName":"refs/heads/<base>","title":"<title>","description":"<description>"}`
+        - 路径段是 `pullrequests`（连写复数），不是 `pulls`；仓库标识用 `<repo>`（远端 URL 中的仓库名），不查 GUID
+      - GitHub：`POST <api-base>/repos/<owner>/<repo>/pulls`
+        - `Authorization: Bearer <GITHUB_TOKEN>`
+        - body：`{"head":"<branch>","base":"<base>","title":"<title>","body":"<description>"}`
+   4. 凭据缺失（无 ADO PAT 或无 `GITHUB_TOKEN`）→ 不发起请求，直接给建 PR 链接交用户手动创建：
+      - ADO：`<ado-base>/_git/<repo>/pullrequestcreate?sourceRef=<branch>&targetRef=<base>`
+      - GitHub：`https://<host>/<owner>/<repo>/compare/<base>...<branch>?expand=1`
+   5. 请求成功 → 回填 PR 链接；失败 → 打印状态码与响应体，按第 4 条给链接，不反复试错
 4. **停在 qa-reviewing**，等用户告知 PR 已合入；期间基线分支前进时按需 rebase + `push --force-with-lease`（见 §rebase 节点化）
 5. 用户确认合入后同步本地基线分支：`git -C <主仓> fetch origin && git -C <主仓> merge --ff-only origin/<base-branch>`——不做这步，`worktree remove` 的 `git branch -d` 会因分支未并入本地 HEAD 而拒绝
 6. `agent-factory feature transition <id> --to done`
@@ -785,6 +806,7 @@ Workspace: <worktree 绝对路径>
 #### 5.4.3 输出处理
 
 - **产出**：`pass` / `fail` / `lock_busy` + `QA-REPORT.md`（写 Feature Directory：主仓 `.features/<id>/`，不随 worktree remove 丢失）
+- **采信门禁**：收到结果后先校验 `QA-REPORT.md` 存在且非空、`## Scenario Results` 与结构化结果的 `scenarios_tested` / `scenarios_passed` 一致；缺失或不一致 → 视为未执行，**状态不流转**，记录异常并重新调度
 - **`pass`（常规 feature）**：`feature transition <id> --to done`
 - **`pass`（子 feature）**：停在 `qa-reviewing`，**不置 done**——子的 done 由父 PM 在合入父分支后置位（见 §3.4.3 合入方式）；汇报用户「子 #<id> 验收通过，待合入父分支」
 - **`fail`**：`feature transition <id> --to implementing` → 调度 developer 修复（§5.3.2）；修复循环最多 3 轮，超过仍不通过则升级用户决策

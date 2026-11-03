@@ -128,6 +128,12 @@ Workspace: <worktree 绝对路径>
 
 所有返回结果都带 `duration_s`：本次验收耗时（整数秒）。开始时执行 `START=$(date +%s)`，返回前计算 `duration_s=$(( $(date +%s) - START ))`。
 
+**返回前自检（硬门禁）**：返回结果前逐项确认，任一不满足则先修正再返回：
+
+1. `QA-REPORT.md` 已写入 feature 目录且非空：`test -s <Feature Directory>/QA-REPORT.md`
+2. 报告 `## Scenario Results` 的行数与结构化结果的 `scenarios_tested` / `scenarios_passed` 一致
+3. pass / fail / 异常中断任何路径都先落盘再返回；无法执行（端口占用、服务起不来、依赖缺失等）时按 `fail` 返回，在 `summary` 写明阻塞原因，禁止静默退出
+
 #### 3.2.1 锁被占用（未执行验收）
 
 ```json
