@@ -189,8 +189,11 @@ sequenceDiagram
     pm->>feat: write summary + background
 
     pm->>feat: set designing
-    pm->>+user: 确认基线分支（列候选）
-    user->>-pm: 选择
+    pm->>pm: 确定基线分支（配置优先；缺失时列候选）
+    opt 未配置 base_branch
+        pm->>+user: 候选基线分支
+        user->>-pm: 选择
+    end
     pm->>wt: worktree new（建目录+分支+写 feat 记录）
     pm->>wt: 了解文档 + 代码
     pm->>pm: 分析与设计
@@ -464,16 +467,18 @@ E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、�
 
 #### 3.4.2 worktree 生命周期
 
-1. **创建**：feature 进入 designing 时，先与用户确认**基线分支**，再执行 `agent-factory worktree new <id> --base <base-branch>`（先 `git fetch`）
+1. **创建**：feature 进入 designing 时确定**基线分支**，再执行 `agent-factory worktree new <id> --base <base-branch>`（先 `git fetch`）
 
-   **基线分支**：本 feature 从它分出、最终合回它的分支（如 `origin/dev`、`origin/main`）。**逐 feature 与用户确认一次，不设全局默认**。候选按下列顺序合并去重后编号列出、标注推荐项，末尾固定一项「其它（我手动给 ref）」：
+   **基线分支**：本 feature 从它分出、最终合回它的分支（如 `origin/dev`、`origin/main`）。**优先取配置**：读 `.claude/agents/agent-factory.yaml` 的 `base_branch`；有值且 `git rev-parse --verify <ref>` 通过 → 直接使用，不再询问。用户本次显式指定 → 以用户为准，不写回配置。配置缺失 → 按下述候选流程与用户确认一次。配置存在但 ref 无效 → 报错，让用户修正配置或本次显式指定，**不静默回退**。
+
+   未配置时的候选按下列顺序合并去重后编号列出、标注推荐项，末尾固定一项「其它（我手动给 ref）」：
    1. 本地分支 upstream 频次最高的 `origin/*`（`git for-each-ref --format='%(upstream:short)' refs/heads | sort | uniq -c | sort -rn`）——推荐，它是本仓库实际在用基线的证据
    2. `origin/HEAD` 指向的分支——只列不推荐（可能指向已废弃的旧线）
    3. 存在的 `origin/{main,master,dev,develop}`
 
-   用户确认的 ref 落库到 FEATURE.yaml `worktree.base`，并贯穿后续全部节点（见 §rebase 节点化）。**不自动回退 `origin/HEAD`**——探测可能出错，静默取错比不给更危险。
+   最终使用的 ref 落库到 FEATURE.yaml `worktree.base`，并贯穿后续全部节点（见 §rebase 节点化）。**不自动回退 `origin/HEAD`**——探测可能出错，静默取错比不给更危险。
 
-   **子 feature（拆分产生的）不走上面的候选流程**：它的基线分支由 `parent` 推导，执行 `agent-factory worktree new <子id> --base <父的 worktree.branch>`。拆分时刻父分支与基线内容完全相同（父尚未提交任何东西），所以这与「从基线分出」等价，且**不需要再问用户一次**——用户在父那边已经确认过拆分清单了。
+   **子 feature（拆分产生的）不走配置与候选流程**：它的基线分支由 `parent` 推导，执行 `agent-factory worktree new <子id> --base <父的 worktree.branch>`。拆分时刻父分支与基线内容完全相同（父尚未提交任何东西），所以这与「从基线分出」等价，且**不需要再问用户一次**——用户在父那边已经确认过拆分清单了。
 2. **使用**：doc/ 撰写、developer 实现、QA 验收全部在 worktree 路径内进行；调度 developer/QA 时 `Workspace` 传 worktree 绝对路径
 3. **收尾**：QA pass → 用户选合入方式（见 §合入方式）→ 合入动作 → `agent-factory worktree remove <id>`（清目录+删分支+清记录）
 

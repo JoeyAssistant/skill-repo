@@ -116,17 +116,18 @@ cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architect
 printf '.features/\n.issues/\n.claude/\n' >> <project>/.git/info/exclude
 ```
 
-### 2. 环境配置（dev 与 prod 分离的项目）
+### 2. 环境配置
 
 创建 `<project>/.claude/agents/agent-factory.yaml`：
 
 ```yaml
-topology: split                  # dev 与 prod 分离：同机两个部署目录
+topology: split                  # 可选：dev 与 prod 分离；缺省 unified
 prod:
   root: /abs/path/to/prod-deploy
+base_branch: origin/dev          # 可选：顶层 feature 的默认基线分支
 ```
 
-一体项目无需此文件（默认 unified）。
+一体项目无需此文件（默认 unified）；如需固定基线分支，可只写 `base_branch`。
 
 ### 3. 启动
 
