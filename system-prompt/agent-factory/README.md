@@ -32,11 +32,16 @@ User ←→ PM (agent-pm.md, system prompt)
 
 ## 安装
 
-一键部署到目标项目（自动完成 subagents 复制、设计参考资产、`.features/` `.issues/` 初始化、git init，可选 `--prod <path>` 生成 topology: split 配置）：
+一键部署到目标项目（自动完成 subagents 复制、设计参考资产、`.features/` `.issues/` 初始化、git init）：
 
 ```bash
-script/init-project.sh <target-project-dir> [--prod <prod-root>]
+script/init-project.sh <target-project-dir> [--prod <prod-root>] [--base-branch <ref>]
 ```
+
+- `--prod <path>`：生成 `topology: split` 配置
+- `--base-branch <ref>`：写入默认基线分支（如 `origin/dev`），顶层 feature 直接采用，不再询问
+
+`agent-factory.yaml` **仅在缺失时生成，已存在则跳过**——重跑部署不会覆盖手写配置（`base_branch`、`prod.log`、`prod.data` 等）。检测到 `--prod` / `--base-branch` 与现有配置不一致时会告警，提示手工编辑。
 
 ### 1. 设置 PM 为 system prompt
 

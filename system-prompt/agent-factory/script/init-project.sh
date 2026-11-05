@@ -2,8 +2,9 @@
 # agent-factory 一键部署：把 PM 工作流资产安装到目标 agent 项目
 #
 # 用法:
-#   init-project.sh <target-project-dir>              # 一体项目（unified，默认）
-#   init-project.sh <target-project-dir> --prod <path> # dev 与 prod 分离（split）
+#   init-project.sh <target-project-dir>                              # 一体项目（unified，默认）
+#   init-project.sh <target-project-dir> --prod <path>                # dev 与 prod 分离（split）
+#   init-project.sh <target-project-dir> --base-branch <ref>          # 指定默认基线分支
 #
 # 做的事:
 #   1. git init（如目标还不是 git 仓）
@@ -11,19 +12,43 @@
 #   3. 复制 subagents（developer/qa/qa-diagnosis/poc/patrol.md）到 .claude/agents/
 #   4. 复制 agent-pm.md（PM system prompt）到 .claude/agents/（PM 提示词随项目仓走，启动命令自包含）
 #   5. 复制 design-reference.md + agent-architecture.drawio 到 .claude/agents/（PM 设计阶段引用，资产落点）
-#   6. --prod 时生成 .claude/agents/agent-factory.yaml（topology: split）
+#   6. agent-factory.yaml 仅在缺失时生成（topology / prod.root / base_branch）；已存在则不覆盖
 #   7. 检查 agent-factory CLI 可用性
 #
 # 可重复执行（幂等）：重跑 = 更新资产到最新版。
+# 注意：agent-factory.yaml 归用户所有，脚本只在文件缺失时生成，绝不覆盖手写配置。
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TARGET="${1:?用法: $0 <target-project-dir> [--prod <prod-root>]}"
+TARGET=""
 PROD_ROOT=""
+BASE_BRANCH=""
 
-if [[ "${2:-}" == "--prod" ]]; then
-  PROD_ROOT="${3:?--prod 需要路径参数}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --prod)
+      PROD_ROOT="${2:?--prod 需要路径参数}"
+      shift 2
+      ;;
+    --base-branch)
+      BASE_BRANCH="${2:?--base-branch 需要分支名}"
+      shift 2
+      ;;
+    -*)
+      echo "未知参数: $1" >&2
+      exit 1
+      ;;
+    *)
+      TARGET="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$TARGET" ]]; then
+  echo "用法: $0 <target-project-dir> [--prod <prod-root>] [--base-branch <ref>]" >&2
+  exit 1
 fi
 
 TARGET="$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")"
@@ -63,14 +88,32 @@ cp "$SCRIPT_DIR/agent-pm.md" .claude/agents/
 # 5. PM 设计阶段参考资产（与 subagents 同落点，不进项目根）
 cp "$SCRIPT_DIR/design-reference.md" "$SCRIPT_DIR/agent-architecture.drawio" .claude/agents/
 
-# 6. 拓扑配置（可选）
-if [[ -n "$PROD_ROOT" ]]; then
-  cat > .claude/agents/agent-factory.yaml <<EOF
-topology: split                  # dev 与 prod 分离：同机两个部署目录
-prod:
-  root: $PROD_ROOT
-EOF
-  echo "==> 已写入 .claude/agents/agent-factory.yaml（topology: split, prod: $PROD_ROOT）"
+# 6. 拓扑配置（仅在缺失时生成；已有配置归用户所有，不覆盖）
+YAML_FILE=.claude/agents/agent-factory.yaml
+if [[ -e "$YAML_FILE" ]]; then
+  echo "==> $YAML_FILE 已存在，跳过写入（保留 base_branch 等手写配置）"
+  if [[ -n "$PROD_ROOT" ]]; then
+    grep -qE '^topology:[[:space:]]*split' "$YAML_FILE" \
+      || echo "!! 现有 topology 非 split；如需切换请手工编辑 $YAML_FILE"
+    grep -qF "root: $PROD_ROOT" "$YAML_FILE" \
+      || echo "!! 现有 prod.root 与 --prod $PROD_ROOT 不一致；如需修改请手工编辑 $YAML_FILE"
+  fi
+  if [[ -n "$BASE_BRANCH" ]]; then
+    grep -qE '^base_branch:' "$YAML_FILE" \
+      || echo "!! 现有配置无 base_branch；如需设置请手工编辑 $YAML_FILE"
+  fi
+elif [[ -n "$PROD_ROOT" || -n "$BASE_BRANCH" ]]; then
+  {
+    if [[ -n "$PROD_ROOT" ]]; then
+      echo "topology: split                  # dev 与 prod 分离：同机两个部署目录"
+      echo "prod:"
+      echo "  root: $PROD_ROOT"
+    fi
+    if [[ -n "$BASE_BRANCH" ]]; then
+      echo "base_branch: $BASE_BRANCH          # 顶层 feature 的默认基线分支"
+    fi
+  } > "$YAML_FILE"
+  echo "==> 已生成 $YAML_FILE"
 fi
 
 # 6. CLI 检查
