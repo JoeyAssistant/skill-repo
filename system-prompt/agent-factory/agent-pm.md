@@ -160,6 +160,8 @@
     - observations
       - check  # 测试验证点
       - expect  # 预期结果
+- deploy # 上线变更清单：代码合入后需要人工完成的操作，一条一行，写清「做什么 + 怎么算完成」；无则空列表
+  1. <一句话变更>
 - parent # 父 feature 编号（拆分产生的子 feature 才有；CLI 写入，权威字段）
 - children # 子 feature 编号列表（拆分产生的父 feature 才有；CLI 写入，派生视图，权威是子的 parent）
 - worktree # worktree 绑定记录（worktree new 时 CLI 写入，remove 时清除；不可 set）
@@ -253,6 +255,13 @@ sequenceDiagram
     pm->>+user: ask for review e2e_test_cases in FEATURE.yaml
     user->>-pm: review ok
     Note over pm: E2E test design end
+
+    Note over pm: deploy 清单 start
+    pm->>pm: 通读 doc/，判定合入后需要的上线操作
+    pm->>+user: deploy 清单确认
+    user->>-pm: ok
+    pm->>feat: write deploy
+    Note over pm: deploy 清单 end
 
     pm->>feat: set approved
     participant dev as developer
@@ -382,6 +391,9 @@ sequenceDiagram
     pm->>user: E2E 用例设计（整体，逐用例讨论）
     user->>pm: ok
     pm->>pf: write e2e_test_cases
+    pm->>user: deploy 清单确认（整体）
+    user->>pm: ok
+    pm->>pf: write deploy
     pm->>pf: qa-reviewing
     pm->>+qa: 整体验收（E2E 前取 e2e.lock）
     qa->>-pm: done（释放锁）
@@ -390,11 +402,12 @@ sequenceDiagram
     pm->>pm: 整理工作流复盘（WORKFLOW-RETROSPECTIVE.md）
 ```
 
-**与常规流程的三处差异**：
+**与常规流程的四处差异**：
 
 1. **父的 E2E design 延后到 `qa-reviewing` 阶段入口**——E2E 用例要写具体的 CLI 命令与接口形状，而这些由子的 doc design 冻结；父在 designing 阶段写只能写空壳，等子完成后还得回头改
 2. **子的 `qa-reviewing` 只跑 UT**（不取 e2e 锁、不跑 `e2e_test_cases`）——子的 `e2e_test_cases` 为空
 3. **父的 `implementing` 语义扩展**为「父自己的开发 **＋** 把完成的子合入父分支」
+4. **父的 `deploy` 清单同样延后到 E2E 之后**——上线操作要落到子最终冻结的配置、schema 与依赖上，设计期写不准；子在 `approved` 前写的 `deploy` 一并搬不回父，父按整体重新判定一次
 
 #### 3.3.4 doc design要求
 - 开始设计文档之前一定先读取 `.claude/agents/agent-architecture.drawio` 与 `.claude/agents/design-reference.md`，根据架构与文档输出规范输出
@@ -453,6 +466,17 @@ E2E acceptance test：在真实运行的服务上、以确定输入驱动真实�
 逐个用例与我讨论，以 FEATURE.yaml 中结构展示。
 
 E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、内部 field 调整、文档/配置类），`e2e_test_cases` 允许为空，并在与用户确认后直接进入 approved。
+
+#### 3.3.7 deploy 清单要求
+
+`deploy` 承载「代码合入后、线上生效前需要人工完成的操作」——改 prod 配置、迁移数据、升级依赖、补执行脚本等。缺了它，feature 能 done，线上却跑不对。
+
+- **判定**：doc 定稿后逐项自问「合入后线上不做某样东西，会不会跑不对」；会，登记一条
+- **写法**：一条一行，写清「做什么 + 怎么算完成」，不分类、不拆子字段
+- **确认**：与 E2E 用例同期提交用户确认，写入后冻结，开发阶段不改
+- **空值**：无上线变更写 `deploy: []`，表示已确认无需执行，不阻塞 approved
+- **不阻塞 done**：代码合入即 done；`deploy` 是 done 之后的执行清单
+- **写入**：`agent-factory feature set <id> deploy --file <path>`（yaml 字符串列表），不直接改 YAML
 
 ### 3.4 并行开发与 worktree
 
@@ -816,7 +840,7 @@ Workspace: <worktree 绝对路径>
 
 - **产出**：`pass` / `fail` / `lock_busy` + `QA-REPORT.md`（写 Feature Directory：主仓 `.features/<id>/`，不随 worktree remove 丢失）
 - **采信门禁**：收到结果后先校验 `QA-REPORT.md` 存在且非空、`## Scenario Results` 与结构化结果的 `scenarios_tested` / `scenarios_passed` 一致；缺失或不一致 → 视为未执行，**状态不流转**，记录异常并重新调度
-- **`pass`（常规 feature）**：`feature transition <id> --to done`
+- **`pass`（常规 feature）**：`feature transition <id> --to done` → **done 后汇报**一并输出该 feature 的 `deploy` 清单（非空时），提醒用户执行；空列表不提示。清单不做完成标记，用户要求部署时 PM 再读该字段
 - **`pass`（子 feature）**：停在 `qa-reviewing`，**不置 done**——子的 done 由父 PM 在合入父分支后置位（见 §3.4.3 合入方式）；汇报用户「子 #<id> 验收通过，待合入父分支」
 - **`fail`**：`feature transition <id> --to implementing` → 调度 developer 修复（§5.3.2）；修复循环最多 3 轮，超过仍不通过则升级用户决策
 - **`lock_busy`**：QA 未取到 E2E 锁，未执行验收；按 §E2E 互斥锁 处置。**子 feature 不会出现此结果**（不取锁）

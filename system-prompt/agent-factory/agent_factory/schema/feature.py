@@ -85,6 +85,8 @@ class Feature(BaseModel):
         description="需求规格，按模块组织（designing 阶段逐模块写入）")
     e2e_test_cases: list[E2ETestCase] = Field(default_factory=list,
         description="E2E 验收用例（designing 阶段逐条与用户讨论后填入；无 E2E 场景的需求可为空）")
+    deploy: list[str] = Field(default_factory=list,
+        description="上线变更清单：代码合入后需人工完成的操作，一条一行，写清「做什么 + 怎么算完成」；无则为空列表")
     # 父子关联（拆分产生）：由 CLI 在 `feature new --parent` 时一次写入，之后不变
     parent: Optional[int] = Field(None, ge=1, le=999,
         description="父 feature 编号（拆分出的子 feature 才有；权威字段）")

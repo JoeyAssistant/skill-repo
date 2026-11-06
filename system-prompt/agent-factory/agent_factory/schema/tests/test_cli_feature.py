@@ -340,6 +340,76 @@ def test_feature_set_invalid_field(tmp_path, monkeypatch):
         "feature", "set", "1", "nonexistent_field", "value",
     ])
     assert result.exit_code == 4
+    assert "deploy" in result.output
+
+
+def test_feature_set_deploy(tmp_path, monkeypatch):
+    """deploy 整列表替换：一条一行文本。"""
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    deploy_file = tmp_path / "deploy.yaml"
+    deploy_file.write_text(yaml.safe_dump([
+        "prod 的 config.yaml 把 retry 从 3 改成 5，改完重启服务确认生效",
+        "把 sqlite 旧表数据迁到新 schema，迁完核对行数一致",
+    ], allow_unicode=True))
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "set", "1", "deploy", "--file", str(deploy_file),
+    ])
+    assert result.exit_code == 0, result.output
+
+    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
+    assert len(feat["deploy"]) == 2
+    assert "retry 从 3 改成 5" in feat["deploy"][0]
+
+
+def test_feature_set_deploy_accepts_empty_list(tmp_path, monkeypatch):
+    """无上线变更时写 []，表示已确认无需执行。"""
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    deploy_file = tmp_path / "deploy.yaml"
+    deploy_file.write_text("[]\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "set", "1", "deploy", "--file", str(deploy_file),
+    ])
+    assert result.exit_code == 0, result.output
+
+    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
+    assert feat["deploy"] == []
+
+
+def test_feature_set_deploy_rejects_blank_item(tmp_path, monkeypatch):
+    """空条目拒绝写入，避免占位式清单。"""
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    deploy_file = tmp_path / "deploy.yaml"
+    deploy_file.write_text(yaml.safe_dump(["改配置", "  "], allow_unicode=True))
+
+    runner = CliRunner()
+    result = runner.invoke(main, [
+        "feature", "set", "1", "deploy", "--file", str(deploy_file),
+    ])
+    assert result.exit_code == 1
+    assert "deploy[2]" in result.output
+
+    feat = load_yaml(tmp_path / ".features" / "001-test-feature" / "FEATURE.yaml")
+    assert feat.get("deploy") in (None, [])
+
+
+def test_feature_set_deploy_requires_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _setup_feature(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["feature", "set", "1", "deploy", "改配置"])
+    assert result.exit_code == 4
+    assert "--file" in result.output
 
 
 def test_feature_set_spec_field_level_rejected(tmp_path, monkeypatch):

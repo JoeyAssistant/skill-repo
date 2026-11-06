@@ -34,3 +34,7 @@ e2e_test_cases:
     cleanup:
       - "python3 cli/income.py delete --month 2026-08 --type salary（或恢复 data/income.json 为执行前的空数组）"
       - "rm -f /tmp/qa-income-*.json"
+
+deploy:
+  - "prod 的 config/income.yaml 新增 income.categories 配置项，写入后重启服务，确认 /api/income/categories 返回新分类"
+  - "迁移 data/income.json 旧格式（amount 为字符串）到新格式（amount 为数字），迁移后核对条目数一致"

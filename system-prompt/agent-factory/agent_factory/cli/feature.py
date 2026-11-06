@@ -204,6 +204,15 @@ def set_field(feature_id: int, field: str, value: str | None,
             sys.exit(4)
         _set_e2e_test_cases(feature_id, file_path); return
 
+    # deploy whole list
+    if field == "deploy":
+        if not file_path:
+            click.echo(format_error("InvalidArgs",
+                "deploy 整列表替换需 --file（yaml: list of str，一条一行；无上线变更写 []）",
+                None), err=True)
+            sys.exit(4)
+        _set_deploy(feature_id, file_path); return
+
     _invalid_field(field)
 
 
@@ -221,7 +230,7 @@ def _invalid_field(field: str) -> None:
     """Exit with invalid field error."""
     click.echo(format_error("InvalidField",
         f"Field '{field}' not supported. 合法形式：user_input / source_issue / background "
-        f"/ background.pain_point / background.benefit / spec.<module> / e2e_test_cases",
+        f"/ background.pain_point / background.benefit / spec.<module> / e2e_test_cases / deploy",
         None), err=True)
     sys.exit(4)
 
@@ -316,6 +325,30 @@ def _set_e2e_test_cases(feature_id: int, file_path: Path) -> None:
         click.echo(format_error("ValidationError", "; ".join(issues), str(file_path)), err=True)
         sys.exit(1)
     data["e2e_test_cases"] = cases
+    _save(feature_id, path, data)
+
+
+def _validate_deploy(items) -> list[str]:
+    """deploy 必须是字符串列表，每条非空（防占位式空条目）。"""
+    if not isinstance(items, list):
+        return ["deploy 必须是字符串列表（无上线变更写 []）"]
+    issues = []
+    for i, item in enumerate(items, 1):
+        if not isinstance(item, str) or not item.strip():
+            issues.append(f"deploy[{i}] 必须是非空字符串")
+    return issues
+
+
+def _set_deploy(feature_id: int, file_path: Path) -> None:
+    path, data = _load_feature(feature_id)
+    items = yaml.safe_load(file_path.read_text())
+    if items is None:
+        items = []
+    issues = _validate_deploy(items)
+    if issues:
+        click.echo(format_error("ValidationError", "; ".join(issues), str(file_path)), err=True)
+        sys.exit(1)
+    data["deploy"] = items
     _save(feature_id, path, data)
 
 
@@ -425,6 +458,11 @@ def _render_feature_markdown(feature: Feature) -> str:
             else:
                 lines.append("  无")
             lines.append("")
+    if feature.deploy:
+        lines += ["## Deploy", ""]
+        for i, item in enumerate(feature.deploy, 1):
+            lines.append(f"{i}. {item}")
+        lines.append("")
     return "\n".join(lines)
 
 
