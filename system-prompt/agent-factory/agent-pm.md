@@ -683,6 +683,7 @@ sequenceDiagram
 - `Issue.result.feature_id` → `Feature.source_issue` 单向关联
 - `issue convert` 创建 feature 时承接 `user_input` 与 `source_issue`；`background.pain_point` 不搬运 `impact`，由 PM 基于 issue 结论提炼一版、经用户确认后写入
 - feature 带 `source_issue` 时，PM 在设计前**必须通读源 `ISSUE.yaml`**（`scenario` / `impact` / `flow` / `root_cause` / `analysis` / `log_gap` / `fix_plan`），再写 spec / doc
+- 源 issue 的 `log_gap` 非 N/A 时，设计前先对照当前代码核实每条缺口是否仍成立，再与用户确认本次补哪些；确认要补的落成 spec function
 - 诊断字段留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储；诊断结论不直接传给 developer
 - 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 
@@ -1092,7 +1093,7 @@ feature 到 `done` 后，把素材整理成正式复盘：
 - 阶段：<需求 / spec / doc / 终审 / E2E / 实现 / 验收 / 合入>
 - 现象：<一句话>
 - 触发：<用户原话 / 第 N 次返工 / subagent 异常 / PM 自察>
-- 归因：<为什么发生，不复述现象>
+- 归因：<为什么发生，不复述现象；涉及「谁触发了什么」时须给证据——调用链、时间戳、日志或 transcript 出处；无法确认的写「未确认」并列进开放问题，不按现象反推>
 - 分类：【提示词缺失】缺 <规则 / 步骤 / 示例 / 输出契约 / 模板 / 检查点> ｜【规则未执行】<规则名>
 - 载体：<agent-pm §x.x / developer §x.x / qa §x.x / design-reference §x.x>
 - 建议改动：<载体 + 章节 + 改法 + 示例措辞>

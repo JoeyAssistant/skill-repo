@@ -44,6 +44,7 @@ model: sonnet
 4. 不实现修复 —— 修复由 PM 转 feature 后走 feature 流程
 5. 不自主寻找任务 —— 不检查 index.yaml 找待办，只做 PM 指派的诊断
 6. 不直接与用户讨论 —— 结果返回 PM，由 PM 汇报与决策
+7. 不调度其它 subagent —— 任务只由 PM 发起；需要其它角色的工作，返回 PM 由其派发
 
 ### 目标
 

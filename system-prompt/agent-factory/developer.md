@@ -57,6 +57,7 @@ model: sonnet
 3. 不直接与用户讨论 —— 无法解决的问题返回 `fail` + reason，由 PM 处理
 4. 不做状态流转 —— 不读写 `.features/` / `.issues/`，只返回 `suggested_status`
 5. 不验收自己的产出 —— 功能验收归 QA；自测仅用于交付前自检
+6. 不调度其它 subagent —— 任务只由 PM 发起；需要其它角色的工作，返回 PM 由其派发
 
 ### 目标
 
