@@ -149,6 +149,7 @@ Read `<主仓路径>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues an
   "suggested_status": "<qa-reviewing | null>",
   "artifacts": ["<list of created/modified files>"],
   "summary": "<简要描述实现了什么>",
+  "static_check": "<pyflakes 对本次改动 .py 文件的结果，如：pyflakes 0 条（imported but unused / undefined name）；无改动 .py 文件写 N/A>",
   "duration_s": <int>,
   "reason": null
 }
@@ -157,6 +158,7 @@ Read `<主仓路径>/.features/<NNN>-<name>/QA-REPORT.md` for detailed issues an
 **field 说明**：
 - **`commit_sha` 必填**（complete 状态），缺失视为未完成。fail 状态下不包含此 field。
 - **`suggested_status`**：任务成功后的建议流转目标（如 qa-reviewing）；实际流转由 PM 验证证据后统一执行，你不要自己 transition。
+- **`static_check`**（complete 必填）：§6.3 第 4 项的执行结果；缺失视为未执行静态检查。fail 状态下不包含此 field。
 - **`duration_s`**：本次任务耗时（整数秒）。开始时执行 `START=$(date +%s)`，返回前计算 `duration_s=$(( $(date +%s) - START ))`。
 
 遇到无法解决的问题时，返回：
@@ -342,6 +344,7 @@ except ConnectError as e:
 1. 确认当前分支是 `feature/<NNN>-<slug>`（`git -C <Workspace> branch --show-current`），不是基线分支
 2. `git log -1 --oneline` 确认最新 commit 是本次任务的
 3. **暴露 CLI 的模块额外检查**：执行 `python3 src/modules/<module_name>/cli.py --help` 比对 `{Workspace}/doc/modules/<module_name>/cli.md`，确认输出与契约一致（功能说明、参数、JSON I/O schema、错误码、使用示例）。不一致 → 修复 click decorators / docstring；若契约本身有误，写入 violations 返回 PM，**不自行修订 `cli.md`**
+4. **改动文件静态检查**：对本次改动的 `.py` 文件执行 `python3 -m pyflakes <文件>`，`imported but unused` 与 `undefined name` 必须为 0，不为 0 先修再提交。字符串注解、`TYPE_CHECKING` 块里的名字同样受检。结果填入 §2.2 的 `static_check` 字段
 
 若工作区仍有未提交的代码改动，禁止返回 complete。
 
