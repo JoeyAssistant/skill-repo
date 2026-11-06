@@ -12,10 +12,11 @@ from agent_factory.schema.feature import FeatureStatus
 from agent_factory.schema.issue import IssueStatus
 from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Feature, Observation, WorktreeInfo
 from agent_factory.schema.issue import (
+    AnalysisItem,
+    AnalysisType,
     ClosedResult,
     ConvertedResult,
-    EvidenceItem,
-    EvidenceType,
+    FixPlan,
     Issue,
     IssueCloseReason,
     IssueResult,
@@ -42,8 +43,9 @@ __all__ = [
     # Issue
     "Issue",
     "IssueCloseReason",
-    "EvidenceItem",
-    "EvidenceType",
+    "AnalysisItem",
+    "AnalysisType",
+    "FixPlan",
     "ConvertedResult",
     "ClosedResult",
     "IssueResult",

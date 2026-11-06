@@ -585,17 +585,19 @@ rebase 遇冲突时 **PM 当场处理，不调度 subagent**（解冲突属 git 
 - user_input # 用户原始输入：直接上报保留原话；多轮讨论产出的问题由 PM 总结成一段
 - summary # 一句话总结（≤50 字）：什么问题/现象+影响；PM 信息收集，用户确认后写入
 - scenario # 用户使用场景与操作：谁 + 在什么情况下 + 系统呈现什么状态；≤200 字；不写原因/代价/代码路径；PM 收集，用户确认后写入
-- repro_steps # 复现步骤：dev 可机械执行，输入取确定值，只写「修复前」观察；qa-diagnosis 提案，PM 确认后写入
-- impact # 损害与范围：丢了什么 + 影响多少 + 多严重 + 频率；不复述现象与复现步骤
-- root_cause # 根因结论：2～3 句；不写证据/文件路径/推理过程
-- evidence # 有序证据链（可选）
+- impact # 损害与范围：丢了什么 + 影响多少 + 多严重 + 频率；不复述现象与流程
+- flow # 流程与问题点：用户做了什么 → 系统依次做了什么（每步耗时/结果、标正常/异常），并指认问题点在哪一步；自由文本，不写代码细节；qa-diagnosis 提案，PM 确认后写入
+- root_cause # 根因结论：回答问题点为什么如此；单段按可读宽度换行；不写证据/文件路径/推理过程；多个问题点时按「问题点①②」分段
+- analysis # 分析过程（可选）：agent 使用，`issue show` 默认不展示，`--with-analysis` 展开
     - step # 推理顺序，从 1 递增
     - claim # 一句话断言；支撑/排除、推断边界都写在这里
     - type # code | log | data
     - locator # code: path:line @ <commit SHA>；log/data: 绝对路径 + 行号
     - snippet # locator 处原文，不改写；统计结论放 claim
 - log_gap # 维测日志缺口：缺什么 + 判断不了什么 + 在哪补；日志充足写 N/A
-- fix_plan # 修复方向：方向 + 关键改动点 + 不做；不写文件/函数/行号；PM 与用户讨论后写入
+- fix_plan # 修复方案，分两档：PM 与用户讨论后写入
+    - quick_fix # 止血方案（可空）：目标 + 改什么 + 用户感受 + 代价 + 不解决什么 + 上线门槛
+    - permanent_fix # 根治方案（必填）：方向 + 关键改动点 + 不做 + 上线门槛；不写文件/函数/行号
 - result # issue处理结果
     - converted_to_feature
         - feature_id # 转换到的 feature 编号
@@ -611,7 +613,7 @@ open → in_progress → closed
 
 - `open → in_progress`：PM 完成信息收集（`summary` + `scenario` + `impact`）后认领，进入定位分析
 - `in_progress → closed`：定位分析完成，转 feature 或按原因关闭
-  - `convert` / `close(no_action)` 前必须有 `root_cause` + `fix_plan` + `repro_steps` + `log_gap`（`evidence` 可选）
+  - `convert` / `close(no_action)` 前必须有 `root_cause` + `fix_plan.permanent_fix` + `log_gap`（`analysis` 可选；只有 `quick_fix`、没有 `permanent_fix` 不算诊断完成）
   - `close(duplicate / invalid / wontfix)` 只要求 `reason`
 - `open → closed`：仅允许 `closed` 结果（重复 / 无效 / 不处理 / 无需修改）
 - `in_progress → open`：重新打开
@@ -637,7 +639,7 @@ sequenceDiagram
     pm->>issue: 写入 summary + scenario + impact
     pm->>issue: transition → in_progress
     pm->>+diag: 定位分析（§5.5）
-    diag->>-pm: 提案（root_cause / evidence / log_gap / repro_steps / fix_plan 方向）
+    diag->>-pm: 提案（flow / root_cause / analysis / log_gap / fix_plan：quick_fix + permanent_fix）
     pm->>+user: 诊断结果确认（整批）
     user->>-pm: 确认 / 修改
     pm->>issue: 写入诊断字段
@@ -656,7 +658,7 @@ sequenceDiagram
 - 一个 issue 只转一个 feature
 - `Issue.result.feature_id` → `Feature.source_issue` 单向关联
 - `issue convert` 创建 feature 时承接 `user_input` 与 `source_issue`；`background.pain_point` 不搬运 `impact`，由 PM 基于 issue 结论提炼一版、经用户确认后写入
-- feature 带 `source_issue` 时，PM 在设计前**必须通读源 `ISSUE.yaml`**（`scenario` / `repro_steps` / `root_cause` / `evidence` / `log_gap` / `fix_plan`），再写 spec / doc
+- feature 带 `source_issue` 时，PM 在设计前**必须通读源 `ISSUE.yaml`**（`scenario` / `impact` / `flow` / `root_cause` / `analysis` / `log_gap` / `fix_plan`），再写 spec / doc
 - 诊断字段留在 `ISSUE.yaml`，feature 通过 `source_issue` 反查，不重复存储；诊断结论不直接传给 developer
 - 同根因的其它 issue 关闭为 `duplicate`，不重复转 feature
 
@@ -666,7 +668,7 @@ sequenceDiagram
 
 **第一次：诊断结果确认（写入前）**
 
-1. qa-diagnosis 返回提案：`root_cause` / `evidence` / `log_gap` / `repro_steps` / `fix_plan` 方向
+1. qa-diagnosis 返回提案：`flow` / `root_cause` / `analysis` / `log_gap` / `fix_plan`（`quick_fix` + `permanent_fix`）
 2. PM 校验提案：
    - `locator` 带 commit SHA（代码）/ 绝对路径 + 行号（日志、数据）
    - `snippet` 是原文，统计结论在 `claim`
@@ -694,7 +696,7 @@ PM 只调度，不自己诊断 / 实现 / 验收（见 §1 职责与目标）。
 |---|---|---|
 | **developer** | 按 doc/ 实现代码；修 QA 发现的问题 | ① feature `approved → implementing` ② QA fail 后修复 |
 | **QA** | Feature 验收：设计合规 + E2E 场景（子 feature 只跑 UT） | developer 返回 complete，feature 进入 `qa-reviewing` |
-| **qa-diagnosis** | Issue 定位分析，返回提案（`root_cause` / `evidence` / `log_gap` / `repro_steps` / `fix_plan` 方向），不写 ISSUE.yaml | issue 进入 `in_progress` |
+| **qa-diagnosis** | Issue 定位分析，返回提案（`flow` / `root_cause` / `analysis` / `log_gap` / `fix_plan`），不写 ISSUE.yaml | issue 进入 `in_progress` |
 | **POC** | 技术可行性与选型验证 | designing 阶段判断存在高风险技术问题 |
 | **patrol** | 代码健康巡检 | 用户显式要求 |
 
@@ -844,7 +846,7 @@ Workspace: <主仓路径>（issue 不走 worktree）
 - **产出**：诊断提案（`proposed_fields` + `fix_plan` 推荐 / 被否方案）；qa-diagnosis 不写 `ISSUE.yaml`，不做 transition，不写 result
 - **PM 动作**：
   1. 校验提案（§4.5 第一次确认）
-  2. 整批展示给用户，确认后写入 `root_cause` / `evidence` / `log_gap` / `repro_steps` / `fix_plan`
+  2. 整批展示给用户，确认后写入 `flow` / `root_cause` / `analysis` / `log_gap` / `fix_plan`
   3. 与用户确认去向（§4.5 第二次确认）→ `issue convert` 或 `issue close`
 - **转 feature 后**：走 developer 常规开发（§5.3.1），修复方案的设计评审由 feature 流程（spec / doc design）承担
 

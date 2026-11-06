@@ -251,7 +251,7 @@ def test_issue_close_requires_result(tmp_path, monkeypatch):
 
     # Fill QA fields
     runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
-    runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan.permanent_fix", "y"])
 
     # Try to close without result → should fail
     result = runner.invoke(main, ["issue", "transition", "1", "--to", "closed"])
@@ -296,8 +296,7 @@ def test_issue_convert_creates_feature_and_closes(tmp_path, monkeypatch):
     runner.invoke(main, ["issue", "set", "1", "impact", "影响范围"])
     runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
     runner.invoke(main, ["issue", "set", "1", "root_cause", "根因"])
-    runner.invoke(main, ["issue", "set", "1", "fix_plan", "修复方向"])
-    runner.invoke(main, ["issue", "set", "1", "repro_steps", "复现步骤"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan.permanent_fix", "修复方向"])
     runner.invoke(main, ["issue", "set", "1", "log_gap", "N/A"])
 
     result = runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
@@ -352,8 +351,7 @@ def test_issue_show_with_converted_result(tmp_path, monkeypatch):
     runner.invoke(main, ["issue", "set", "1", "impact", "y"])
     runner.invoke(main, ["issue", "transition", "1", "--to", "in_progress"])
     runner.invoke(main, ["issue", "set", "1", "root_cause", "x"])
-    runner.invoke(main, ["issue", "set", "1", "fix_plan", "y"])
-    runner.invoke(main, ["issue", "set", "1", "repro_steps", "z"])
+    runner.invoke(main, ["issue", "set", "1", "fix_plan.permanent_fix", "y"])
     runner.invoke(main, ["issue", "set", "1", "log_gap", "N/A"])
     runner.invoke(main, ["issue", "convert", "1", "--slug", "login-crash"])
 
@@ -365,13 +363,13 @@ def test_issue_show_with_converted_result(tmp_path, monkeypatch):
     assert "draft" in result.output
 
 
-def test_issue_set_evidence_and_show(tmp_path, monkeypatch):
-    """evidence 通过 --file 写入 YAML 列表，并在 show 中渲染."""
+def test_issue_set_analysis_and_show(tmp_path, monkeypatch):
+    """analysis 通过 --file 写入 YAML 列表；show 仅在 --with-analysis 时渲染."""
     monkeypatch.chdir(tmp_path)
     _setup_issue(tmp_path)
 
-    evidence_file = tmp_path / "evidence.yaml"
-    evidence_file.write_text(
+    analysis_file = tmp_path / "analysis.yaml"
+    analysis_file.write_text(
         "- step: 1\n"
         "  claim: 后端返回 401，响应体不含 token\n"
         "  type: log\n"
@@ -381,16 +379,20 @@ def test_issue_set_evidence_and_show(tmp_path, monkeypatch):
 
     runner = CliRunner()
     result = runner.invoke(main, [
-        "issue", "set", "1", "evidence", "--file", str(evidence_file),
+        "issue", "set", "1", "analysis", "--file", str(analysis_file),
     ])
     assert result.exit_code == 0, result.output
 
     issue = load_yaml(tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml")
-    assert issue["evidence"][0]["claim"] == "后端返回 401，响应体不含 token"
+    assert issue["analysis"][0]["claim"] == "后端返回 401，响应体不含 token"
 
-    shown = runner.invoke(main, ["issue", "show", "1"])
+    hidden = runner.invoke(main, ["issue", "show", "1"])
+    assert hidden.exit_code == 0
+    assert "## Analysis" not in hidden.output
+
+    shown = runner.invoke(main, ["issue", "show", "1", "--with-analysis"])
     assert shown.exit_code == 0
-    assert "## Evidence" in shown.output
+    assert "## Analysis" in shown.output
     assert "后端返回 401" in shown.output
 
 
@@ -427,8 +429,8 @@ def test_issue_close_no_action_requires_diagnosis(tmp_path, monkeypatch):
     assert result.exit_code == 1
 
     for field, value in (
-        ("root_cause", "x"), ("fix_plan", "y"),
-        ("repro_steps", "z"), ("log_gap", "N/A"),
+        ("root_cause", "x"), ("fix_plan.permanent_fix", "y"),
+        ("log_gap", "N/A"),
     ):
         runner.invoke(main, ["issue", "set", "1", field, value])
 
@@ -436,3 +438,20 @@ def test_issue_close_no_action_requires_diagnosis(tmp_path, monkeypatch):
         "issue", "close", "1", "--reason-type", "no_action", "--reason", "无需修改",
     ])
     assert result.exit_code == 0, result.output
+
+
+def test_issue_set_quick_fix_keeps_legacy_fix_plan_string(tmp_path, monkeypatch):
+    """历史 fix_plan 为字符串时，写 quick_fix 不得丢掉原有内容（应迁移为 permanent_fix）."""
+    monkeypatch.chdir(tmp_path)
+    _setup_issue(tmp_path)
+    issue_path = tmp_path / ".issues" / "001-test-issue" / "ISSUE.yaml"
+    issue_path.write_text(issue_path.read_text() + "fix_plan: '旧版修复方向'\nrepro_steps: '旧复现步骤'\n")
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["issue", "set", "1", "fix_plan.quick_fix", "先降级"])
+    assert result.exit_code == 0, result.output
+
+    issue = load_yaml(issue_path)
+    assert issue["fix_plan"]["permanent_fix"] == "旧版修复方向"
+    assert issue["fix_plan"]["quick_fix"] == "先降级"
+    assert "repro_steps" not in issue

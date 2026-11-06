@@ -20,6 +20,7 @@ from agent_factory.schema import (
     IssueIndexItem,
 )
 from agent_factory.schema.enums import Priority
+from agent_factory.schema.compat import migrate_legacy_issue
 from agent_factory.schema.issue import IssueStatus
 
 
@@ -42,10 +43,15 @@ def issue_group() -> None:
 
 # Note: 'title' is NOT in this set -- title is immutable (equals directory name)
 # Note: 'result' is special — use `issue close` command instead of `set` for it
+# Note: 'fix_plan' itself is not settable — write its children via dotted paths
 ISSUE_FIELDS = {
-    "user_input", "summary", "scenario", "repro_steps", "impact",
-    "root_cause", "evidence", "log_gap", "fix_plan",
+    "user_input", "summary", "scenario", "impact", "flow",
+    "root_cause", "analysis", "log_gap",
+    "fix_plan.quick_fix", "fix_plan.permanent_fix",
 }
+
+# 需要按 YAML 解析的字段（列表 / 映射），其余按文本原样写入
+_YAML_FIELDS = {"analysis"}
 
 
 @issue_group.command("new")
@@ -111,10 +117,12 @@ def new(title: str, slug: str, user_input: str, priority: str, summary: str | No
 def set_field(issue_id: int, field: str, value: str | None, file_path: Path | None) -> None:
     """Update a field in ISSUE.yaml. Title is immutable (equals directory name).
 
-    传值约定：多行长文本（user_input / scenario / repro_steps / evidence / impact /
-    root_cause / log_gap / fix_plan 等）统一 `--file <path>` 传值——
+    传值约定：多行长文本（user_input / scenario / impact / flow / root_cause /
+    log_gap / fix_plan.permanent_fix / fix_plan.quick_fix 等）统一 `--file <path>` 传值——
     inline 传参在含引号 / $ / 反引号 / # 时 shell 转义不可靠，内容会静默截断或损坏；
-    --file 原样读入零转义。evidence 需传 YAML 列表。
+    --file 原样读入零转义。analysis 需传 YAML 列表。
+    fix_plan 下分两档：quick_fix（止血，可空）与 permanent_fix（根治，必填），
+    用点路径写入，如 `issue set 150 fix_plan.permanent_fix --file plan.md`。
     """
     if field not in ISSUE_FIELDS:
         click.echo(format_error("InvalidField",
@@ -136,27 +144,38 @@ def set_field(issue_id: int, field: str, value: str | None, file_path: Path | No
         click.echo(format_error("NotFound", str(exc), None), err=True)
         sys.exit(2)
 
-    if field == "evidence":
+    if field in _YAML_FIELDS:
         try:
             parsed = yaml.safe_load(new_value)
         except yaml.YAMLError as exc:
             click.echo(format_error("InvalidValue",
-                                    f"evidence 必须是 YAML 列表: {exc}", None), err=True)
+                                    f"{field} 必须是 YAML 列表: {exc}", None), err=True)
             sys.exit(4)
         if not isinstance(parsed, list):
             click.echo(format_error(
                 "InvalidValue",
-                "evidence 必须是 YAML 列表，每项为 "
+                f"{field} 必须是 YAML 列表，每项为 "
                 "{step, claim, type, locator, snippet}", None), err=True)
             sys.exit(4)
         field_value = parsed
     else:
         field_value = new_value
 
+    # 点路径（fix_plan.quick_fix 等）下钻写入；fix_plan 未初始化时先建空壳，
+    # 由 pydantic 校验 permanent_fix 是否最终被填上。
+    parent, _, child = field.partition(".")
+
     issue_path = issue_dir / "ISSUE.yaml"
     try:
-        data = load_yaml(issue_path)
-        data[field] = field_value
+        data = migrate_legacy_issue(load_yaml(issue_path))
+        if child:
+            section = data.get(parent)
+            if not isinstance(section, dict):
+                section = {}
+            section[child] = field_value
+            data[parent] = section
+        else:
+            data[field] = field_value
         issue = Issue.model_validate(data)
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), str(issue_path)), err=True)
@@ -179,8 +198,14 @@ def _feature_status_map() -> dict[int, str]:
 @issue_group.command("show")
 @click.argument("issue_id", type=int)
 @click.option("--format", "fmt", type=click.Choice(["markdown", "yaml", "json"]), default="markdown")
-def show(issue_id: int, fmt: str) -> None:
-    """Show issue details."""
+@click.option("--with-analysis", is_flag=True, default=False,
+              help="markdown 输出中包含 analysis（默认隐藏，供 agent 使用）")
+def show(issue_id: int, fmt: str, with_analysis: bool) -> None:
+    """Show issue details.
+
+    markdown 面向人阅读：默认不输出 analysis；--with-analysis 展开。
+    yaml / json 始终输出全部字段。
+    """
     try:
         issue_dir = find_issue_dir(issue_id)
     except FileNotFoundError as exc:
@@ -200,25 +225,27 @@ def show(issue_id: int, fmt: str) -> None:
         lines += ["## User Input", issue.user_input, ""]
         if issue.scenario:
             lines += ["## Scenario", issue.scenario, ""]
-        if issue.repro_steps:
-            lines += ["## Repro Steps", issue.repro_steps, ""]
         if issue.impact:
             lines += ["## Impact", issue.impact, ""]
+        if issue.flow:
+            lines += ["## Flow", issue.flow, ""]
         if issue.root_cause:
             lines += ["## Root Cause", issue.root_cause, ""]
-        if issue.evidence:
-            lines += ["## Evidence", ""]
-            for ev in issue.evidence:
-                lines.append(f"{ev.step}. [{ev.type.value}] {ev.claim}")
-                lines.append(f"   - locator: {ev.locator}")
+        if with_analysis and issue.analysis:
+            lines += ["## Analysis", ""]
+            for item in issue.analysis:
+                lines.append(f"{item.step}. [{item.type.value}] {item.claim}")
+                lines.append(f"   - locator: {item.locator}")
                 lines.append("   - snippet:")
-                for snippet_line in ev.snippet.rstrip("\n").splitlines():
+                for snippet_line in item.snippet.rstrip("\n").splitlines():
                     lines.append(f"     {snippet_line}")
                 lines.append("")
         if issue.log_gap:
             lines += ["## Log Gap", issue.log_gap, ""]
         if issue.fix_plan:
-            lines += ["## Fix Plan", issue.fix_plan, ""]
+            if issue.fix_plan.quick_fix:
+                lines += ["## Fix Plan · Quick Fix", issue.fix_plan.quick_fix, ""]
+            lines += ["## Fix Plan · Permanent Fix", issue.fix_plan.permanent_fix, ""]
         if issue.result:
             if isinstance(issue.result, ConvertedResult):
                 lines += ["## Result (converted_to_feature)",
@@ -294,12 +321,19 @@ def _has_text(value: str | None) -> bool:
 
 
 def _missing_diagnosis(issue: Issue) -> list[str]:
-    """Return missing diagnosis-field messages (qa proposes, PM confirms and writes)."""
+    """Return missing diagnosis-field messages (qa proposes, PM confirms and writes).
+
+    ``fix_plan.quick_fix`` is deliberately not required: a quick fix is optional,
+    and writing only a stopgap must not pass as a completed diagnosis.
+    """
     missing: list[str] = []
-    for field in ("root_cause", "fix_plan", "repro_steps", "log_gap"):
+    for field in ("root_cause", "log_gap"):
         if not _has_text(getattr(issue, field)):
             missing.append(
                 f"{field} is empty (qa-diagnosis proposes, PM confirms and fills)")
+    if not _has_text(issue.fix_plan.permanent_fix if issue.fix_plan else None):
+        missing.append(
+            "fix_plan.permanent_fix is empty (qa-diagnosis proposes, PM confirms and fills)")
     return missing
 
 
@@ -452,8 +486,8 @@ def close(issue_id: int, reason_type: str, reason: str) -> None:
 def convert(issue_id: int, slug: str) -> None:
     """Convert issue to feature and close it as converted_to_feature.
 
-    Requires the issue to be in_progress with root_cause + fix_plan +
-    repro_steps + log_gap filled (qa-diagnosis proposes, PM confirms).
+    Requires the issue to be in_progress with root_cause + fix_plan.permanent_fix
+    + log_gap filled (qa-diagnosis proposes, PM confirms).
     Creates a feature from user_input and links source_issue.
     """
     import re
