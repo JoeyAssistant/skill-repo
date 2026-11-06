@@ -7,60 +7,58 @@
 
 - [Design Reference](#design-reference)
   - [目录](#目录)
-  - [1. 设计工作原则](#1-设计工作原则)
-  - [2. Agent参考架构](#2-agent参考架构)
-    - [2.1 Module Layer](#21-module-layer)
-    - [2.2 CLI Layer](#22-cli-layer)
-      - [2.2.1 CLI 设计原则](#221-cli-设计原则)
-      - [2.2.2 CLI 设计归属](#222-cli-设计归属)
-      - [2.2.3 CLI 调用方式](#223-cli-调用方式)
-    - [2.3 Agent Layer](#23-agent-layer)
-    - [2.4 Backend Layer](#24-backend-layer)
-      - [2.4.1 定位与边界](#241-定位与边界)
-      - [2.4.2 service 划分](#242-service-划分)
-  - [3. 目录结构](#3-目录结构)
-  - [4. doc/modules/\<module\_name\>/ 章节契约](#4-docmodulesmodule_name-章节契约)
-    - [4.1 README.md](#41-readmemd)
+  - [文档撰写要求（全部章节适用）](#文档撰写要求全部章节适用)
+  - [1. Agent参考架构](#1-agent参考架构)
+    - [1.1 Module Layer](#11-module-layer)
+    - [1.2 CLI Layer](#12-cli-layer)
+      - [1.2.1 CLI 设计原则](#121-cli-设计原则)
+      - [1.2.2 CLI 设计归属](#122-cli-设计归属)
+      - [1.2.3 CLI 调用方式](#123-cli-调用方式)
+    - [1.3 Agent Layer](#13-agent-layer)
+    - [1.4 Backend Layer](#14-backend-layer)
+      - [1.4.1 定位与边界](#141-定位与边界)
+      - [1.4.2 service 划分](#142-service-划分)
+  - [2. 目录结构](#2-目录结构)
+  - [3. doc/modules/\<module\_name\>/ 章节契约](#3-docmodulesmodule_name-章节契约)
+    - [3.1 README.md](#31-readmemd)
+      - [3.1.1 应有章节](#311-应有章节)
+    - [3.2 schema.md](#32-schemamd)
+      - [3.2.1 术语](#321-术语)
+      - [3.2.2 文件结构](#322-文件结构)
+        - [3.2.2.1 应有章节](#3221-应有章节)
+        - [3.2.2.2 模板](#3222-模板)
+      - [3.2.3 设计原则](#323-设计原则)
+        - [3.2.3.1 命名原则](#3231-命名原则)
+        - [3.2.3.2 类型选型原则](#3232-类型选型原则)
+        - [3.2.3.3 注释原则](#3233-注释原则)
+        - [3.2.3.4 一致性原则](#3234-一致性原则)
+    - [3.3 persistence.md](#33-persistencemd)
+      - [3.3.1 应有章节](#331-应有章节)
+      - [3.3.2 存储介质选型](#332-存储介质选型)
+    - [3.4 api.md](#34-apimd)
+      - [3.4.1 应有章节](#341-应有章节)
+      - [3.4.2 模板](#342-模板)
+    - [3.5 cli.md](#35-climd)
+  - [4. doc/backend/ 章节契约](#4-docbackend-章节契约)
+    - [4.1 doc/backend/README.md](#41-docbackendreadmemd)
       - [4.1.1 应有章节](#411-应有章节)
-    - [4.2 schema.md](#42-schemamd)
-      - [4.2.1 术语](#421-术语)
-      - [4.2.2 文件结构](#422-文件结构)
-        - [4.2.2.1 应有章节](#4221-应有章节)
-        - [4.2.2.2 模板](#4222-模板)
-      - [4.2.3 设计原则](#423-设计原则)
-        - [4.2.3.1 命名原则](#4231-命名原则)
-        - [4.2.3.2 类型选型原则](#4232-类型选型原则)
-        - [4.2.3.3 注释原则](#4233-注释原则)
-        - [4.2.3.4 一致性原则](#4234-一致性原则)
-    - [4.3 persistence.md](#43-persistencemd)
-      - [4.3.1 应有章节](#431-应有章节)
-      - [4.3.2 存储介质选型](#432-存储介质选型)
-    - [4.4 api.md](#44-apimd)
+      - [4.1.2 模板](#412-模板)
+    - [4.2 doc/backend/\<service\_name\>/README.md](#42-docbackendservice_namereadmemd)
+      - [4.2.1 应有章节](#421-应有章节)
+      - [4.2.2 模板](#422-模板)
+    - [4.3 openapi.external.yaml / openapi.internal.yaml](#43-openapiexternalyaml--openapiinternalyaml)
+      - [4.3.1 约定](#431-约定)
+      - [4.3.2 模板](#432-模板)
+    - [4.4 api.external.md 与 api.internal.md](#44-apiexternalmd-与-apiinternalmd)
       - [4.4.1 应有章节](#441-应有章节)
       - [4.4.2 模板](#442-模板)
-    - [4.5 cli.md](#45-climd)
-  - [5. doc/backend/ 章节契约](#5-docbackend-章节契约)
-    - [5.1 doc/backend/README.md](#51-docbackendreadmemd)
-      - [5.1.1 应有章节](#511-应有章节)
-      - [5.1.2 模板](#512-模板)
-    - [5.2 doc/backend/\<service\_name\>/README.md](#52-docbackendservice_namereadmemd)
-      - [5.2.1 应有章节](#521-应有章节)
-      - [5.2.2 模板](#522-模板)
-    - [5.3 openapi.external.yaml / openapi.internal.yaml](#53-openapiexternalyaml--openapiinternalyaml)
-      - [5.3.1 约定](#531-约定)
-      - [5.3.2 模板](#532-模板)
-    - [5.4 api.external.md 与 api.internal.md](#54-apiexternalmd-与-apiinternalmd)
-      - [5.4.1 应有章节](#541-应有章节)
-      - [5.4.2 模板](#542-模板)
 
-## 1. 设计工作原则
+## 文档撰写要求（全部章节适用）
 
 - **图表优先**：流程、交互、依赖关系优先用 mermaid 表达（flowchart / sequence / state）。能用图说明的不写文字；文字仅作图的补充说明
 - **聚焦核心**：文档核心是五类内容 —— 数据结构定义、数据存储方案、CLI 定义、模块边界与依赖、接口交互。其余（背景、概述、理由）保持精简
-- **可审计性**：每个设计决策都必须记录选择理由，使设计过程可追溯
-- **可讨论性**：设计方案应先与用户讨论确认后再定稿，不擅自做重大架构决定
 
-## 2. Agent参考架构
+## 1. Agent参考架构
 
 ```mermaid
 graph TD
@@ -87,7 +85,7 @@ graph TD
     SrcModules <--> Data
 ```
 
-### 2.1 Module Layer
+### 1.1 Module Layer
 
 **模块是 agent 系统的功能单元，提供一个独立的功能或服务。** 一个模块由以下要件构成：
 
@@ -102,9 +100,9 @@ graph TD
 
 **判别**：`modules/` 之内的是模块（`src/modules/<module_name>/`、`doc/modules/<module_name>/`）；其余目录不是模块（`src/` 下 `backend` / `frontend` / `skill` / `mcp`，`doc/` 下与 src 同名的非模块目录）。
 
-### 2.2 CLI Layer
+### 1.2 CLI Layer
 
-#### 2.2.1 CLI 设计原则
+#### 1.2.1 CLI 设计原则
 - **`--help as doc`**：CLI 命令文档通过 `python3 {Root}/src/modules/<module_name>/cli.py --help` 运行时输出获得（运行期产出），包含：
     - **功能说明**：脚本用途、内部实现原理
     - **输入说明**：参数、选项、结构化输入格式
@@ -117,7 +115,7 @@ graph TD
 - 使用 `dataclass` 定义 data schema
 - 默认使用 `python3`
 
-#### 2.2.2 CLI 设计归属
+#### 1.2.2 CLI 设计归属
 
 暴露 CLI 的模块，CLI 设计分布在两处：
 
@@ -128,7 +126,7 @@ graph TD
 
 产品级命令清单在讨论中与用户确定后直接写入 `cli.md`；developer 实现 `cli.py` 时按 `cli.md` 写 click decorators + docstring，`--help` 输出应与 `cli.md` 一致。
 
-#### 2.2.3 CLI 调用方式
+#### 1.2.3 CLI 调用方式
 
 所有 CLI 调用使用脚本方式：`python3 src/modules/<module_name>/cli.py --help`。
 
@@ -145,7 +143,7 @@ from src.modules.<module_name> import <公开接口>
 # ... click 命令定义
 ```
 
-### 2.3 Agent Layer
+### 1.3 Agent Layer
 
 - 使用 Claude SDK (Anthropic SDK) 或 Claude Agent SDK 构建 Agent
 - **Agent 职责边界**：Agent 负责理解用户意图、编排任务流程、调用工具（执行实际业务逻辑的工具）
@@ -156,9 +154,9 @@ from src.modules.<module_name> import <公开接口>
 - 定义目标 Agent 的 system prompt，可通过 Claude Code 的 append-system-prompt 使用，也可通过 Anthropic SDK 或 Claude Agent SDK 使用，根据实际需求决定
 - 实现时可参考 `/claude-api` skill
 
-### 2.4 Backend Layer
+### 1.4 Backend Layer
 
-#### 2.4.1 定位与边界
+#### 1.4.1 定位与边界
 
 - Backend 是 HTTP 适配与编排层
 - 对外暴露 HTTP/REST 服务
@@ -167,14 +165,14 @@ from src.modules.<module_name> import <公开接口>
 - 直接 import `src/modules/<module_name>/` 的公开接口，不经过 CLI
 - 不访问 module 内部实现或私有符号
 
-#### 2.4.2 service 划分
+#### 1.4.2 service 划分
 
 - Backend service 是 backend 进程内、围绕同一核心业务实体及其生命周期、面向同一类消费者的一组 HTTP 端点与编排逻辑所构成的业务设计单元——它只编排 module 的公开接口、不承载业务能力，以 `src/backend/<service_name>/` 与 `doc/backend/<service_name>/` 同名目录承载，是设计、实现与验收的最小边界。
 - 判据：同一核心 entity + 同一生命周期 + 同一消费场景；至少具备独立 API 面或独立编排流程之一
 - 命名 `snake_case`；`src/backend/<service_name>/` 与 `doc/backend/<service_name>/` 同名
 - 一个进程内聚合多个 service；注册表写在 `doc/backend/README.md`
 
-## 3. 目录结构
+## 2. 目录结构
 
 ```
 {Root}/
@@ -217,7 +215,7 @@ service 目录内部文件组织不限；`app.py` 负责把各 service 的路由
 
 设计完成后，按本节目录树产出 `doc/` 下的文件；条件见树中注释。暴露 CLI 的模块另需产出 `python3 src/modules/<module_name>/cli.py --help` 的运行时输出，且与 `cli.md` 一致。
 
-## 4. doc/modules/<module_name>/ 章节契约
+## 3. doc/modules/<module_name>/ 章节契约
 
 `{Root}/doc/` 下的所有文件是**最终正式文档**，仅承载"是什么"（定义、契约、方案），**不承载"为什么"**（决策、讨论、分析过程）。
 
@@ -233,11 +231,11 @@ service 目录内部文件组织不限；`app.py` 负责把各 service 的路由
 | 范围决策 | `YAGNI` `留给后续` `待定` `本期明确排除` | 删（不落库） |
 | 变更记录 | `变更记录` `第一版` `第二版` `架构调整` | 删（git history 已记录） |
 
-### 4.1 README.md
+### 3.1 README.md
 
 > 模块说明。
 
-#### 4.1.1 应有章节
+#### 3.1.1 应有章节
 
 - 模块标题 + 一句话模块功能与职责
 
@@ -324,11 +322,11 @@ service 目录内部文件组织不限；`app.py` 负责把各 service 的路由
     |---|---|
     | `<本系统其他模块>` | <说明> |
 
-### 4.2 schema.md
+### 3.2 schema.md
 
 > 业务数据结构定义。
 
-#### 4.2.1 术语
+#### 3.2.1 术语
 
 本节固定 `schema.md` 的四个术语。后文一律使用这四个词，不再使用「实体」「属性」等别名。
 
@@ -341,9 +339,9 @@ service 目录内部文件组织不限；`app.py` 负责把各 service 的路由
 
 判定：`schema.md` 里出现的每个 `class` 定义都是一个 entity；总览图中的节点数 = 正文 `## <EntityName>` 节数 = entity 数。
 
-#### 4.2.2 文件结构
+#### 3.2.2 文件结构
 
-##### 4.2.2.1 应有章节
+##### 3.2.2.1 应有章节
 
 - 文件标题
 - `## 数据结构总览` —— mermaid classDiagram，展示模块内**全部** entity 及关系：
@@ -352,7 +350,7 @@ service 目录内部文件组织不限；`app.py` 负责把各 service 的路由
   - field 类型：列表统一写作 `List~T~`
 - N × `## <EntityName>` —— 每个 entity 一节
 
-##### 4.2.2.2 模板
+##### 3.2.2.2 模板
 
 ````markdown
 # <Module> Schema
@@ -394,9 +392,9 @@ class <EnumName>(str, Enum):
 ```
 ````
 
-#### 4.2.3 设计原则
+#### 3.2.3 设计原则
 
-##### 4.2.3.1 命名原则
+##### 3.2.3.1 命名原则
 
 **命名风格**
 
@@ -409,7 +407,7 @@ class <EnumName>(str, Enum):
 
 **原则三：entity 名必须是名词或名词短语**
 
-##### 4.2.3.2 类型选型原则
+##### 3.2.3.2 类型选型原则
 
 设计每个 field 时，按以下原则选类型。**违反任一 = 设计缺陷**，需重新设计。
 
@@ -428,7 +426,7 @@ class <EnumName>(str, Enum):
 | `Optional[X]` | None 语义是"未提供"还是"零值"？后者用默认值 |
 | 多个相关 field | 总是一起出现？若是 → 封装 dataclass |
 
-##### 4.2.3.3 注释原则
+##### 3.2.3.3 注释原则
 
 每个 field 按三个维度写注释：
 
@@ -444,18 +442,18 @@ class <EnumName>(str, Enum):
 - enum 成员 → 行尾注释
 - 每个维度**各占一行**，示例不内联在描述里
 
-##### 4.2.3.4 一致性原则
+##### 3.2.3.4 一致性原则
 
 - `schema.md` 是该 module 全部 entity 的**唯一真值**，跨文档一致性以本文件为准
 - 与 `README.md`「名词概念」表**不要求互相覆盖**；两边都出现的概念，名称必须一致（英文名 ↔ class 名）、定义不得矛盾，冲突时以本文件 docstring 为准
 
-### 4.3 persistence.md
+### 3.3 persistence.md
 
 > 数据存储方案。仅含持久化对象的模块才有。
 >
 > 聚焦"怎么存"。以**持久化对象**为单元组织：逐个对象讲清它的持久化方案、存储形式、存储内容、序列化与持久化操作。**引用 `schema.md` 的 dataclass，不重复定义 field 语义**。
 
-#### 4.3.1 应有章节
+#### 3.3.1 应有章节
 
 - `## 1. 持久化数据对象` —— 汇总表，列出本模块全部持久化对象：
 
@@ -474,15 +472,15 @@ class <EnumName>(str, Enum):
   | `### N.4 序列化` | 序列化与反序列化的方式，以及与 `schema.md` 的对应关系；不涉及序列化时直写「不涉及」 |
   | `### N.5 持久化操作` | 三部分：**写规格** / **读规格** / **数据生命周期** |
 
-#### 4.3.2 存储介质选型
+#### 3.3.2 存储介质选型
 
 优先 json、yaml 等简单持久化；较复杂场景使用数据库。
 
-### 4.4 api.md
+### 3.4 api.md
 
 > 对外接口契约 + 流程 + 配置。
 
-#### 4.4.1 应有章节
+#### 3.4.1 应有章节
 
 对外 API 是本模块「功能与职责」（`README.md`）中「负责」各项功能的接口表达；一项功能对应一个或多个接口，粒度在设计讨论中结合实际需求确定。
 
@@ -515,7 +513,7 @@ class <EnumName>(str, Enum):
 - `## 2. 模块配置` —— 环境变量、路径参数；无配置项时写一句「本模块无可配置项。」
 - `## 3. 模块常量` —— 可选，仅当模块存在对外共享的常量时才有；无则整节省略
 
-#### 4.4.2 模板
+#### 3.4.2 模板
 
 ````markdown
 # <Module> API
@@ -564,7 +562,7 @@ def <签名>:
 |---|---|---|
 ````
 
-### 4.5 cli.md
+### 3.5 cli.md
 
 > CLI 契约。仅暴露 CLI 的模块才有。
 >
@@ -578,20 +576,20 @@ def <签名>:
   - 输出 schema（成功响应 + 失败响应 + 错误码）
   - 使用示例（典型调用）
 
-## 5. doc/backend/ 章节契约
+## 4. doc/backend/ 章节契约
 
-### 5.1 doc/backend/README.md
+### 4.1 doc/backend/README.md
 
 > 进程级说明：整个 backend 进程的目录结构、service 注册表、启动与路由、进程级配置。
 
-#### 5.1.1 应有章节
+#### 4.1.1 应有章节
 
 - 文件标题 + 一句话 backend 职责
 
 - `## 1. 目录结构` —— 本项目的 backend 代码与文档目录树：
   - 代码：`src/backend/` 的进程入口、`common/`、各 `<service_name>/`
   - 文档：`doc/backend/` 的 `README.md` 与各 `<service_name>/`
-  - 只呈现结构，不解释实现；通用结构规则见 §3，此处只写本项目实际结构
+  - 只呈现结构，不解释实现；通用结构规则见 §2，此处只写本项目实际结构
 
 - `## 2. service 注册表` —— 本进程内全部 service 的索引表：
 
@@ -618,7 +616,7 @@ def <签名>:
   - service 级配置写在对应 service 的 `README.md`，此处不重复
   - 无配置项时写「本进程无可配置项。」
 
-#### 5.1.2 模板
+#### 4.1.2 模板
 
 ````markdown
 # Backend
@@ -672,11 +670,11 @@ flowchart TD
 | `<ENV_VAR>` | 环境变量 | <...> | <...> |
 ````
 
-### 5.2 doc/backend/<service_name>/README.md
+### 4.2 doc/backend/<service_name>/README.md
 
 > service 说明：单个 service 的职责、名词概念、端点清单、依赖 module、消费者与 service 级配置。
 
-#### 5.2.1 应有章节
+#### 4.2.1 应有章节
 
 - 文件标题 + 一句话 service 职责
 
@@ -718,7 +716,7 @@ flowchart TD
   - 只列只影响本 service 的配置；进程级配置在 `doc/backend/README.md`
   - 无配置项时整节省略
 
-#### 5.2.2 模板
+#### 4.2.2 模板
 
 ````markdown
 # <Service> Service
@@ -764,11 +762,11 @@ service 级配置。
 | `<ENV_VAR>` | 环境变量 | <...> | <...> |
 ````
 
-### 5.3 openapi.external.yaml / openapi.internal.yaml
+### 4.3 openapi.external.yaml / openapi.internal.yaml
 
 > HTTP 契约：service 暴露的路径、参数、请求/响应 schema 与状态码，按对外/内部受众分别成文件。
 
-#### 5.3.1 约定
+#### 4.3.1 约定
 
 - 版本：OpenAPI **3.0.3**
 - 每个 service 按受众拆分：
@@ -783,7 +781,7 @@ service 级配置。
 - 请求 / 响应 schema 定义在 `components.schemas`，`paths` 中用 `$ref` 引用
 - 契约在设计期手写，实现必须与契约一致；QA 可据此校验真实响应
 
-#### 5.3.2 模板
+#### 4.3.2 模板
 
 ````yaml
 openapi: 3.0.3
@@ -834,11 +832,11 @@ components:
           type: string
 ````
 
-### 5.4 api.external.md 与 api.internal.md
+### 4.4 api.external.md 与 api.internal.md
 
 > 实现说明书：每个 operationId 的实现方案、与 module 的交互、异常与错误码。
 
-#### 5.4.1 应有章节
+#### 4.4.1 应有章节
 
 - 文件标题 + 一句话说明
 - 文件开头引用语：指向本受众对应的契约文件，声明本文只写契约之外的实现信息，不重复请求 / 响应字段定义
@@ -849,7 +847,7 @@ components:
   - `### N.1 实现方案`：
     - 实现步骤、关键规格、参数校验、并发 / 限流
     - 与 module 的交互：调用了哪些 module、哪些公开接口、顺序、失败处理
-    - 时序图：调用方 → service → module；参与者命名与粒度要求同 §4.4.1（调用方抽象为「调用方」、本 service 不拆内部类、module 用模块名）
+    - 时序图：调用方 → service → module；参与者命名与粒度要求同 §3.4.1（调用方抽象为「调用方」、本 service 不拆内部类、module 用模块名）
   - `### N.2 异常与错误码` —— 该接口全部异常 / 错误场景：
 
     | 场景 | 状态码 | 触发条件 | 处理 |
@@ -858,7 +856,7 @@ components:
     - 禁止只写「无。」；确无错误场景时写「不涉及」
 - 覆盖要求：契约中每个 operation 有且仅有一节；`operationId` 在契约、README 端点清单、本节标题三处一致
 
-#### 5.4.2 模板
+#### 4.4.2 模板
 
 ````markdown
 # <Service> External API
