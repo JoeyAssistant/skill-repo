@@ -66,8 +66,7 @@
   - [6 启动时行为](#6-启动时行为)
     - [6.1 初始化检测](#61-初始化检测)
     - [6.2 topology 检测](#62-topology-检测)
-    - [6.3 prod 只读访问](#63-prod-只读访问)
-    - [6.4 巡检汇报](#64-巡检汇报)
+    - [6.3 巡检汇报](#63-巡检汇报)
   - [7 工作流演进](#7-工作流演进)
     - [7.1 为什么](#71-为什么)
     - [7.2 什么时候记录](#72-什么时候记录)
@@ -757,6 +756,8 @@ Workspace: <代码工作区路径>
 
 **工作区语义**：代码工作区路径（feature 任务 = worktree 绝对路径，由 FEATURE.yaml `worktree.path` 解析；issue 任务 = 主仓根目录）。subagent 一切代码操作限定在工作区内；状态文件路径 PM 在 prompt 中显式给出（主仓路径）。
 
+**prod 取证**：调度涉及 prod 取证时，prompt 中显式给出 prod 路径（`agent-factory.yaml` 的 `prod.*`，见 §6.2）与只读约束——subagent 不读配置文件。
+
 各 subagent 在公共部分上追加：可选章节 / `## Feature Directory` 或 `## Issue Directory`。
 
 **冲突保护**：同一个 feature/issue 同时只调度一次（检查是否已有任务在处理）。
@@ -964,21 +965,14 @@ PM 启动时按序执行：初始化检测 → topology 检测 → 巡检汇报 
 读 `.claude/agents/agent-factory.yaml`（无此文件则跳过）的 `topology`：
 
 - `unified`（或无 topology 键）→ dev 与 prod 一体，无特殊行为
-- `split` 且 `prod.root` 完整 → 激活 §prod 只读访问
+- `split` 且 `prod.root` 完整 → 启用 prod 取证（只读约束见 §1 职责）
 - `split` 但 `prod.root` 缺失，或 `unified` 却带 prod → 配置矛盾，向用户报错并提示修配置
+
+`split` 时 prod 路径取 `prod.root`；log/data 默认按 `<root>/log`、`<root>/data` 发现，可被 `prod.log` / `prod.data` 覆盖。
 
 topology 以启动时检测为准，会话中途改配置不生效。
 
-### 6.3 prod 只读访问
-
-`topology: split`（dev 与 prod 分离）时生效。prod 路径来自 `.claude/agents/agent-factory.yaml` 的 `prod.root`；log/data 默认按 `<root>/log`、`<root>/data` 约定发现，可被 `prod.log` / `prod.data` 覆盖。
-
-- **直读**：定位问题、收集证据时直接读取 prod 下的 log/data，**不 cp、不建副本**；引用证据时带文件路径 + 行号
-- **只读约束**：对 prod 路径下任何文件禁止写入 / 修改 / 删除（包括加日志、改数据）。prod 是运行现场，取证只读
-- **进程约束**：启停验证 / 预览服务时，只能按端口或 PID 精确定位，禁止按进程名或命令行宽匹配（如 `pkill -f`）；不对 prod 进程做启停，确需操作交用户
-- **调度传递**：调度 QA / developer 涉及 prod 取证时，调度 prompt 中必须注明 prod 路径与只读约束（subagent 不读配置文件）
-
-### 6.4 巡检汇报
+### 6.3 巡检汇报
 
 初始化检测确认已初始化后执行（刚完成初始化的跳过）：
 
