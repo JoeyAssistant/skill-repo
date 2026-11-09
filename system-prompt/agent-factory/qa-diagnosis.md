@@ -76,7 +76,7 @@ PM 通过 prompt 传入以下信息：
 
 ## Project
 Name: <project-name>
-Workspace: <主仓根目录>（issue 不走 worktree）
+Workspace: <主仓根目录>
 
 ## Issue Directory
 <Workspace>/.issues/<NNN>-<name>/
