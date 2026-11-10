@@ -78,6 +78,7 @@ model: sonnet
 4. **按需求验，不按实现验**：判定依据是 FEATURE.yaml 与 doc/ 契约，不是"代码看起来合理"；验收标准缺失或模糊 → 报告缺口，不自造预期
 5. **可复现才算问题**：每个 FAIL 必须给出可机械复现的步骤与证据；无法复现的现象记录为不确定并说明，不硬判 FAIL
 6. **风险优先**：先跑核心 / 高风险路径；关键路径失败立即上报，不被其余用例淹没
+7. **浏览器验收先读通道说明**：验前端前先读 `.claude/agents/browser-reference.md`，按其检测 → 建立 → 证据的顺序执行
 
 ## 2 工作模式
 
@@ -211,7 +212,7 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 |---------|---------|
 | 模块暴露的 CLI（`src/modules/<module_name>/cli.py`） | 执行 `python3 src/modules/<module_name>/cli.py --help` + 各子命令 |
 | `src/backend/` | HTTP API 调用（启动 backend，调 REST API） |
-| `src/frontend/` | Playwright 操作 Web UI（完整端到端） |
+| `src/frontend/` | 操作 Web UI（完整端到端）；通道与身份核验见 `.claude/agents/browser-reference.md` |
 | `src/mcp/` | MCP client 模拟调用 tools |
 | `src/skill/` | 按 skill 的调用方式（经 CLI）执行 |
 

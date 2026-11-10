@@ -56,7 +56,7 @@ script/init-project.sh <target-project-dir> [--prod <prod-root>] [--base-branch 
 
 ```bash
 mkdir -p <project-root>/.claude/agents
-cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architecture.drawio <project-root>/.claude/agents/
+cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architecture.drawio browser-reference.md <project-root>/.claude/agents/
 ```
 
 ### 3. 初始化目录结构
@@ -112,7 +112,7 @@ subagents 与配置统一放在 `.claude/agents/`（agent-factory 资产落点�
 
 ```bash
 mkdir -p <project>/.claude/agents
-cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architecture.drawio <project>/.claude/agents/
+cp developer.md qa.md qa-diagnosis.md poc.md design-reference.md agent-architecture.drawio browser-reference.md <project>/.claude/agents/
 ```
 
 状态目录与（如被跟踪的）`.claude/` 加入本地排除——**不写 .gitignore**（.gitignore 本身进仓，暴露痕迹）：
@@ -264,6 +264,7 @@ agent-workspace/
 |------|------|
 | `agent-pm.md` | PM system prompt，用户主入口（含设计阶段直接修改 doc/） |
 | `design-reference.md` | PM 设计阶段按需参考手册 |
+| `browser-reference.md` | 浏览器通道操作手册，所有 agent 共用（检测通道 → 建立通道 → 证据） |
 | `developer.md` | Developer subagent 定义，负责代码实现 |
 | `qa.md` | QA subagent 定义，负责 feature 验收 |
 | `qa-diagnosis.md` | Issue 定位分析 subagent 定义 |

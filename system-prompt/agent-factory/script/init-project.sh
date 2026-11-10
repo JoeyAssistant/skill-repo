@@ -11,7 +11,7 @@
 #   2. 创建 .features/ .issues/ .claude/agents/
 #   3. 复制 subagents（developer/qa/qa-diagnosis/poc/patrol.md）到 .claude/agents/
 #   4. 复制 agent-pm.md（PM system prompt）到 .claude/agents/（PM 提示词随项目仓走，启动命令自包含）
-#   5. 复制 design-reference.md + agent-architecture.drawio 到 .claude/agents/（PM 设计阶段引用，资产落点）
+#   5. 复制 design-reference.md + agent-architecture.drawio + browser-reference.md 到 .claude/agents/（PM 设计阶段引用与浏览器通道手册，资产落点）
 #   6. agent-factory.yaml 仅在缺失时生成（topology / prod.root / base_branch）；已存在则不覆盖
 #   7. 检查 agent-factory CLI 可用性
 #
@@ -86,7 +86,7 @@ cp "$SCRIPT_DIR/developer.md" "$SCRIPT_DIR/qa.md" "$SCRIPT_DIR/qa-diagnosis.md" 
 cp "$SCRIPT_DIR/agent-pm.md" .claude/agents/
 
 # 5. PM 设计阶段参考资产（与 subagents 同落点，不进项目根）
-cp "$SCRIPT_DIR/design-reference.md" "$SCRIPT_DIR/agent-architecture.drawio" .claude/agents/
+cp "$SCRIPT_DIR/design-reference.md" "$SCRIPT_DIR/agent-architecture.drawio" "$SCRIPT_DIR/browser-reference.md" .claude/agents/
 
 # 6. 拓扑配置（仅在缺失时生成；已有配置归用户所有，不覆盖）
 YAML_FILE=.claude/agents/agent-factory.yaml
@@ -128,6 +128,7 @@ echo "部署完成："
 echo "  .claude/agents/{developer,qa,qa-diagnosis,poc,patrol}.md   subagents"
 echo "  .claude/agents/agent-pm.md   PM system prompt"
 echo "  .claude/agents/{design-reference.md,agent-architecture.drawio}   PM 设计参考"
+echo "  .claude/agents/browser-reference.md   浏览器通道手册（所有 agent 共用）"
 echo "  .features/ .issues/   状态目录"
 echo "  .worktrees/   feature 并行开发 worktree 落点（已入 .gitignore）"
 echo "  .patrol/   patrol 巡检报告目录（已入 .gitignore）"

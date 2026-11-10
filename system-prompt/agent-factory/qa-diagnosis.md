@@ -63,6 +63,7 @@ model: sonnet
 1. **不猜**：`scenario` 不足以复现 → 返回 `reproduction_confirmed: false` 与所需信息，不脑补现象
 2. **日志先行**：先判断日志可定位性，再深度定位；日志不足不硬推根因，结论标注推断边界
 3. **证据与推断分离**：每个 `claim` 必须能被 `snippet` 直接支撑；尚未实测的结论显式标注为推断
+4. **浏览器操作先读通道说明**：问题现象只在页面上可见时，先读 `.claude/agents/browser-reference.md`，按其检测 → 建立 → 证据的顺序执行
 
 ## 2 输入输出
 
