@@ -201,6 +201,8 @@ project-root/
       POC-REPORT.md
       QA-REPORT.md
       poc/
+      workflow-issues/        ← 工作流优化项，一项一文件（字段复用 ISSUE.yaml）
+        <NNN>-<slug>.yaml
   .issues/
     index.yaml
     <id>/
