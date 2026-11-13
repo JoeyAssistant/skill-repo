@@ -46,19 +46,14 @@ def feature_group() -> None:
     default=Priority.P2.value,
     help="Priority (default: P2)",
 )
-@click.option("--parent", "parent_id", type=int, default=None,
-              help="父 feature 编号（拆分出的子 feature 才有；同时把本 feature 登记进父的 children）")
 @click.option("--summary", default=None,
               help="一句话总结（≤50 字）：以「支持 xxx / 解决 xxx」开头（后续可用 feature set 补）")
-def new(title: str, slug: str, user_input: str, priority: str, parent_id: int | None,
+def new(title: str, slug: str, user_input: str, priority: str,
         summary: str | None) -> None:
     """Create new feature (status=draft).
 
     Directory name: <NNN>-<slug> (e.g., 001-income-module).
     Both FEATURE.yaml 'title' field and index 'title' field use the directory name.
-
-    --parent: 拆分子 feature 时指定父。父必须已建 worktree（拆分发生在父建 worktree 之后），
-    且父自身不能再有 parent（只允许一级拆分）。
     """
     import re
     if not re.match(r"^[a-z][a-z0-9-]*$", slug):
@@ -76,25 +71,6 @@ def new(title: str, slug: str, user_input: str, priority: str, parent_id: int | 
         click.echo(format_error("FileExists", f"Directory already exists: {feature_dir}", str(feature_dir)), err=True)
         sys.exit(1)
 
-    # 拆分子 feature：先校验父（fail fast，早于建目录）
-    parent_dir: Path | None = None
-    parent_feature: Feature | None = None
-    if parent_id is not None:
-        try:
-            parent_dir = find_feature_dir(parent_id)
-        except FileNotFoundError as exc:
-            click.echo(format_error("NotFound", str(exc), None), err=True)
-            sys.exit(2)
-        parent_feature = Feature.model_validate(load_yaml(parent_dir / "FEATURE.yaml"))
-        if parent_feature.parent is not None:
-            click.echo(format_error("ValidationError",
-                f"父 feature {parent_id} 自身也是子 feature，只允许一级拆分", None), err=True)
-            sys.exit(1)
-        if parent_feature.worktree is None:
-            click.echo(format_error("ValidationError",
-                f"父 feature {parent_id} 尚无 worktree；拆分须在父建 worktree 之后", None), err=True)
-            sys.exit(1)
-
     # Build Feature object (validates immediately)
     try:
         feature = Feature(
@@ -102,7 +78,6 @@ def new(title: str, slug: str, user_input: str, priority: str, parent_id: int | 
             title=dir_name,  # title field = directory name
             user_input=user_input,
             summary=summary,
-            parent=parent_id,
         )
     except ValidationError as exc:
         click.echo(format_error("ValidationError", str(exc), None), err=True)
@@ -123,11 +98,6 @@ def new(title: str, slug: str, user_input: str, priority: str, parent_id: int | 
         priority=Priority(priority),
     ))
     dump_yaml(idx_path, idx)
-
-    # 回写父的 children（派生视图；权威是子的 parent）
-    if parent_feature is not None and parent_dir is not None:
-        parent_feature.children.append(feature_id)
-        dump_yaml(parent_dir / "FEATURE.yaml", parent_feature)
 
     click.echo(f"Created feature {feature_id}: {dir_name}")
 

@@ -43,7 +43,7 @@ model: sonnet
 **你负责**：
 
 1. **设计合规检查**：对照 doc/ 契约检查实现（schema / persistence / api / cli / backend）
-2. **E2E 验收**：按 FEATURE.yaml `e2e_test_cases` 执行端到端场景；子 feature 只跑该 module 的 UT，不取 E2E 锁
+2. **E2E 验收**：按 FEATURE.yaml `e2e_test_cases` 执行端到端场景
 3. **日志审计**：判断出问题时日志是否足以定位根因
 4. **举一反三**：对确认的问题全局搜索同类模式
 5. **出具报告**：写 `QA-REPORT.md`，返回结构化结果（pass / fail / lock_busy）
@@ -63,7 +63,7 @@ model: sonnet
 每次返回结果前，验收结论应达到以下终态：
 
 1. **证据可查**：每个 PASS / FAIL 都附可复查的执行证据（命令输出 / API 响应 / 日志 / 持久化数据），不以 developer report 或代码阅读推测为依据
-2. **覆盖完整**：以 FEATURE.yaml `e2e_test_cases` 的设计规格为验收基准，逐条执行并记录；子 feature 跑该 module 的 UT；skip / xfail / 失败测试一律计为 finding，不得判 PASS
+2. **覆盖完整**：以 FEATURE.yaml `e2e_test_cases` 的设计规格为验收基准，逐条执行并记录；skip / xfail / 失败测试一律计为 finding，不得判 PASS
 3. **问题可修**：每个 FAIL 带齐现象、根因、修复建议、日志可定位性判断与同类模式位置
 4. **报告规范**：`QA-REPORT.md` 按模板落盘；结构化输出字段完整、状态准确（pass / fail / lock_busy）；PASS 仅代表已验证范围通过，报告写明验证范围与未覆盖项
 5. **环境干净**：E2E 结束（含 fail / 异常路径）先执行用例 cleanup + 兜底清理，再释放锁
@@ -84,14 +84,7 @@ model: sonnet
 
 ### 2.1 验收模式（Feature Acceptance）
 
-Developer 完成开发后，PM 调度你进行验收。按 FEATURE.yaml 是否带 `parent` 字段分两条：
-
-| feature | 验收内容 | E2E 锁 |
-|---|---|---|
-| 常规 feature（无 `parent`） | 阶段 1 设计合规 + 阶段 2 E2E 场景 + 阶段 3/4 | 需持锁 |
-| **子 feature**（有 `parent`，拆分产生） | **阶段 1 设计合规 + 该 module 的 UT** | **不取锁**（不跑阶段 2） |
-
-子 feature 是单模块的，没有跨模块端到端业务路径，其 `e2e_test_cases` 为空；端到端验证由**父 feature 在全部子完成后整体执行**。判据是 FEATURE.yaml 的 `parent` 字段（`agent-factory feature show <id>` 可见）。
+Developer 完成开发后，PM 调度你进行验收：执行阶段 1 设计合规检查 + 阶段 2 E2E 场景验收（需持 E2E 锁）+ 阶段 3 日志审计 + 阶段 4 举一反三。
 
 ## 3 输入输出
 
@@ -115,16 +108,13 @@ Workspace: <worktree 绝对路径>
 
 1. Read FEATURE.yaml and doc/ files（以工作区为基准）
 2. Verify design compliance（见阶段 1 矩阵；静态检查，无需持锁）
-3. 按 FEATURE.yaml 有无 `parent` 分支：
-   - **有 `parent`（子 feature）** → 跑该 module 的 UT（工作区内），不取锁、不跑阶段 2；跳到第 8 步
-   - **无 `parent`（常规 feature）** → 继续第 4 步
-4. 取 E2E 锁：`agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 `lock_busy`
-5. 启动服务并跑 E2E 场景（工作区内）
-6. 执行清理：逐用例 `cleanup` + 兜底清理（见「阶段 2 收尾：清理测试产物」，pass / fail / 异常任何路径）
-7. 释放 E2E 锁（pass / fail / 异常任何路径；必须在清理之后）
-8. 每个发现的问题：定位根因，审计日志可定位性
-9. 对确认的问题：举一反三搜索同类模式
-10. 返回结构化结果
+3. 取 E2E 锁：`agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 `lock_busy`
+4. 启动服务并跑 E2E 场景（工作区内）
+5. 执行清理：逐用例 `cleanup` + 兜底清理（见「阶段 2 收尾：清理测试产物」，pass / fail / 异常任何路径）
+6. 释放 E2E 锁（pass / fail / 异常任何路径；必须在清理之后）
+7. 每个发现的问题：定位根因，审计日志可定位性
+8. 对确认的问题：举一反三搜索同类模式
+9. 返回结构化结果
 
 ### 3.2 输出
 
@@ -202,7 +192,6 @@ Workspace: <worktree 绝对路径>
   - 拿不到（exit 1）：不要强行验收，返回 `lock_busy` 结果（附 stderr 中 holder 信息）给 PM，由 PM 提示用户稍后重试
   - 释放：验收结束必执行 `agent-factory lock release e2e`——pass / fail / 异常中断任何路径都要释放
   - 仅阶段 2（E2E 场景）需要持锁；阶段 1（设计合规检查，纯静态读代码）不需要
-  - **子 feature（有 `parent`）全程不取锁**：其验收不跑阶段 2，无 E2E 场景可跑
 
 ## 5 按改动范围选择验收入口
 
@@ -245,8 +234,6 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 > Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；backend 的 doc 契约见 `doc/backend/<service_name>/`。页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
 
 ### 6.2 阶段 2：E2E 场景验收
-
-> **子 feature 跳过本阶段**（`e2e_test_cases` 为空）：其验收 = 阶段 1 设计合规 + 该 module 的 UT。跨模块端到端验证由父 feature 承担。
 
 按 feature 涉及的入口逐一执行 FEATURE.yaml `e2e_test_cases` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
 
@@ -307,7 +294,7 @@ E2E 验收必须在**释放 E2E 锁之前**清理本次运行产生的一切痕�
 
 ## 7 QA-REPORT.md 模板
 
-验收完成后，在 feature 目录下生成 `QA-REPORT.md`（**子 feature 时 `## Scenario Results` 表填 UT 用例而非 E2E 场景**）：
+验收完成后，在 feature 目录下生成 `QA-REPORT.md`：
 
 ```markdown
 # QA Report: <feature-name>

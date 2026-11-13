@@ -16,9 +16,8 @@
     - [3.3 Feature Workflow](#33-feature-workflow)
       - [3.3.1 question resolve要求](#331-question-resolve要求)
       - [3.3.2 spec design要求](#332-spec-design要求)
-      - [3.3.3 按 module 拆分](#333-按-module-拆分)
-      - [3.3.4 doc design要求](#334-doc-design要求)
-      - [3.3.5 E2E Test Cases要求](#335-e2e-test-cases要求)
+      - [3.3.3 doc design要求](#333-doc-design要求)
+      - [3.3.4 E2E Test Cases要求](#334-e2e-test-cases要求)
     - [3.4 并行开发与 worktree](#34-并行开发与-worktree)
       - [3.4.1 核心模型](#341-核心模型)
       - [3.4.2 worktree 生命周期](#342-worktree-生命周期)
@@ -169,8 +168,6 @@
       - expect  # 预期结果
 - deploy # 上线变更清单：代码合入后需要人工完成的操作，一条一行，写清「做什么 + 怎么算完成」；无则空列表
   1. <一句话变更>
-- parent # 父 feature 编号（拆分产生的子 feature 才有；CLI 写入，权威字段）
-- children # 子 feature 编号列表（拆分产生的父 feature 才有；CLI 写入，派生视图，权威是子的 parent）
 - worktree # worktree 绑定记录（worktree new 时 CLI 写入，remove 时清除；不可 set）
     - name   # worktree 目录名（.worktrees/feat-<NNN>-<slug>，相对路径）
     - branch # feature 分支（feature/<NNN>-<slug>）
@@ -225,20 +222,6 @@ sequenceDiagram
         pm->>feat: write spec.<module>
     end
     Note over pm: spec design end
-
-    Note over pm: 拆分评估 start
-    pm->>pm: 逐 module 判定「拆 / 不拆 + 理由」
-    pm->>+user: 拆分清单（拆哪些 module，每个建一个子 feature）
-    user->>-pm: 确认
-    alt 存在判定为「拆」的 module
-        loop 每个判定为「拆」的 module
-            pm->>feat: feature new --parent <父id> + 搬 spec/background
-        end
-        Note over pm,wt: 此后走 §按 module 拆分，不走本图剩余部分
-    else 全部不拆
-        Note over pm: 继续下方常规流程
-    end
-    Note over pm: 拆分评估 end
 
     Note over pm: doc design start
     pm->>ref: read .claude/agents/{agent-architecture.drawio, design-reference.md}
@@ -324,102 +307,7 @@ sequenceDiagram
 - **术语完整且已对齐**：spec 中的概念、名词、术语一律使用完整名称，禁止简写、缩写或省略；涉及新增或修改术语的，须在写入 spec 前先与用户确认
 - **硬门禁：逐条确认后才写入**：功能点标题确认 ≠ spec 定稿。完整 spec 必须逐条发给用户确认，确认后才允许 `feature set <id> spec.<module>` 写入；未逐条确认的 spec 不得作为 doc design 的输入
 
-#### 3.3.3 按 module 拆分
-
-拆分在**父 feature 的 designing 阶段内**完成（`spec` 定稿后、doc design 前——`spec` 已按 module 列出功能，**它本身就是拆分表**，不需要另做分解）：判定为「拆」的 module 各建一个子 feature，由用户另开的 Claude 实例并行推进；**不拆的 module 与非 module 维度（backend / frontend / skill / mcp）留在父，父自己开发**。
-
-**判据（正向：够格才拆）**：一个 module 该拆，当且仅当「**拆出去省下的 doc 设计与审核时间 > 拆出去增加的管理开销**」。
-
-拆一个 module 的固定开销是实打实的：一个 worktree、一个实例、一次 spec 搬运、一轮 doc 审核、一次合回父分支。所以小 module 拆出去是净亏。
-
-判据无法直接计算，用**可操作信号**代替——**看该 module 动不动 doc 契约**：
-
-| 该 module 的改动 | 判定 | 理由 |
-|---|---|---|
-| 要新增/修改 `schema` / `persistence` / `api` 契约，或新增 CLI 命令 | **拆** | doc 设计与审核是实打实的一坨工作量，独立成并行线收益明显 |
-| 只是既有功能的小幅调整（改内部逻辑、加个 field、改默认值） | **留父** | doc 改动一两处，独立出去的管理开销反而更大 |
-
-之所以用「动不动 doc 契约」当信号：拆分要省的就是 **doc 设计与审核**，而 doc 的工作量恰恰集中在 schema / persistence / api 这几份契约文档上。契约不动，doc 审核就没几处，拆出去不划算。
-
-**范围**：
-
-- **只对 module 维度拆**；`backend` / `frontend` / `skill` / `mcp` 这类非 module 维度**永不拆，留在父**。这顺带解决了跨模块接线——接线本就落在 backend / frontend / skill / mcp 上，全部留在父，**父天然就是集成者，子之间不需要知道彼此存在**
-- **一个 module → 一个子 feature**（子 feature 是单模块的）
-- **只允许一级拆分**：子不能再拆（`feature new --parent` 会拒绝以子为父）
-- **父不会空转**：父的活 = 非 module 维度 + 所有判定为「不拆」的 module
-
-**建子 feature 的动作**（每个判定为「拆」的 module 一次，三步）：
-
-1. `agent-factory feature new --parent <父id>`（title / slug / user_input 为必填，title 取「<父 title> · <module>」）
-   —— `--parent` 会同时写子的 `parent` 与父的 `children`
-2. **搬 `spec`**：`agent-factory feature set <子id> spec.<module> --file <父该 module 的 ModuleSpec yaml>`
-3. **搬 `background`**：`agent-factory feature set <子id> background --file <父的 background yaml>`
-
-**搬运是手动的，不自动迁移。** **子的 `spec` 必须非空**——否则 `designing → approved` 会被 CLI 拒绝（`spec is empty`），子实例会卡在设计阶段。
-
-**子的 `user_input`** 要写明来源与范围，让新实例的 PM 一看就知道自己负责哪一块：
-
-```
-父需求 #<父id> 的 <module> 模块部分。
-用户原话："<父的 user_input 原文>"
-```
-
-**硬规则（流程约束）**：PM **必须逐 module 给出「拆 / 不拆 + 一句话理由」**（如「新增 schema + 3 个 CLI 命令 → 拆」/「只是给既有 schema 加一个 field → 留父」），由用户逐条拍板。**不设数字阈值**——阈值化会逼 PM 去凑数字，比给理由还不可靠。
-
-**拆分后的父子协作**：
-
-```mermaid
-sequenceDiagram
-    actor user
-    participant pf as 父FEATURE.yaml
-    participant pw as 父worktree（=父分支，集成点）
-    participant pm as 父实例PM
-    participant cf as 子FEATURE.yaml
-    participant cw as 子worktree
-    participant cpm as 子实例PM
-    participant qa as QA
-
-    Note over pm,pw: 父实例：拆分在 designing 阶段内完成
-    pm->>pf: feature new --parent <父id>（每个「拆」的 module 一个子）
-    Note over pm: 父继续 doc design（只覆盖自己保留的 module，逐文件修改并审核）→ approved → implementing
-
-    Note over cpm,cw: 子实例（用户另开，每个子 feature 一个）
-    user->>cpm: 做 feature #<子id>
-    cpm->>cf: 读 spec + parent（父已搬好）
-    cpm->>cw: worktree new --base <父的 worktree.branch>
-    cpm->>user: question resolve → doc design（逐文件修改并审核）
-    cpm->>cf: approved → implementing → UT
-    cpm->>cf: qa-reviewing（只跑 UT，不取 e2e 锁）
-
-    Note over user,pw: 子完成 → 回父实例
-    user->>pm: 子 #<子id> 完成
-    pm->>pw: git -C <父worktree> merge feature/<子id>-<slug>
-    pm->>cf: 子 set done
-    pm->>cw: 子 worktree remove
-
-    Note over pm,pw: 全部子 done + 父自己开发完成
-    pm->>user: E2E 用例设计（整体，逐用例讨论）
-    user->>pm: ok
-    pm->>pf: write e2e_test_cases
-    pm->>user: deploy 清单确认（整体）
-    user->>pm: ok
-    pm->>pf: write deploy
-    pm->>pf: qa-reviewing
-    pm->>+qa: 整体验收（E2E 前取 e2e.lock）
-    qa->>-pm: done（释放锁）
-    pm->>user: 合入方式：merge 还是 PR
-    pm->>pw: 父分支合入基线 → 父 set done → worktree remove
-    pm->>pm: 工作流优化项写入 workflow-issues/<NNN>-<slug>.yaml（按 §7.2 触发信号）
-```
-
-**与常规流程的四处差异**：
-
-1. **父的 E2E design 延后到 `qa-reviewing` 阶段入口**——E2E 用例要写具体的 CLI 命令与接口形状，而这些由子的 doc design 冻结；父在 designing 阶段写只能写空壳，等子完成后还得回头改
-2. **子的 `qa-reviewing` 只跑 UT**（不取 e2e 锁、不跑 `e2e_test_cases`）——子的 `e2e_test_cases` 为空
-3. **父的 `implementing` 语义扩展**为「父自己的开发 **＋** 把完成的子合入父分支」
-4. **父的 `deploy` 清单同样延后到 E2E 之后**——上线操作要落到子最终冻结的配置、schema 与依赖上，设计期写不准；子在 `approved` 前写的 `deploy` 一并搬不回父，父按整体重新判定一次
-
-#### 3.3.4 doc design要求
+#### 3.3.3 doc design要求
 - 开始设计文档之前一定先读取 `.claude/agents/agent-architecture.drawio` 与 `.claude/agents/design-reference.md`，根据架构与文档输出规范输出
 - 对外部分（前端、对外 API、CLI、Agent 对话）的设计必须写出最终用户的交互流程、状态与反馈、错误与恢复、等待与可理解性；不以功能跑通为终点（见 §1 目标「打造完美用户体验」）
 - **逐文件修改、逐处审核确认**：
@@ -450,7 +338,7 @@ review内容按照以下模板给出
   - `cli.md`：<命令 / 子命令 / 参数>
 - **改动**：一条只写一个改动点，写明动作与结果（如「新增 `POST /tasks/{id}/cancel` 端点」「删除 `Task.retry_count` 字段」），禁止「优化」「完善」「调整」这类无法定位与验证的表述；同一处含多个改动点时逐条列出
 
-#### 3.3.5 E2E Test Cases要求
+#### 3.3.4 E2E Test Cases要求
 E2E acceptance test：在真实运行的服务上、以确定输入驱动真实端到端业务路径，验证该需求核心功能，其结论可直接作为「需求是否验收通过」的判据。
 
 用例结构见 FEATURE.yaml `e2e_test_cases`，**逐字段约束如下**：
@@ -470,7 +358,7 @@ E2E acceptance test：在真实运行的服务上、以确定输入驱动真实�
 
 E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、内部 field 调整、文档/配置类），`e2e_test_cases` 允许为空，并在与用户确认后直接进入 approved。
 
-#### 3.3.6 deploy 清单要求
+#### 3.3.5 deploy 清单要求
 
 `deploy` 承载「代码合入后、线上生效前需要人工完成的操作」——改 prod 配置、迁移数据、升级依赖、补执行脚本等。缺了它，feature 能 done，线上却跑不对。
 
@@ -506,8 +394,6 @@ E2E 非强制：需求无真实端到端业务路径可跑时（如纯重构、�
    3. 存在的 `origin/{main,master,dev,develop}`
 
    最终使用的 ref 落库到 FEATURE.yaml `worktree.base`，并贯穿后续全部节点（见 §rebase 节点化）。**不自动回退 `origin/HEAD`**——探测可能出错，静默取错比不给更危险。
-
-   **子 feature（拆分产生的）不走配置与候选流程**：它的基线分支由 `parent` 推导，执行 `agent-factory worktree new <子id> --base <父的 worktree.branch>`。拆分时刻父分支与基线内容完全相同（父尚未提交任何东西），所以这与「从基线分出」等价，且**不需要再问用户一次**——用户在父那边已经确认过拆分清单了。
 2. **使用**：doc/ 撰写、developer 实现、QA 验收全部在 worktree 路径内进行；调度 developer/QA 时 `Workspace` 传 worktree 绝对路径
 3. **收尾**：QA pass → 用户选合入方式（见 §合入方式）→ 合入动作 → `agent-factory worktree remove <id>`（清目录+删分支+清记录）
 
@@ -552,10 +438,6 @@ QA pass 后 PM 问用户合入方式，二选一；**不落库**（决策只在�
 **reviewer 打回**（PR 路径）：用户告知后 `set implementing` → 调度 developer（Workspace=worktree）→ `set qa-reviewing` → QA 复验 → push 更新 PR（复用现有转移，无需新状态）。
 
 **顺序约定**：两条路径都是「合入动作 → set done → worktree remove」。done 在合入之后置位——PR 路径下合入异步，done 必须等人工合入；merge 路径随之统一。
-
-**子 feature 的合入（拆分场景）**：子的合入目标不是基线，而是**父分支**，且**由父实例 PM 在父 worktree 里执行**——git 限制同一分支只能在一个 worktree 检出，父分支检出在父 worktree，子无法自己 checkout 它去 merge。父 PM 合入后一条龙收尾：`子 set done` → `agent-factory worktree remove <子id>`（避免用户在两个实例间来回搬运状态）。这顺带把集成串行化到父这一个点，不存在两个子同时改父分支的并发问题。
-
-**父 PM 合入的前置条件**：父 worktree 空闲（无在途 subagent、工作区干净）——与 §rebase 节点化 的兜底规则同理。
 
 #### 3.4.4 真相源约定
 
@@ -723,7 +605,7 @@ PM 只调度，不自己诊断 / 实现 / 验收（见 §1 职责与目标）。
 | Subagent | 职责 | 何时调度 |
 |---|---|---|
 | **developer** | 按 doc/ 实现代码；修 QA 发现的问题 | ① feature `approved → implementing` ② QA fail 后修复 |
-| **QA** | Feature 验收：设计合规 + E2E 场景（子 feature 只跑 UT） | developer 返回 complete，feature 进入 `qa-reviewing` |
+| **QA** | Feature 验收：设计合规 + E2E 场景 | developer 返回 complete，feature 进入 `qa-reviewing` |
 | **qa-diagnosis** | Issue 定位分析，返回提案（`flow` / `root_cause` / `analysis` / `log_gap` / `fix_plan`），不写 ISSUE.yaml | issue 进入 `in_progress` |
 | **POC** | 技术可行性与选型验证 | designing 阶段判断存在高风险技术问题 |
 | **patrol** | 代码健康巡检 | 用户显式要求 |
@@ -848,10 +730,9 @@ Workspace: <worktree 绝对路径>
 
 - **产出**：`pass` / `fail` / `lock_busy` + `QA-REPORT.md`（写 Feature Directory：主仓 `.features/<id>/`，不随 worktree remove 丢失）
 - **采信门禁**：收到结果后先校验 `QA-REPORT.md` 存在且非空、`## Scenario Results` 与结构化结果的 `scenarios_tested` / `scenarios_passed` 一致；缺失或不一致 → 视为未执行，**状态不流转**，记录异常并重新调度
-- **`pass`（常规 feature）**：`feature transition <id> --to done` → **done 后汇报**一并输出该 feature 的 `deploy` 清单（非空时），提醒用户执行；空列表不提示。清单不做完成标记，用户要求部署时 PM 再读该字段
-- **`pass`（子 feature）**：停在 `qa-reviewing`，**不置 done**——子的 done 由父 PM 在合入父分支后置位（见 §3.4.3 合入方式）；汇报用户「子 #<id> 验收通过，待合入父分支」
+- **`pass`**：按 §3.4.3 合入方式完成合入、`feature transition <id> --to done` 与 `worktree remove`；**done 后汇报**一并输出该 feature 的 `deploy` 清单（非空时），提醒用户执行；空列表不提示。清单不做完成标记，用户要求部署时 PM 再读该字段
 - **`fail`**：`feature transition <id> --to implementing` → 调度 developer 修复（§5.3.2）；修复循环最多 3 轮，超过仍不通过则升级用户决策
-- **`lock_busy`**：QA 未取到 E2E 锁，未执行验收；按 §E2E 互斥锁 处置。**子 feature 不会出现此结果**（不取锁）
+- **`lock_busy`**：QA 未取到 E2E 锁，未执行验收；按 §E2E 互斥锁 处置
 
 ### 5.5 qa-diagnosis（Issue 定位分析）
 
