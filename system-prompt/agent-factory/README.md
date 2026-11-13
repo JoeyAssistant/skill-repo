@@ -1,6 +1,6 @@
 # Agent Factory - PM-Driven Agent System
 
-PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature 和 issue，直接完成设计并调度 developer subagent 完成开发。
+PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature 和 issue，直接完成需求设计与前端实现；developer 负责 backend、业务模块及其他非前端代码，QA 对完整交付做独立验收。
 
 ## 架构
 
@@ -8,12 +8,13 @@ PM 驱动的 AI Agent 开发体系。PM 作为用户主入口，管理 feature �
 
 ```
 User ←→ PM (agent-pm.md, system prompt)
-            ├── developer (subagent, .claude/agents/developer.md)
+            ├── developer (subagent, .claude/agents/developer.md)       # 非前端实现与修复
             ├── qa (subagent, .claude/agents/qa.md)                      # feature 验收
             ├── qa-diagnosis (subagent, .claude/agents/qa-diagnosis.md)  # issue 定位分析
             └── poc (subagent, .claude/agents/poc.md)
 
-PM 在 designing 阶段直接修改 doc/ 并自检，向用户展示 git diff 终审。
+PM 在 feature worktree 中展示真实前端，与用户逐步确认页面和交互，所见即所得；在 designing 阶段修改 doc/ 并自检，向用户展示 git diff 审核。
+implementing 阶段先由 developer 完成非前端任务，再由 PM 完成前端与接口联动；全部完成并有提交证据后进入 QA。仅前端需求由 PM 完成，仅非前端需求由 developer 完成。
 ```
 
 ### 多项目模式
@@ -167,11 +168,14 @@ pm() {
 
 ```
 用户: 我想做一个财务日报功能
-PM:   [创建 feature #NNN，引导讨论背景、价值、范围]
+PM:   [先阅读相关文档，再创建 feature #NNN，引导讨论背景、价值、范围]
+PM:   [涉及前端时，在 feature worktree 的真实项目前端展示可操作效果，逐步确认]
 用户: 确认范围
 PM:   [整理 FEATURE.yaml，自己写 doc/ 并自检]
 用户: [review git diff]
-PM:   [调度 developer]
+PM:   [调度 developer 完成本需求涉及的非前端任务]
+PM:   [非前端完成后，完成前端与真实接口联动、测试、自检并提交]
+PM:   [全部实现完成且有提交证据后，调度 QA 独立验收]
 ```
 
 ### 交互模式：提交 Issue
@@ -187,7 +191,7 @@ PM:   [审核: bug → 调度 qa-diagnosis 定位 → 分析完成后转 feature
 用户也可以跳过 PM，直接调用 subagent：
 
 ```
-用户: Use the developer agent to implement feature #003
+用户: Use the developer agent to implement the backend of feature #003
 ```
 
 ## 项目目录结构
@@ -264,11 +268,11 @@ agent-workspace/
 
 | 文件 | 用途 |
 |------|------|
-| `agent-pm.md` | PM system prompt，用户主入口（含设计阶段直接修改 doc/） |
+| `agent-pm.md` | PM system prompt，用户主入口，负责需求设计、前端实现与工作流调度 |
 | `design-reference.md` | PM 设计阶段按需参考手册 |
 | `browser-reference.md` | 浏览器通道操作手册，所有 agent 共用（检测通道 → 建立通道 → 证据） |
-| `developer.md` | Developer subagent 定义，负责代码实现 |
-| `qa.md` | QA subagent 定义，负责 feature 验收 |
+| `developer.md` | Developer subagent 定义，负责非前端代码实现与修复 |
+| `qa.md` | QA subagent 定义，独立验收 PM 与 developer 的完整交付 |
 | `qa-diagnosis.md` | Issue 定位分析 subagent 定义 |
 | `poc.md` | POC subagent 定义，负责技术可行性分析和验证 |
 
