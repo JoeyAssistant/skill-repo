@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import get_args
 
 import click
 import yaml
@@ -16,7 +18,7 @@ from agent_factory.cli.common import (
 )
 from agent_factory.schema import Feature, FeatureIndex, FeatureIndexItem
 from agent_factory.schema.enums import Priority
-from agent_factory.schema.feature import FeatureStatus
+from agent_factory.schema.feature import FeatureStatus, FeatureSubagent, SubagentResult
 
 
 def _feature_doc() -> str:
@@ -216,7 +218,7 @@ def _load_feature(feature_id: int) -> tuple[Path, dict]:
     return path, load_yaml(path)
 
 
-def _save(feature_id: int, path: Path, data: dict) -> None:
+def _save(feature_id: int, path: Path, data: dict, *, quiet: bool = False) -> None:
     """Validate and save feature data."""
     try:
         feature = Feature.model_validate(data)
@@ -224,7 +226,8 @@ def _save(feature_id: int, path: Path, data: dict) -> None:
         click.echo(format_error("ValidationError", str(exc), str(path)), err=True)
         sys.exit(1)
     dump_yaml(path, feature)
-    click.echo(f"Updated feature {feature_id}")
+    if not quiet:
+        click.echo(f"Updated feature {feature_id}")
 
 
 def _set_plain(feature_id: int, key: str, new_value: str) -> None:
@@ -320,6 +323,83 @@ def _set_deploy(feature_id: int, file_path: Path) -> None:
         sys.exit(1)
     data["deploy"] = items
     _save(feature_id, path, data)
+
+
+@feature_group.group("run")
+def run_group() -> None:
+    """创建和补全 subagent 调度记录（唯一数据源：FEATURE.yaml）。"""
+
+
+def _load_run_feature(feature_id: int) -> tuple[Path, Feature]:
+    path, data = _load_feature(feature_id)
+    try:
+        return path, Feature.model_validate(data)
+    except ValidationError as exc:
+        click.echo(format_error("ValidationError", str(exc), str(path)), err=True)
+        sys.exit(1)
+
+
+@run_group.command("start")
+@click.argument("feature_id", type=int)
+@click.option("--agent", required=True, type=click.Choice(get_args(FeatureSubagent)))
+@click.option("--task", required=True, help="本次任务描述，如首次实现、修复 QA 问题")
+def run_start(feature_id: int, agent: str, task: str) -> None:
+    """调度前创建记录，自动分配 id 和 UTC 调度时间，输出该记录 JSON。
+
+    result / duration_s 初始为空。重试调度需新建记录；创建命令结果不明时，
+    先 feature show 核对是否已写入，避免重复创建。
+    """
+    path, feature = _load_run_feature(feature_id)
+    data = feature.model_dump(mode="json")
+    record = {
+        "id": max((run.id for run in feature.subagent_runs), default=0) + 1,
+        "agent": agent,
+        "task": task,
+        "dispatched_at": datetime.now(timezone.utc).isoformat(),
+        "result": None,
+        "duration_s": None,
+    }
+    data["subagent_runs"].append(record)
+    _save(feature_id, path, data, quiet=True)
+    click.echo(json.dumps(record, ensure_ascii=False))
+
+
+@run_group.command("finish")
+@click.argument("feature_id", type=int)
+@click.argument("run_id", type=click.IntRange(min=1))
+@click.option("--result", required=True, type=click.Choice(get_args(SubagentResult)))
+@click.option("--duration-s", type=click.IntRange(min=0), default=None,
+              help="subagent 返回的实际整数秒耗时；未知时省略，不估算")
+def run_finish(feature_id: int, run_id: int, result: str,
+               duration_s: int | None) -> None:
+    """按执行编号补全记录，输出该记录 JSON；重复处理同一结果不会重复计数。
+
+    已记录结果不得改为另一结果，已知耗时不得覆盖或清空；
+    同一结果的未知耗时可以补全。冲突 exit 3，执行编号不存在 exit 2。
+    """
+    path, feature = _load_run_feature(feature_id)
+    run = next((run for run in feature.subagent_runs if run.id == run_id), None)
+    if run is None:
+        click.echo(format_error("NotFound", f"Feature {feature_id} run {run_id} 不存在", str(path)), err=True)
+        sys.exit(2)
+    if run.result is not None and (
+        run.result != result or (
+            duration_s is not None and run.duration_s is not None
+            and duration_s != run.duration_s
+        )
+    ):
+        click.echo(format_error("StateViolation",
+            f"run {run_id} 已记录结果或耗时，与本次输入冲突", str(path)), err=True)
+        sys.exit(3)
+
+    data = feature.model_dump(mode="json")
+    record = next(record for record in data["subagent_runs"] if record["id"] == run_id)
+    record["result"] = result
+    if duration_s is not None:
+        record["duration_s"] = duration_s
+    if record != run.model_dump(mode="json"):
+        _save(feature_id, path, data, quiet=True)
+    click.echo(json.dumps(record, ensure_ascii=False))
 
 
 @feature_group.command("show")
@@ -433,7 +513,38 @@ def _render_feature_markdown(feature: Feature) -> str:
         for i, item in enumerate(feature.deploy, 1):
             lines.append(f"{i}. {item}")
         lines.append("")
+    if feature.subagent_runs:
+        lines += _render_subagent_runs(feature)
     return "\n".join(lines)
+
+
+def _render_subagent_runs(feature: Feature) -> list[str]:
+    lines = [
+        "## Subagent Runs", "",
+        "| ID | AGENT | TASK | DISPATCHED (UTC) | RESULT | DURATION (s) |",
+        "|---|---|---|---|---|---|",
+    ]
+    by_agent: dict[str, list] = {}
+    for run in feature.subagent_runs:
+        task = run.task.replace("|", "\\|").replace("\n", " ")
+        stamp = run.dispatched_at.strftime("%Y-%m-%d %H:%M:%S")
+        result = run.result or "进行中 / 待核实"
+        duration = str(run.duration_s) if run.duration_s is not None else "未知"
+        lines.append(f"| {run.id} | {run.agent} | {task} | {stamp} | {result} | {duration} |")
+        by_agent.setdefault(run.agent, []).append(run)
+    lines += [
+        "", "### 耗时汇总", "",
+        "| AGENT | 调用次数 | 已知耗时次数 | 未知耗时次数 | 累计耗时 (s) | 平均耗时 (s) | fail 次数 |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for agent, runs in by_agent.items():
+        known = [run.duration_s for run in runs if run.duration_s is not None]
+        total = sum(known)
+        average = f"{total / len(known):.1f}" if known else "未知"
+        failures = sum(run.result == "fail" for run in runs)
+        lines.append(f"| {agent} | {len(runs)} | {len(known)} | {len(runs) - len(known)} | {total} | {average} | {failures} |")
+    lines += ["", "累计与平均仅统计已知耗时；并行任务累计耗时不等于用户等待时间。", ""]
+    return lines
 
 
 def _summary_for(title: str) -> str | None:

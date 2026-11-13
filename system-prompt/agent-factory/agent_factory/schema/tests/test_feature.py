@@ -2,7 +2,7 @@
 import pytest
 from pydantic import ValidationError
 
-from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Feature, Observation
+from agent_factory.schema.feature import Background, E2ETestCase, ModuleSpec, Feature, Observation, SubagentRun
 
 
 # === Background 测试 ===
@@ -100,6 +100,7 @@ def test_feature_minimal_valid():
     assert feature.background is None
     assert feature.spec == {}
     assert feature.e2e_test_cases == []
+    assert feature.subagent_runs == []
 
 
 def test_feature_summary_optional():
@@ -208,3 +209,39 @@ def test_feature_status_enum_values():
     assert FeatureStatus.QA_REVIEWING.value == "qa-reviewing"
     assert FeatureStatus.DONE.value == "done"
     assert FeatureStatus.CANCELLED.value == "cancelled"
+
+
+def _valid_subagent_run():
+    return dict(id=1, agent="qa", task="首次验收", dispatched_at="2026-11-13T14:00:00+08:00")
+
+
+def test_subagent_run_normalizes_timestamp_to_utc_and_roundtrips():
+    run = SubagentRun(**_valid_subagent_run(), result="pass", duration_s=0)
+    assert run.model_dump(mode="json")["dispatched_at"] == "2026-11-13T06:00:00Z"
+    feature = Feature(**_valid_feature_kwargs(), subagent_runs=[run])
+    restored = Feature.model_validate(feature.model_dump(mode="json"))
+    assert restored.subagent_runs == [run]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("id", 0), ("id", True), ("agent", "unknown"), ("task", "  "),
+    ("dispatched_at", "2026-11-13T06:00:00"),
+    ("duration_s", -1), ("duration_s", 1.5), ("duration_s", True),
+    ("result", "running"), ("extra", "unexpected"),
+])
+def test_invalid_subagent_run_rejected(field, value):
+    data = dict(_valid_subagent_run(), result="pass", duration_s=10)
+    data[field] = value
+    with pytest.raises(ValidationError):
+        SubagentRun(**data)
+
+
+def test_pending_run_cannot_claim_measured_duration():
+    with pytest.raises(ValidationError):
+        SubagentRun(**_valid_subagent_run(), duration_s=10)
+
+
+def test_duplicate_subagent_run_ids_rejected():
+    run = _valid_subagent_run()
+    with pytest.raises(ValidationError):
+        Feature(**_valid_feature_kwargs(), subagent_runs=[run, run])

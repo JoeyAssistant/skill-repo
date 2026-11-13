@@ -38,3 +38,23 @@ e2e_test_cases:
 deploy:
   - "prod 的 config/income.yaml 新增 income.categories 配置项，写入后重启服务，确认 /api/income/categories 返回新分类"
   - "迁移 data/income.json 旧格式（amount 为字符串）到新格式（amount 为数字），迁移后核对条目数一致"
+
+subagent_runs:
+  - id: 1
+    agent: developer
+    task: 首次实现
+    dispatched_at: "2026-11-13T06:00:00Z"
+    result: complete
+    duration_s: 900
+  - id: 2
+    agent: qa
+    task: 首次验收
+    dispatched_at: "2026-11-13T06:16:00Z"
+    result: fail
+    duration_s: 420
+  - id: 3
+    agent: developer
+    task: 修复 QA 问题
+    dispatched_at: "2026-11-13T06:24:00Z"
+    result: null
+    duration_s: null

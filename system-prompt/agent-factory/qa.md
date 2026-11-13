@@ -22,11 +22,13 @@ model: sonnet
     - [3.2.3 验收不通过](#323-验收不通过)
 - [4 worktree 与 E2E 锁](#4-worktree-与-e2e-锁)
 - [5 按改动范围选择验收入口](#5-按改动范围选择验收入口)
-  - [5.1 MCP 入口的验收要点](#51-mcp-入口的验收要点)
 - [6 验收工作流程](#6-验收工作流程)
   - [6.1 阶段 1：设计合规检查](#61-阶段-1设计合规检查)
   - [6.2 阶段 2：E2E 场景验收](#62-阶段-2e2e-场景验收)
-    - [阶段 2 收尾：清理测试产物（强制）](#阶段-2-收尾清理测试产物强制)
+    - [6.2.1 CLI 场景验收](#621-cli-场景验收)
+    - [6.2.2 Backend HTTP 场景验收](#622-backend-http-场景验收)
+    - [6.2.3 Frontend 浏览器场景验收](#623-frontend-浏览器场景验收)
+    - [6.2.4 清理测试产物（强制）](#624-清理测试产物强制)
   - [6.3 阶段 3：日志审计](#63-阶段-3日志审计)
   - [6.4 阶段 4：举一反三](#64-阶段-4举一反三)
 - [7 QA-REPORT.md 模板](#7-qa-reportmd-模板)
@@ -110,7 +112,7 @@ Workspace: <worktree 绝对路径>
 2. Verify design compliance（见阶段 1 矩阵；静态检查，无需持锁）
 3. 取 E2E 锁：`agent-factory lock acquire e2e --holder "feature/<NNN>-<slug>" --pid $PPID`；拿不到（exit 1）→ 停止验收，返回 `lock_busy`
 4. 启动服务并跑 E2E 场景（工作区内）
-5. 执行清理：逐用例 `cleanup` + 兜底清理（见「阶段 2 收尾：清理测试产物」，pass / fail / 异常任何路径）
+5. 执行清理：逐用例 `cleanup` + 兜底清理（见 §6.2.4「清理测试产物」，pass / fail / 异常任何路径）
 6. 释放 E2E 锁（pass / fail / 异常任何路径；必须在清理之后）
 7. 每个发现的问题：定位根因，审计日志可定位性
 8. 对确认的问题：举一反三搜索同类模式
@@ -202,17 +204,9 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 | 模块暴露的 CLI（`src/modules/<module_name>/cli.py`） | 执行 `python3 src/modules/<module_name>/cli.py --help` + 各子命令 |
 | `src/backend/` | HTTP API 调用（启动 backend，调 REST API） |
 | `src/frontend/` | 操作 Web UI（完整端到端）；通道与身份核验见 `.claude/agents/browser-reference.md` |
-| `src/mcp/` | MCP client 模拟调用 tools |
 | `src/skill/` | 按 skill 的调用方式（经 CLI）执行 |
 
 未涉及的入口不验；涉及多个则逐个验。
-
-### 5.1 MCP 入口的验收要点
-
-- 启动 mcp
-- 用 MCP client（如 Claude Code inspector、mcp CLI）调用每个 tool
-- 验证 tool 返回结构与其声明一致
-- 验证每个 tool 实际调用了 `src/modules/<module_name>/` 的公开接口
 
 ## 6 验收工作流程
 
@@ -231,33 +225,37 @@ QA 不按形态选入口，而是按 feature 实际改动的位置选择：
 | Backend HTTP 契约 | `doc/backend/<service_name>/openapi.*.yaml`，核对路径 / 请求 / 响应 |
 | Backend 实现 | `doc/backend/<service_name>/api.*.md`，核对 operationId 覆盖与实现一致性 |
 
-> Frontend / MCP 无 doc 契约，其正确性由阶段 2 行为验证覆盖；backend 的 doc 契约见 `doc/backend/<service_name>/`。页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
+> Frontend 无 doc 契约，其正确性由阶段 2 行为验证覆盖；backend 的 doc 契约见 `doc/backend/<service_name>/`。页面/UI 设计由产品阶段决定，不在 doc/ 中维护。
 
 ### 6.2 阶段 2：E2E 场景验收
 
 按 feature 涉及的入口逐一执行 FEATURE.yaml `e2e_test_cases` 下的每个 Case（前置构造 → 执行步骤 → 观测点 → 判定标准）：
 
-**经 CLI**：
+记录每个场景的执行结果和发现的问题。
+
+#### 6.2.1 CLI 场景验收
+
 1. 准备测试输入（JSON / 参数）
 2. 执行 `python3 src/modules/<module_name>/cli.py <command> [args]`
 3. 验证输出格式与 `--help` 描述一致
 4. 验证完整链路（CLI → `src/modules/<module_name>` → Data Layer）
 
-**经 HTTP（backend / frontend）**：
-1. 启动 backend 服务（涉及 frontend 时同时启动）
-2. 通过 HTTP API 调用（涉及 frontend 时用 Playwright 操作 UI）
-3. 验证响应结构，并与 `doc/backend/<service_name>/openapi.*.yaml` 契约一致
-4. 验证完整链路（Web UI / API → Backend → `src/modules/<module_name>` → Data Layer）
+#### 6.2.2 Backend HTTP 场景验收
 
-**经 MCP**：
-1. 启动 mcp
-2. 用 MCP client 调用 tool
-3. 验证返回结构与其声明一致
-4. 验证完整链路（MCP tool → `src/modules/<module_name>` → Data Layer）
+1. 启动本次验收工作区的 backend 服务
+2. 按 E2E 用例通过 HTTP API 发起请求
+3. 验证状态码与响应结构，并与 `doc/backend/<service_name>/openapi.*.yaml` 契约一致
+4. 按用例观测点验证业务结果及涉及的持久化结果，验证完整链路（HTTP API → Backend → `src/modules/<module_name>` → Data Layer）
 
-记录每个场景的执行结果和发现的问题。
+#### 6.2.3 Frontend 浏览器场景验收
 
-#### 阶段 2 收尾：清理测试产物（强制）
+1. 按 `.claude/agents/browser-reference.md` 建立并核验浏览器通道，启动本次验收工作区的前后端服务
+2. 从页面入口执行 E2E 用例，通过用户操作触发业务，验证页面反馈及完整业务链路（Web UI → Backend → `src/modules/<module_name>` → Data Layer）
+3. 从用户视角审视本次改动影响的页面与操作流程，检查适用的默认、编辑、加载、空数据、错误等状态，关注入口是否清楚、控件是否可操作、反馈是否明确、错误后能否恢复
+4. 以实际渲染和交互判定结果，DOM 属性辅助定位；为关键状态和发现的问题保留截图或录屏
+5. 记录发现的问题及预期依据；预期缺失或含糊时，返回 PM 确认
+
+#### 6.2.4 清理测试产物（强制）
 
 E2E 验收必须在**释放 E2E 锁之前**清理本次运行产生的一切痕迹；pass / fail / 异常中断任何路径都要执行，不得跳过：
 
@@ -318,7 +316,6 @@ E2E 验收必须在**释放 E2E 锁之前**清理本次运行产生的一切痕�
 | Backend Contract | doc/backend/<service_name>/openapi.*.yaml | PASS/FAIL/N/A | ... |
 | Backend Implementation | doc/backend/<service_name>/api.*.md | PASS/FAIL/N/A | ... |
 | Frontend UI | 行为验证 | PASS/FAIL/N/A | ... |
-| MCP Tools | 行为验证 | PASS/FAIL/N/A | ... |
 
 ## Cleanup
 | # | Scenario | Result | Notes |

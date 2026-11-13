@@ -1,10 +1,11 @@
 # agent_factory/schema/feature.py
 """Feature 模型（对应 .features/<id>/FEATURE.yaml）."""
 from __future__ import annotations
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from agent_factory.schema.compat import migrate_legacy_desc
 
@@ -63,6 +64,43 @@ class WorktreeInfo(BaseModel):
         description="基线分支（创建时的 --base 值）；历史记录可能缺失")
 
 
+FeatureSubagent = Literal["developer", "qa", "poc"]
+SubagentResult = Literal["complete", "pass", "fail", "lock_busy", "interrupted"]
+
+
+class SubagentRun(BaseModel):
+    """一条归属于 feature 的 subagent 调度记录。"""
+    model_config = ConfigDict(extra="forbid")
+
+    id: int = Field(..., ge=1, strict=True, description="feature 内的执行编号")
+    agent: FeatureSubagent
+    task: str = Field(..., min_length=1, description="本次任务描述")
+    dispatched_at: datetime = Field(..., description="PM 调度时间（UTC）")
+    result: Optional[SubagentResult] = None
+    duration_s: Optional[int] = Field(None, ge=0, strict=True,
+        description="subagent 实测总耗时；未知时为空，不按调度时间估算")
+
+    @field_validator("task")
+    @classmethod
+    def _task_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("task must not be blank")
+        return value
+
+    @field_validator("dispatched_at")
+    @classmethod
+    def _utc_timestamp(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("dispatched_at must include a timezone")
+        return value.astimezone(timezone.utc)
+
+    @model_validator(mode="after")
+    def _pending_duration_unknown(self):
+        if self.result is None and self.duration_s is not None:
+            raise ValueError("unfinished run must have duration_s=null")
+        return self
+
+
 class Feature(BaseModel):
     """对应 .features/<NNN>-<slug>/FEATURE.yaml."""
     model_config = ConfigDict(extra="forbid")
@@ -94,3 +132,12 @@ class Feature(BaseModel):
         description="子 feature 编号列表（拆分出的父 feature 才有；派生视图，权威是子的 parent）")
     worktree: Optional[WorktreeInfo] = Field(None,
         description="绑定的 worktree（worktree new 时写入，worktree remove 时清除）")
+    subagent_runs: list[SubagentRun] = Field(default_factory=list,
+        description="每次 subagent 调度一条记录；由 PM 经 CLI 创建和补全")
+
+    @model_validator(mode="after")
+    def _unique_subagent_run_ids(self):
+        ids = [run.id for run in self.subagent_runs]
+        if len(ids) != len(set(ids)):
+            raise ValueError("subagent_runs ids must be unique within a feature")
+        return self

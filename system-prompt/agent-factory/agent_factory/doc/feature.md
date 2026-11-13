@@ -7,6 +7,7 @@ CLI 侧约定：
 
 - 状态文件：`.features/<NNN>-<slug>/FEATURE.yaml`（单条）+ `.features/index.yaml`（索引行）
 - 子命令与参数见 `agent-factory feature <cmd> --help`
+- subagent 调度记录的创建与补全见 `agent-factory feature run start --help` / `finish --help`；记录规则见 PM §3.1 / §5.2
 
 ## 退出码
 
